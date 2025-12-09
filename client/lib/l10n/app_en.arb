@@ -533,5 +533,17 @@
   "export_progress_completed": "Completed",
   "@export_progress_completed": {
     "description": "Export progress message completed"
+  },
+  "error_directory_not_exists": "Dir does not exist. Use folder button to select",
+  "@error_directory_not_exists": {
+    "description": "Error message when directory does not exist"
+  },
+  "error_directory_no_permission": "No permission. Use folder button to select",
+  "@error_directory_no_permission": {
+    "description": "Error message when directory has no permission"
+  },
+  "error_directory_no_permission_macos": "No permission. Use folder button to select and authorize",
+  "@error_directory_no_permission_macos": {
+    "description": "Error message when directory has no permission on macOS"
   }
 }

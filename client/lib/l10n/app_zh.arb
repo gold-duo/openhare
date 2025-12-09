@@ -176,5 +176,17 @@
         }
       }
     },
-    "export_progress_completed": "完成"
+    "export_progress_completed": "完成",
+    "error_directory_not_exists": "目录不存在，点击右侧文件夹按钮选择",
+    "@error_directory_not_exists": {
+      "description": "目录不存在错误消息"
+    },
+    "error_directory_no_permission": "目录无权限，点击右侧文件夹按钮选择",
+    "@error_directory_no_permission": {
+      "description": "目录无读写权限错误消息"
+    },
+    "error_directory_no_permission_macos": "目录无权限，点击右侧文件夹按钮授权访问",
+    "@error_directory_no_permission_macos": {
+      "description": "macOS 目录无读写权限错误消息"
+    }
 }

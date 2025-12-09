@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:client/l10n/app_localizations.dart';
 import 'package:client/models/instances.dart';
 import 'package:client/models/tasks.dart';
 import 'package:client/services/ai/agent.dart';
 import 'package:client/services/tasks/export_data.dart';
+import 'package:client/utils/file_utils.dart';
 import 'package:client/widgets/button.dart';
 import 'package:client/widgets/const.dart';
 import 'package:client/widgets/dialog.dart';
@@ -61,6 +64,7 @@ class _ExportDataDialogContentState
   late final TextEditingController fileNameController;
   late final TextEditingController descController;
   final _formKey = GlobalKey<FormState>();
+  final _dirFieldKey = GlobalKey<FormFieldState<String>>();
 
   @override
   void initState() {
@@ -70,10 +74,15 @@ class _ExportDataDialogContentState
       text:
           'export-${DateTime.now().toIso8601String().split('.').first.replaceAll(':', '-')}.csv',
     );
-    // 自动填充目录
+    // 自动填充目录, 确保有权限访问
     final latestTask = ref.read(latestExportTaskProvider);
-    dirController =
-        TextEditingController(text: latestTask?.parameters?.fileDir ?? '');
+    final latestDir = latestTask?.parameters?.fileDir;
+    if (latestDir != null && checkDirectoryAccessible(latestDir) == null) {
+      dirController = TextEditingController(text: latestDir);
+    } else {
+      dirController = TextEditingController();
+    }
+
     descController = TextEditingController();
   }
 
@@ -91,6 +100,8 @@ class _ExportDataDialogContentState
     );
     if (directory != null) {
       dirController.text = directory;
+      // 触发验证
+      _dirFieldKey.currentState?.validate();
     }
   }
 
@@ -339,6 +350,7 @@ class _ExportDataDialogContentState
           children: [
             // 目录选择
             TextFormField(
+              key: _dirFieldKey,
               controller: dirController,
               autovalidateMode: AutovalidateMode.onUserInteraction,
               validator: (value) {
@@ -346,7 +358,24 @@ class _ExportDataDialogContentState
                   return AppLocalizations.of(context)!
                       .export_data_directory_required;
                 }
-                return null;
+                // 使用工具函数验证目录路径
+                final error = checkDirectoryAccessible(value.trim());
+                if (error == null) {
+                  return null;
+                }
+                // 根据错误类型返回国际化消息
+                final localizations = AppLocalizations.of(context)!;
+                switch (error) {
+                  case DirectoryAccessError.notExists:
+                    return localizations.error_directory_not_exists;
+                  case DirectoryAccessError.noPermission:
+                    // macOS 需要用户自己选择授权，使用不同的提示消息
+                    if (Platform.isMacOS) {
+                      return localizations.error_directory_no_permission_macos;
+                    } else {
+                      return localizations.error_directory_no_permission;
+                    }
+                }
               },
               decoration: _buildInputDecoration(
                 colorScheme,

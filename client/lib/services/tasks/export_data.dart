@@ -112,6 +112,7 @@ class ExportDataTasksServices extends _$ExportDataTasksServices {
 
     final connServices = ref.read(sessionConnsServicesProvider.notifier);
     SessionConnModel? connModel;
+    IOSink? sink;
     try {
       // 2. 正在连接数据
       task = task.copyWith(progressMessage: l10n.export_progress_connecting);
@@ -130,54 +131,50 @@ class ExportDataTasksServices extends _$ExportDataTasksServices {
       task = task.copyWith(progressMessage: l10n.export_progress_opening_file);
       _updateTask(task);
 
-      File file = File(finalParameters.exportFilePath);
-      final sink = file.openWrite(encoding: utf8);
-
       int rowCount = 0;
       int bufferedSize = 0;
       const int flushThreshold = 1024 * 1024;
       const csvConverter = ListToCsvConverter();
       List<String>? columnNames;
 
-      try {
-        await for (final item
-            in connServices.queryStream(connModel.connId, parameters.query)) {
-          switch (item) {
-            case QueryStreamItemHeader(:final columns, affectedRows: _):
-              columnNames = columns.map((e) => e.name).toList();
-              final headerCsv = csvConverter.convert([columnNames]);
-              sink.writeln(headerCsv);
-              await sink.flush();
+      File file = File(finalParameters.exportFilePath);
+      sink = file.openWrite(encoding: utf8);
+      
+      await for (final item
+          in connServices.queryStream(connModel.connId, parameters.query)) {
+        switch (item) {
+          case QueryStreamItemHeader(:final columns, affectedRows: _):
+            columnNames = columns.map((e) => e.name).toList();
+            final headerCsv = csvConverter.convert([columnNames]);
+            sink.writeln(headerCsv);
+            await sink.flush();
 
-              // 5. 开始导出数据
+            // 5. 开始导出数据
+            task = task.copyWith(
+              progressMessage: l10n.export_progress_exporting(0)
+            );
+            _updateTask(task);
+
+          case QueryStreamItemRow(:final row):
+            final rowData =
+                row.values.map((e) => e.getString() ?? '').toList();
+            final rowCsv = csvConverter.convert([rowData]);
+            sink.writeln(rowCsv);
+            rowCount++;
+
+            bufferedSize += rowCsv.length + 1; // 1 是换行符的长度
+            // 如果缓冲区大小超过阈值，则存一下文件并更新进度
+            if (bufferedSize >= flushThreshold) {
+              await sink.flush();
+              bufferedSize = 0;
               task = task.copyWith(
-                progressMessage: l10n.export_progress_exporting(0)
+                progressMessage: l10n.export_progress_exporting(rowCount),
               );
               _updateTask(task);
-
-            case QueryStreamItemRow(:final row):
-              final rowData =
-                  row.values.map((e) => e.getString() ?? '').toList();
-              final rowCsv = csvConverter.convert([rowData]);
-              sink.writeln(rowCsv);
-              rowCount++;
-
-              bufferedSize += rowCsv.length + 1; // 1 是换行符的长度
-              // 如果缓冲区大小超过阈值，则存一下文件并更新进度
-              if (bufferedSize >= flushThreshold) {
-                await sink.flush();
-                bufferedSize = 0;
-                task = task.copyWith(
-                  progressMessage: l10n.export_progress_exporting(rowCount),
-                );
-                _updateTask(task);
-              }
-          }
+            }
         }
-        await sink.flush();
-      } finally {
-        await sink.close();
       }
+      await sink.flush();
 
       // 6. 完成
       task = task.copyWith(
@@ -193,6 +190,9 @@ class ExportDataTasksServices extends _$ExportDataTasksServices {
         completedAt: DateTime.now(),
       ));
     } finally {
+      if (sink != null) {
+        await sink.close();
+      }
       if (connModel != null) {
         await connServices.close(connModel.connId);
         await connServices.removeConn(connModel.connId);
