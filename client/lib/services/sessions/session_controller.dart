@@ -72,9 +72,10 @@ class SessionController {
       cache[sessionId]!.aiChatSearchTextController.dispose();
       cache[sessionId]!.chatInputController.dispose();
       cache[sessionId]!.aiChatScrollController.dispose();
-      cache.remove(sessionId);
       // drawer
       cache[sessionId]!.metadataTreeScrollController.dispose();
+      // remove cache
+      cache.remove(sessionId);
     }
   }
 }

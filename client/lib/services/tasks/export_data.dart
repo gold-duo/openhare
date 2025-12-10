@@ -46,11 +46,11 @@ class ExportDataTasksServices extends _$ExportDataTasksServices {
 
   ExportDataModel _createTask(ExportDataModel task) {
     final taskId = _repo.createTask(task.toModel());
-    invalidate();
     final taskModel = _repo.getTaskById(taskId);
     if (taskModel == null) {
       throw Exception('Failed to create task');
     }
+     invalidate();
     return ExportDataModel.fromModel(taskModel);
   }
 
