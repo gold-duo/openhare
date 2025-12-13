@@ -48,7 +48,7 @@ class SessionDrawerMetadata extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     SessionMetadataTreeModel? model =
-        ref.watch(sessionMetadataNotifierProvider);
+        ref.watch(sessionMetadataProvider);
 
     if (model == null) {
       return loadingPage();

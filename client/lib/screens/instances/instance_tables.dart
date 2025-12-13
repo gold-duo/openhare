@@ -69,7 +69,7 @@ class _InstanceTableState extends ConsumerState<InstanceTable> {
                   .read(instancesServicesProvider.notifier)
                   .deleteInstance(instance.id);
 
-              ref.read(instancesNotifierProvider.notifier).refresh();
+              ref.read(instancesProvider.notifier).refresh();
             },
           ),
           RectangleIconButton.small(
@@ -110,7 +110,7 @@ class _InstanceTableState extends ConsumerState<InstanceTable> {
       ),
     ];
 
-    final model = ref.watch(instancesNotifierProvider);
+    final model = ref.watch(instancesProvider);
 
     return BodyPageSkeleton(
       bottomSpaceSize: kSpacingSmall,
@@ -154,7 +154,7 @@ class _InstanceTableState extends ConsumerState<InstanceTable> {
                     ),
                   ),
                   onChanged: (value) {
-                    ref.read(instancesNotifierProvider.notifier).changePage(
+                    ref.read(instancesProvider.notifier).changePage(
                         value,
                         pageNumber: model.currentPage,
                         pageSize: model.pageSize);
@@ -194,7 +194,7 @@ class _InstanceTableState extends ConsumerState<InstanceTable> {
             pageSize: model.pageSize,
             pageNumber: model.currentPage,
             onChange: (pageNumber) {
-              ref.read(instancesNotifierProvider.notifier).changePage(
+              ref.read(instancesProvider.notifier).changePage(
                   instanceSearchTextController.text,
                   pageNumber: pageNumber,
                   pageSize: model.pageSize);

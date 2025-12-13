@@ -117,7 +117,7 @@ class _AddInstanceState extends ConsumerState<AddInstance> {
 
                   addInstanceController.clear();
 
-                  ref.read(instancesNotifierProvider.notifier).changePage("");
+                  ref.read(instancesProvider.notifier).changePage("");
                 }
               },
               child: Text(AppLocalizations.of(context)!.submit_and_continue)),
@@ -130,7 +130,7 @@ class _AddInstanceState extends ConsumerState<AddInstance> {
 
                   addInstanceController.clear();
 
-                  ref.read(instancesNotifierProvider.notifier).changePage("");
+                  ref.read(instancesProvider.notifier).changePage("");
 
                   GoRouter.of(context).go('/instances/list');
                 }

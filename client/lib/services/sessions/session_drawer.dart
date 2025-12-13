@@ -47,7 +47,7 @@ class SessionDrawerServices extends _$SessionDrawerServices {
 class SessionDrawerNotifier extends _$SessionDrawerNotifier {
   @override
   SessionDrawerModel build() {
-    SessionModel? sessionModel = ref.watch(selectedSessionNotifierProvider);
+    SessionModel? sessionModel = ref.watch(selectedSessionProvider);
     if (sessionModel == null) {
       return ref
           .watch(sessionDrawerServicesProvider(const SessionId(value: 0)));

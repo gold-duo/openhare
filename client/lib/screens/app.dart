@@ -101,7 +101,7 @@ class App extends HookConsumerWidget {
       return null;
     }, []);
 
-    final model = ref.watch(systemSettingNotifierProvider);
+    final model = ref.watch(systemSettingProvider);
 
     return MaterialApp.router(
       title: 'openhare',
@@ -169,7 +169,7 @@ class _ScaffoldWithNavRailState extends State<ScaffoldWithNavRail> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-               NavigationRailDestination(
+              NavigationRailDestination(
                 icon: const Icon(Icons.schedule),
                 label: Text(
                   AppLocalizations.of(context)!.scheduled_task,

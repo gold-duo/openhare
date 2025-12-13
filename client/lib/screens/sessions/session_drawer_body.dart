@@ -12,7 +12,7 @@ class SessionDrawerBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessionDrawer = ref.watch(sessionDrawerNotifierProvider);
+    final sessionDrawer = ref.watch(sessionDrawerProvider);
     return Container(
       color: Theme.of(context)
           .colorScheme

@@ -22,8 +22,7 @@ class SqlResultTables extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    SessionSQLResultsModel? model =
-        ref.watch(selectedSQLResultTabNotifierProvider);
+    SessionSQLResultsModel? model = ref.watch(selectedSQLResultTabProvider);
     CommonTabStyle style = CommonTabStyle(
       maxWidth: 100,
       minWidth: 90,
@@ -237,7 +236,7 @@ class SqlResultTable extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final model = ref.watch(selectedSQLResultNotifierProvider);
+    final model = ref.watch(selectedSQLResultProvider);
     if (model == null) {
       return buildEmptyBody(context);
     }

@@ -16,7 +16,7 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    SettingModel model = ref.watch(settingNotifierProvider);
+    SettingModel model = ref.watch(settingProvider);
 
     return PageSkeleton(
       key: const Key("settings"),
@@ -195,7 +195,7 @@ class LLMApiSettingPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final models = ref.watch(lLMAgentNotifierProvider);
+    final models = ref.watch(lLMAgentProvider);
 
     return GridView.extent(
       maxCrossAxisExtent: 350,
@@ -314,7 +314,7 @@ class LLMApiSettingItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final status = ref.watch(lLMAgentNotifierProvider).agents[model.id]!.status;
+    final status = ref.watch(lLMAgentProvider).agents[model.id]!.status;
 
     return Container(
       constraints: const BoxConstraints(),

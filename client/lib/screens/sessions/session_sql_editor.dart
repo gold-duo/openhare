@@ -59,7 +59,7 @@ class SQLEditor extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     SessionSQLEditorModel model =
-        ref.watch(selectedSessionSQLEditorNotifierProvider);
+        ref.watch(selectedSessionSQLEditorProvider);
 
     List<CodeKeywordPrompt> keywordPrompt = [
       for (final keyword in keywords)

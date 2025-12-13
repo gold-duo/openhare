@@ -35,7 +35,7 @@ class SelectedSessionSQLEditorNotifier
     extends _$SelectedSessionSQLEditorNotifier {
   @override
   SessionSQLEditorModel build() {
-    SessionModel? sessionModel = ref.watch(selectedSessionNotifierProvider);
+    SessionModel? sessionModel = ref.watch(selectedSessionProvider);
     if (sessionModel == null) {
       return const SessionSQLEditorModel(sessionId: SessionId(value: 0));
     }
@@ -62,7 +62,7 @@ class SelectedSessionSQLEditorNotifier
 class SessionEditorNotifier extends _$SessionEditorNotifier {
   @override
   SessionEditorModel build() {
-    SessionModel? sessionModel = ref.watch(selectedSessionNotifierProvider);
+    SessionModel? sessionModel = ref.watch(selectedSessionProvider);
     if (sessionModel == null) {
       return ref
           .watch(sessionSQLEditorServiceProvider(const SessionId(value: 0)));

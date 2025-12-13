@@ -18,7 +18,7 @@ class AddSession extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final model = ref.watch(instancesNotifierProvider);
+    final model = ref.watch(instancesProvider);
 
     if (model.totalCount == 0) {
       return EmptyPage(
@@ -151,7 +151,7 @@ class AddSession extends HookConsumerWidget {
                           ),
                           onChanged: (value) {
                             ref
-                                .read(instancesNotifierProvider.notifier)
+                                .read(instancesProvider.notifier)
                                 .changePage(value,
                                     pageNumber: model.currentPage,
                                     pageSize: model.pageSize);
@@ -232,7 +232,7 @@ class AddSession extends HookConsumerWidget {
             pageSize: model.pageSize,
             pageNumber: model.currentPage,
             onChange: (pageNumber) {
-              ref.read(instancesNotifierProvider.notifier).changePage(
+              ref.read(instancesProvider.notifier).changePage(
                   instanceSearchTextController.text,
                   pageNumber: pageNumber,
                   pageSize: model.pageSize);

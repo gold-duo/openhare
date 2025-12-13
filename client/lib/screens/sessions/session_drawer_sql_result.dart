@@ -59,7 +59,7 @@ class SessionDrawerSqlResult extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessionDrawer = ref.watch(sessionDrawerNotifierProvider);
+    final sessionDrawer = ref.watch(sessionDrawerProvider);
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       crossAxisAlignment: CrossAxisAlignment.start,

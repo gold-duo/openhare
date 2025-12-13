@@ -19,8 +19,7 @@ class SessionStatusTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    SessionStatusModel? model =
-        ref.watch(selectedSessionStatusNotifierProvider);
+    SessionStatusModel? model = ref.watch(selectedSessionStatusProvider);
     if (model == null) {
       return Container(
         height: 30,

@@ -116,7 +116,7 @@ class _UpdateInstanceState extends ConsumerState<UpdateInstance> {
 
                   updateInstanceController.clear();
 
-                  ref.read(instancesNotifierProvider.notifier).refresh();
+                  ref.read(instancesProvider.notifier).refresh();
 
                   GoRouter.of(context).go('/instances/list');
                 }

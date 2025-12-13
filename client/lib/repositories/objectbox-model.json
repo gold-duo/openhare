@@ -17,9 +17,9 @@
         {
           "id": "2:4854003834765344230",
           "name": "instanceId",
+          "indexId": "2:3493315780447542151",
           "type": 11,
           "flags": 520,
-          "indexId": "2:3493315780447542151",
           "relationTarget": "InstanceStorage"
         },
         {
@@ -30,9 +30,9 @@
         {
           "id": "5:9052036293034370497",
           "name": "codeId",
+          "indexId": "3:6583598154122015850",
           "type": 11,
           "flags": 520,
-          "indexId": "3:6583598154122015850",
           "relationTarget": "SessionCodeStorage"
         }
       ],

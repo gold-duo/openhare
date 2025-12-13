@@ -5,7 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'instances.g.dart';
 
-@Riverpod()
+@Riverpod(keepAlive: true)
 class InstancesServices extends _$InstancesServices {
   @override
   int build() {

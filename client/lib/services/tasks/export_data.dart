@@ -28,8 +28,8 @@ class ExportDataTasksServices extends _$ExportDataTasksServices {
     return 1;
   }
 
-  invalidate() {
-    ref.invalidate(exportDataTaskPaginationListNotifierProvider);
+  void invalidate() {
+    ref.invalidate(exportDataTaskPaginationListProvider);
     ref.invalidate(latestExportTaskProvider);
     ref.invalidate(taskOverviewServiceProvider);
   }
@@ -50,7 +50,7 @@ class ExportDataTasksServices extends _$ExportDataTasksServices {
     if (taskModel == null) {
       throw Exception('Failed to create task');
     }
-     invalidate();
+    invalidate();
     return ExportDataModel.fromModel(taskModel);
   }
 
@@ -139,7 +139,7 @@ class ExportDataTasksServices extends _$ExportDataTasksServices {
 
       File file = File(finalParameters.exportFilePath);
       sink = file.openWrite(encoding: utf8);
-      
+
       await for (final item
           in connServices.queryStream(connModel.connId, parameters.query)) {
         switch (item) {
@@ -151,13 +151,11 @@ class ExportDataTasksServices extends _$ExportDataTasksServices {
 
             // 5. 开始导出数据
             task = task.copyWith(
-              progressMessage: l10n.export_progress_exporting(0)
-            );
+                progressMessage: l10n.export_progress_exporting(0));
             _updateTask(task);
 
           case QueryStreamItemRow(:final row):
-            final rowData =
-                row.values.map((e) => e.getString() ?? '').toList();
+            final rowData = row.values.map((e) => e.getString() ?? '').toList();
             final rowCsv = csvConverter.convert([rowData]);
             sink.writeln(rowCsv);
             rowCount++;

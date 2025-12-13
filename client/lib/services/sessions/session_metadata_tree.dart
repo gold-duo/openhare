@@ -98,7 +98,7 @@ class SessionMetadataServices extends _$SessionMetadataServices {
 class SessionMetadataNotifier extends _$SessionMetadataNotifier {
   @override
   SessionMetadataTreeModel? build() {
-    SessionModel? sessionModel = ref.watch(selectedSessionNotifierProvider);
+    SessionModel? sessionModel = ref.watch(selectedSessionProvider);
     if (sessionModel == null || sessionModel.instanceId == null) {
       return null;
     }

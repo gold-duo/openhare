@@ -17,8 +17,8 @@ class SessionBodyPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     SessionEditorModel sessionEditor = ref
-        .watch(sessionEditorNotifierProvider); // todo: 合并或者拆分page, 不要两个页面混在一起刷新
-    SessionDrawerModel sessionDrawer = ref.watch(sessionDrawerNotifierProvider);
+        .watch(sessionEditorProvider); // todo: 合并或者拆分page, 不要两个页面混在一起刷新
+    SessionDrawerModel sessionDrawer = ref.watch(sessionDrawerProvider);
     SessionController sessionController =
         SessionController.sessionController(sessionDrawer.sessionId);
 

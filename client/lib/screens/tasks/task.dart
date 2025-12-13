@@ -348,9 +348,8 @@ class _TaskTableState extends ConsumerState<TaskTable> {
 
   @override
   Widget build(BuildContext context) {
-    final model = ref.watch(exportDataTaskPaginationListNotifierProvider);
-    final notifier =
-        ref.read(exportDataTaskPaginationListNotifierProvider.notifier);
+    final model = ref.watch(exportDataTaskPaginationListProvider);
+    final notifier = ref.read(exportDataTaskPaginationListProvider.notifier);
 
     return BodyPageSkeleton(
       bottomSpaceSize: kSpacingSmall,

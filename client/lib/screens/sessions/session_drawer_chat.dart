@@ -37,7 +37,7 @@ class SessionDrawerChat extends ConsumerStatefulWidget {
 class _SessionDrawerChatState extends ConsumerState<SessionDrawerChat> {
   @override
   Widget build(BuildContext context) {
-    SessionAIChatModel? model = ref.watch(sessionAIChatNotifierProvider);
+    SessionAIChatModel? model = ref.watch(sessionAIChatProvider);
     if (model == null) {
       return const Spacer();
     }
@@ -140,7 +140,7 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
 
   @override
   Widget build(BuildContext context) {
-    SessionAIChatModel? model = ref.watch(sessionAIChatNotifierProvider);
+    SessionAIChatModel? model = ref.watch(sessionAIChatProvider);
     if (model == null) {
       return const Spacer();
     }
@@ -763,7 +763,7 @@ class SessionChatMessages extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    SessionAIChatModel? model = ref.watch(sessionAIChatNotifierProvider);
+    SessionAIChatModel? model = ref.watch(sessionAIChatProvider);
     if (model == null) {
       return const Spacer();
     }

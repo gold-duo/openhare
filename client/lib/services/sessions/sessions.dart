@@ -12,6 +12,7 @@ import 'package:client/services/sessions/session_sql_editor.dart';
 import 'package:client/services/sessions/session_sql_result.dart';
 import 'package:client/services/sessions/session_controller.dart';
 import 'package:client/services/tasks/overview.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'sessions.g.dart';
@@ -216,7 +217,7 @@ class SessionsDetailNotifier extends _$SessionsDetailNotifier {
 class SelectedSessionDetailNotifier extends _$SelectedSessionDetailNotifier {
   @override
   SessionDetailModel? build() {
-    return ref.watch(sessionsDetailNotifierProvider.select((s) {
+    return ref.watch(sessionsDetailProvider.select((s) {
       return s.selectedSession;
     }));
   }
@@ -227,13 +228,13 @@ class SessionOpBarNotifier extends _$SessionOpBarNotifier {
   @override
   SessionOpBarModel? build() {
     SessionDetailModel? session =
-        ref.watch(selectedSessionDetailNotifierProvider);
+        ref.watch(selectedSessionDetailProvider);
     if (session == null) {
       return null;
     }
 
     SessionDrawerModel? sessionDrawer =
-        ref.watch(sessionDrawerNotifierProvider);
+        ref.watch(sessionDrawerProvider);
     if (sessionDrawer == null) {
       return null;
     }
@@ -259,13 +260,13 @@ class SelectedSessionStatusNotifier extends _$SelectedSessionStatusNotifier {
   @override
   SessionStatusModel? build() {
     SessionDetailModel? session =
-        ref.watch(selectedSessionDetailNotifierProvider);
+        ref.watch(selectedSessionDetailProvider);
     if (session == null) {
       return null;
     }
 
     SQLResultDetailModel? sqlResultModel =
-        ref.watch(selectedSQLResultNotifierProvider);
+        ref.watch(selectedSQLResultProvider);
 
     return SessionStatusModel(
       sessionId: session.sessionId,

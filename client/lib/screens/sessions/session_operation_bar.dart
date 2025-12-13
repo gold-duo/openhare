@@ -260,7 +260,7 @@ class SessionOpBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    SessionOpBarModel? model = ref.watch(sessionOpBarNotifierProvider);
+    SessionOpBarModel? model = ref.watch(sessionOpBarProvider);
 
     if (model == null) {
       return Container(
@@ -409,7 +409,7 @@ class SessionDrawerBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final model = ref.watch(sessionDrawerNotifierProvider);
+    final model = ref.watch(sessionDrawerProvider);
     final services =
         ref.read(sessionDrawerServicesProvider(model.sessionId).notifier);
     return Row(

@@ -4,6 +4,7 @@ import 'package:client/repositories/sessions/session_sql_result.dart';
 import 'package:client/services/sessions/session_controller.dart';
 import 'package:client/services/sessions/sessions.dart';
 import 'package:db_driver/db_driver.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'session_sql_result.g.dart';
@@ -116,7 +117,7 @@ class SQLResultsServices extends _$SQLResultsServices {
 class SelectedSQLResultTabNotifier extends _$SelectedSQLResultTabNotifier {
   @override
   SessionSQLResultsModel? build() {
-    SessionModel? sessionModel = ref.watch(selectedSessionNotifierProvider);
+    SessionModel? sessionModel = ref.watch(selectedSessionProvider);
     if (sessionModel == null) {
       return null;
     }
@@ -130,7 +131,7 @@ class SelectedSQLResultTabNotifier extends _$SelectedSQLResultTabNotifier {
 class SelectedSQLResultNotifier extends _$SelectedSQLResultNotifier {
   @override
   SQLResultDetailModel? build() {
-    SessionModel? sessionModel = ref.watch(selectedSessionNotifierProvider);
+    SessionModel? sessionModel = ref.watch(selectedSessionProvider);
     if (sessionModel == null) {
       return null;
     }
