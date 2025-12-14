@@ -7,7 +7,6 @@ import 'package:client/services/ai/chat.dart';
 import 'package:client/services/instances/instances.dart';
 import 'package:client/services/sessions/session_conn.dart';
 import 'package:client/services/sessions/session_drawer.dart';
-import 'package:client/services/sessions/session_metadata_tree.dart';
 import 'package:client/services/sessions/session_sql_editor.dart';
 import 'package:client/services/sessions/session_sql_result.dart';
 import 'package:client/services/sessions/session_controller.dart';
@@ -91,7 +90,6 @@ class SessionsServices extends _$SessionsServices {
     // 5. delete provider status
     ref.invalidate(sessionSQLEditorServiceProvider(session.sessionId));
     ref.invalidate(sessionDrawerServicesProvider(session.sessionId));
-    ref.invalidate(sessionMetadataServicesProvider(session.sessionId));
     SessionController.removeSessionController(session.sessionId);
   }
 

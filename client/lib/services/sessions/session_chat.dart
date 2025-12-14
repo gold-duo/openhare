@@ -1,9 +1,9 @@
 import 'package:client/models/ai.dart';
 import 'package:client/models/instances.dart';
 import 'package:client/models/sessions.dart';
+import 'package:client/repositories/instances/instances.dart';
 import 'package:client/services/ai/agent.dart';
 import 'package:client/services/ai/chat.dart';
-import 'package:client/services/instances/metadata.dart';
 import 'package:client/services/sessions/sessions.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -13,10 +13,10 @@ part 'session_chat.g.dart';
 @Riverpod(keepAlive: true)
 class SessionAIChatNotifier extends _$SessionAIChatNotifier {
   @override
-  SessionAIChatModel? build() {
+  Future<SessionAIChatModel> build() async {
     SessionDetailModel? session = ref.watch(selectedSessionDetailProvider);
     if (session == null) {
-      return null;
+      throw Exception("Session not found");
     }
     LLMAgentsModel llmAgents = ref.watch(lLMAgentServiceProvider);
 
@@ -36,10 +36,11 @@ class SessionAIChatNotifier extends _$SessionAIChatNotifier {
       ref.read(aIChatServiceProvider.notifier).create(aiChatModel);
     }
 
-    AsyncValue<InstanceMetadataModel>? metadata; //todo: 如何优雅处理嵌套异步
+    InstanceMetadataModel? metadata; //todo: 如何优雅处理嵌套异步
     if (session.instanceId != null) {
-      metadata =
-          ref.watch(instanceMetadataServicesProvider(session.instanceId!));
+      metadata = await ref
+          .watch(instanceRepoProvider)
+          .getMetadata(session.instanceId!);
     }
 
     return SessionAIChatModel(
@@ -47,12 +48,7 @@ class SessionAIChatNotifier extends _$SessionAIChatNotifier {
       sessionId: session.sessionId,
       currentSchema: session.currentSchema,
       dbType: session.dbType,
-      metadata: (metadata == null)
-          ? null
-          : metadata.when(
-              data: (data) => data.metadata,
-              error: (error, trace) => null,
-              loading: () => null),
+      metadata: metadata?.metadata,
       connId: session.connId,
       state: session.connState,
       llmAgents: llmAgents,

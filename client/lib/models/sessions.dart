@@ -315,6 +315,6 @@ abstract class SessionAIChatModel with _$SessionAIChatModel {
 abstract class SessionMetadataTreeModel with _$SessionMetadataTreeModel {
   const factory SessionMetadataTreeModel({
     required SessionId sessionId,
-    required StateValue<TreeController<DataNode>> metadataTreeCtrl,
+    required TreeController<DataNode> metadataTreeCtrl,
   }) = _SessionMetadataTreeModel;
 }

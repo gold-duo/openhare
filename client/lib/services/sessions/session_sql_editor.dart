@@ -40,13 +40,15 @@ class SelectedSessionSQLEditorNotifier
       return const SessionSQLEditorModel(sessionId: SessionId(value: 0));
     }
     if (sessionModel.instanceId != null) {
-      InstanceMetadataModel? sessionMeta =
+      AsyncValue<InstanceMetadataModel>? sessionMeta =
           ref.watch(instanceMetadataServicesProvider(sessionModel.instanceId!));
       return SessionSQLEditorModel(
         sessionId: sessionModel.sessionId,
         currentSchema: sessionModel.currentSchema,
-        metadata: sessionMeta?.metadata
-            .match((value) => value, (error) => null, () => null),
+        metadata: sessionMeta?.when(
+            data: (data) => data.metadata,
+            error: (error, trace) => null,
+            loading: () => null),
       );
     }
 

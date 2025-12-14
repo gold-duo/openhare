@@ -10,7 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:client/widgets/loading.dart';
 
 class SessionDrawerMetadata extends ConsumerWidget {
-  const SessionDrawerMetadata({Key? key}) : super(key: key);
+  const SessionDrawerMetadata({super.key});
 
   Widget loadingPage() {
     return const Align(
@@ -19,8 +19,7 @@ class SessionDrawerMetadata extends ConsumerWidget {
     );
   }
 
-  Widget errorPage(
-      BuildContext context, WidgetRef ref, String error, SessionId sessionId) {
+  Widget errorPage(BuildContext context, WidgetRef ref, String error) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -32,8 +31,8 @@ class SessionDrawerMetadata extends ConsumerWidget {
           icon: Icons.refresh,
           onPressed: () {
             ref
-                .read(sessionMetadataServicesProvider(sessionId).notifier)
-                .refresh();
+                .read(selectedSessionMetadataProvider.notifier)
+                .refreshMetadata();
           },
         )
       ],
@@ -47,26 +46,21 @@ class SessionDrawerMetadata extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    SessionMetadataTreeModel? model =
-        ref.watch(sessionMetadataProvider);
-
-    if (model == null) {
-      return loadingPage();
-    }
-
-    SessionController sessionController =
-        SessionController.sessionController(model.sessionId);
+    AsyncValue<SessionMetadataTreeModel> model =
+        ref.watch(selectedSessionMetadataProvider);
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-            child: model.metadataTreeCtrl.match(
-          (value) =>
-              bodyPage(value, sessionController.metadataTreeScrollController),
-          (error) => errorPage(context, ref, error, model.sessionId),
-          () => loadingPage(),
+            child: model.when(
+          data: (value) => bodyPage(
+              value.metadataTreeCtrl,
+              SessionController.sessionController(value.sessionId)
+                  .metadataTreeScrollController),
+          error: (error, trace) => errorPage(context, ref, error.toString()),
+          loading: () => loadingPage(),
         )),
       ],
     );

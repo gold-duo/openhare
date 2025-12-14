@@ -1,6 +1,5 @@
 import 'package:client/models/instances.dart';
 import 'package:client/repositories/instances/instances.dart';
-import 'package:client/services/instances/metadata.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'instances.g.dart';
@@ -30,8 +29,6 @@ class InstancesServices extends _$InstancesServices {
   Future<void> deleteInstance(InstanceId id) async {
     final repo = ref.read(instanceRepoProvider);
     await repo.delete(id);
-    ref.invalidate(
-        instanceMetadataServicesProvider(id)); // close metadata provider
   }
 
   bool isInstanceExist(String name) {

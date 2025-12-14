@@ -77,16 +77,6 @@ class SessionConnRepoImpl extends SessionConnRepo {
     await conns[connId.value]!.setCurrentSchema(schema);
   }
 
-  // @override
-  // Future<List<String>> getSchemas(ConnId connId) {
-  //   return conns[connId.value]!.getSchemas();
-  // }
-
-  // @override
-  // Future<List<MetaDataNode>> getMetadata(ConnId connId) {
-  //   return conns[connId.value]!.metadata();
-  // }
-
   @override
   Future<BaseQueryResult?> query(ConnId connId, String query) {
     return conns[connId.value]!.query(query);
