@@ -1,6 +1,8 @@
+import 'package:client/models/instances.dart';
 import 'package:client/models/sessions.dart';
 import 'package:client/screens/tasks/export_data.dart';
 import 'package:client/screens/tasks/task_overview.dart';
+import 'package:client/services/instances/instances.dart';
 import 'package:client/services/sessions/session_drawer.dart';
 import 'package:client/services/sessions/session_sql_editor.dart';
 import 'package:client/services/sessions/session_sql_result.dart';
@@ -203,8 +205,7 @@ class SessionOpBar extends ConsumerWidget {
     );
   }
 
-  Widget exportDataWidget(
-      BuildContext context, SessionOpBarModel model) {
+  Widget exportDataWidget(BuildContext context, SessionOpBarModel model) {
     return RectangleIconButton.medium(
       tooltip: AppLocalizations.of(context)!.button_tooltip_sql_result_download,
       icon: Icons.file_download_sharp,
@@ -282,6 +283,7 @@ class SessionOpBar extends ConsumerWidget {
 
           // schema list
           SchemaBar(
+            instanceId: model.instanceId,
             connId: model.connId,
             disable: !SQLConnectState.isIdle(model.state),
             currentSchema: model.currentSchema,
@@ -304,15 +306,17 @@ class SessionOpBar extends ConsumerWidget {
 class SchemaBar extends ConsumerStatefulWidget {
   final String? currentSchema;
   final bool disable;
+  final InstanceId? instanceId;
   final ConnId? connId;
   final Color? iconColor;
 
   const SchemaBar({
     Key? key,
-    this.connId,
+    this.instanceId,
     required this.disable,
     this.currentSchema,
     this.iconColor,
+    this.connId,
   }) : super(key: key);
 
   @override
@@ -350,9 +354,9 @@ class _SchemaBarState extends ConsumerState<SchemaBar> {
                 Overlay.of(context).context.findRenderObject() as RenderBox;
             final overlayPos = overlay.localToGlobal(Offset.zero);
 
-            List<String> schemas = await ref
-                .read(sessionConnsServicesProvider.notifier)
-                .getSchemas(widget.connId!);
+            List<String>? schemas = await ref
+                .read(instancesServicesProvider.notifier)
+                .getSchemas(widget.instanceId!);
 
             // todo
             showMenu(

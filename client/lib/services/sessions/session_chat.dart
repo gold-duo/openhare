@@ -36,7 +36,7 @@ class SessionAIChatNotifier extends _$SessionAIChatNotifier {
       ref.read(aIChatServiceProvider.notifier).create(aiChatModel);
     }
 
-    InstanceMetadataModel? metadata;
+    AsyncValue<InstanceMetadataModel>? metadata; //todo: 如何优雅处理嵌套异步
     if (session.instanceId != null) {
       metadata =
           ref.watch(instanceMetadataServicesProvider(session.instanceId!));
@@ -47,8 +47,12 @@ class SessionAIChatNotifier extends _$SessionAIChatNotifier {
       sessionId: session.sessionId,
       currentSchema: session.currentSchema,
       dbType: session.dbType,
-      metadata: metadata?.metadata
-          .match((value) => value, (error) => null, () => null),
+      metadata: (metadata == null)
+          ? null
+          : metadata.when(
+              data: (data) => data.metadata,
+              error: (error, trace) => null,
+              loading: () => null),
       connId: session.connId,
       state: session.connState,
       llmAgents: llmAgents,

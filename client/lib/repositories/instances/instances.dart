@@ -1,4 +1,5 @@
 import 'package:client/models/instances.dart';
+import 'package:client/repositories/instances/session_conn.dart';
 import 'package:client/repositories/objectbox.g.dart';
 import 'package:objectbox/objectbox.dart';
 import 'package:client/repositories/repo.dart';
@@ -124,6 +125,8 @@ class InstanceRepoImpl extends InstanceRepo {
   final ObjectBox ob;
   final Box<InstanceStorage> _instanceBox;
 
+  Map<InstanceId, InstanceMetadataModel> metadataCache = {};
+
   InstanceRepoImpl(this.ob) : _instanceBox = ob.store.box();
 
   @override
@@ -134,10 +137,14 @@ class InstanceRepoImpl extends InstanceRepo {
   @override
   Future<void> update(InstanceModel instance) async {
     await _instanceBox.putAsync(InstanceStorage.fromModel(instance));
+    metadataCache.remove(instance.id);
   }
 
   @override
-  Future<void> delete(InstanceId id) => _instanceBox.removeAsync(id.value);
+  Future<void> delete(InstanceId id) async {
+    await _instanceBox.removeAsync(id.value);
+    metadataCache.remove(id);
+  }
 
   @override
 // todo: aync
@@ -215,6 +222,70 @@ class InstanceRepoImpl extends InstanceRepo {
     instance.activeSchemas.add(schema);
     await _instanceBox.putAsync(instance);
     return;
+  }
+
+  @override
+  Future<List<String>> getSchemas(InstanceId instanceId) async {
+    final instance = _instanceBox.get(instanceId.value);
+    if (instance == null) {
+      return List.empty();
+    }
+    final model = metadataCache[instanceId];
+
+    if (model == null) {
+      return List.empty();
+    }
+    final schemas = List<String>.empty(growable: true);
+    for (final meta in model.metadata) {
+      meta.visitor((node, parent) {
+        if (node.type == MetaType.schema) {
+          schemas.add(node.value);
+        }
+        return true;
+      });
+    }
+    return schemas;
+  }
+
+  Future<InstanceMetadataModel> _getMetadata(InstanceModel instance) async {
+    SessionConn? conn;
+    try {
+      conn = SessionConn(model: instance);
+      await conn.connect();
+      final metadataNode = await conn.metadata();
+      return InstanceMetadataModel(metadata: metadataNode);
+    } catch (e) {
+      rethrow;
+    } finally {
+      if (conn != null) {
+        await conn.close();
+      }
+    }
+  }
+
+  @override
+  Future<InstanceMetadataModel> getMetadata(InstanceId instanceId) async {
+    final metadata = metadataCache[instanceId];
+    if (metadata != null) {
+      return metadata;
+    }
+    final instance = _instanceBox.get(instanceId.value);
+    if (instance == null) {
+      throw Exception("Instance not found");
+    }
+    final newMetadata = await _getMetadata(instance.toModel());
+    metadataCache[instanceId] = newMetadata;
+    return newMetadata;
+  }
+
+  @override
+  Future<void> refreshMetadata(InstanceId instanceId) async {
+    final instance = _instanceBox.get(instanceId.value);
+    if (instance == null) {
+      throw Exception("Instance not found");
+    }
+    final newMetadata = await _getMetadata(instance.toModel());
+    metadataCache[instanceId] = newMetadata;
   }
 }
 

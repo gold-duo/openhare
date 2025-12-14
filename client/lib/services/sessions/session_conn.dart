@@ -1,7 +1,7 @@
 import 'package:client/models/instances.dart';
 import 'package:client/models/sessions.dart';
 import 'package:client/repositories/instances/instances.dart';
-import 'package:client/repositories/sessions/session_conn.dart';
+import 'package:client/repositories/instances/session_conn.dart';
 import 'package:db_driver/db_driver.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -52,14 +52,6 @@ class SessionConnsServices extends _$SessionConnsServices {
   Future<void> setCurrentSchema(ConnId connId, String schema) async {
     await ref.read(sessionConnRepoProvider).setCurrentSchema(connId, schema);
     ref.invalidateSelf();
-  }
-
-  Future<List<String>> getSchemas(ConnId connId) async {
-    return ref.read(sessionConnRepoProvider).getSchemas(connId);
-  }
-
-  Future<List<MetaDataNode>> getMetadata(ConnId connId) async {
-    return ref.read(sessionConnRepoProvider).getMetadata(connId);
   }
 
   Future<BaseQueryResult?> query(ConnId connId, String query) async {
