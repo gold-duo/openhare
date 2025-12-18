@@ -160,13 +160,6 @@ class _DataGridState extends State<DataGrid> {
     return (contentWidth + 12.0).clamp(parentWidth, double.infinity);
   }
 
-  /// 计算总高度 - 确保不小于父组件高度（减去表头高度）
-  double _calculateTotalHeight(double parentHeight) {
-    final contentHeight = widget.controller.rows.length * widget.rowHeight;
-    final minHeight = parentHeight - widget.headerHeight;
-    return (contentHeight + 12.0).clamp(minHeight, double.infinity);
-  }
-
   /// 更新列宽
   void _updateColumnWidth(int index, double width) {
     widget.controller.updateColumnWidth(index, width);
@@ -258,52 +251,51 @@ class _DataGridState extends State<DataGrid> {
 
   /// 构建数据主体
   Widget _buildBody(BuildContext context, double parentWidth, double parentHeight) {
-    return Stack(
-      children: [
-        Scrollbar(
+    final totalWidth = _calculateTotalWidth(parentWidth);
+    
+    return Scrollbar(
+      controller: _bodyHorizontalController,
+      thumbVisibility: false,
+      notificationPredicate: (notification) => notification.metrics.axis == Axis.horizontal,
+      child: Scrollbar(
+        controller: _verticalController,
+        thumbVisibility: false,
+        notificationPredicate: (notification) => notification.metrics.axis == Axis.vertical,
+        child: SingleChildScrollView(
           controller: _bodyHorizontalController,
-          thumbVisibility: false,
-          notificationPredicate: (notification) => notification.metrics.axis == Axis.horizontal,
-          child: Scrollbar(
-            controller: _verticalController,
-            thumbVisibility: false,
-            notificationPredicate: (notification) => notification.metrics.axis == Axis.vertical,
-            child: SingleChildScrollView(
-              controller: _verticalController,
-              scrollDirection: Axis.vertical,
-              physics: const ClampingScrollPhysics(),
-              child: SingleChildScrollView(
-                controller: _bodyHorizontalController,
-                scrollDirection: Axis.horizontal,
+          scrollDirection: Axis.horizontal,
+          physics: const ClampingScrollPhysics(),
+          child: SizedBox(
+            width: totalWidth,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12.0), // 底部留白
+              child: ListView.builder(
+                controller: _verticalController,
                 physics: const ClampingScrollPhysics(),
-                child: SizedBox(
-                  width: _calculateTotalWidth(parentWidth),
-                  height: _calculateTotalHeight(parentHeight),
-                  child: _buildRow(context),
-                ),
+                itemCount: widget.controller.rows.length,
+                itemExtent: widget.rowHeight,
+                cacheExtent: widget.rowHeight * 5, // 缓存额外的5行
+                itemBuilder: (context, index) {
+                  return _buildDataRow(context, index, totalWidth);
+                },
               ),
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 
-  /// 构建数据内容
-  Widget _buildRow(BuildContext context) {
-    return Column(
-      children: [
-        for (int i = 0; i < widget.controller.rows.length; i++)
-          SizedBox(
-            height: widget.rowHeight,
-            child: Row(
-              children: [
-                for (int j = 0; j < widget.controller.columns.length; j++)
-                  _buildCell(context, Postion(rowIndex: i, columnIndex: j)),
-              ],
-            ),
-          ),
-      ],
+  /// 构建单行数据
+  Widget _buildDataRow(BuildContext context, int rowIndex, double totalWidth) {
+    return SizedBox(
+      height: widget.rowHeight,
+      child: Row(
+        children: [
+          for (int j = 0; j < widget.controller.columns.length; j++)
+            _buildCell(context, Postion(rowIndex: rowIndex, columnIndex: j)),
+        ],
+      ),
     );
   }
 
@@ -312,14 +304,14 @@ class _DataGridState extends State<DataGrid> {
     final colorScheme = Theme.of(context).colorScheme;
     final width = widget.controller.columnWidths[postion.columnIndex];
     final cell = widget.controller.rows[postion.rowIndex].cells[postion.columnIndex];
+    final isSelected = widget.controller.selectedCellPostion != null && 
+                      widget.controller.selectedCellPostion == postion;
+    final isRowSelected = widget.controller.selectedCellPostion != null &&
+                         postion.rowIndex == widget.controller.selectedCellPostion!.rowIndex;
 
     return DataGridCellWidget(
-      selected:
-          (widget.controller.selectedCellPostion != null) ? (widget.controller.selectedCellPostion == postion) : false,
-      backgroundColor: (widget.controller.selectedCellPostion != null &&
-              postion.rowIndex == widget.controller.selectedCellPostion!.rowIndex)
-          ? colorScheme.surfaceContainerLow
-          : null,
+      selected: isSelected,
+      backgroundColor: isRowSelected ? colorScheme.surfaceContainerLow : null,
       child: SizedBox(
         width: width,
         height: widget.rowHeight,
@@ -333,12 +325,18 @@ class _DataGridState extends State<DataGrid> {
             widget.controller.updateSelectedCell(postion);
             widget.onCellDoubleTap?.call(postion);
           },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            alignment: Alignment.centerLeft,
-            padding: const EdgeInsets.symmetric(horizontal: kSpacingSmall),
-            child: cell.contentBuilder(context),
-          ),
+          child: isSelected
+              ? AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.symmetric(horizontal: kSpacingSmall),
+                  child: cell.contentBuilder(context),
+                )
+              : Container(
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.symmetric(horizontal: kSpacingSmall),
+                  child: cell.contentBuilder(context),
+                ),
         ),
       ),
     );

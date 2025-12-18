@@ -10,12 +10,13 @@ class SessionDrawerServices extends _$SessionDrawerServices {
   @override
   SessionDrawerModel build(SessionId sessionId) {
     return SessionDrawerModel(
-        sessionId: sessionId,
-        drawerPage: DrawerPage.metadataTree,
-        sqlResult: null,
-        sqlColumn: null,
-        showRecord: false,
-        isRightPageOpen: true);
+      sessionId: sessionId,
+      drawerPage: DrawerPage.metadataTree,
+      sqlResult: null,
+      sqlColumn: null,
+      showRecord: false,
+      isRightPageOpen: true,
+    );
   }
 
   void showRightPage() {
