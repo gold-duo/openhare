@@ -6,14 +6,13 @@ part 'instances.freezed.dart';
 part 'instances.g.dart';
 
 abstract class InstanceRepo {
-  Future<void> add(InstanceModel model);
-  Future<void> update(InstanceModel model);
-  Future<void> delete(InstanceId id);
+  void add(InstanceModel model);
+  void update(InstanceModel model);
+  void delete(InstanceId id);
   bool isInstanceExist(String name);
   InstanceModel? getInstanceByName(String name);
   InstanceModel? getInstanceById(InstanceId id);
-  List<InstanceModel> search(String key, {int? pageNumber, int? pageSize});
-  int count({String? key});
+  InstanceListModel isntances(String key, {int? pageNumber, int? pageSize});
   List<InstanceModel> getActiveInstances(int top);
   Future<void> addActiveInstance(InstanceId id);
   Future<void> addInstanceActiveSchema(InstanceId id, String schema);
@@ -66,14 +65,20 @@ abstract class InstanceModel with _$InstanceModel {
 }
 
 @freezed
+abstract class InstanceListModel with _$InstanceListModel {
+  const factory InstanceListModel({
+    required List<InstanceModel> instances,
+    required int count,
+  }) = _InstanceListModel;
+}
+
+@freezed
 abstract class PaginationInstanceListModel with _$PaginationInstanceListModel {
   const factory PaginationInstanceListModel({
-    required List<InstanceModel> instances,
+    required InstanceListModel instances,
     required int currentPage,
     required int pageSize,
-    required int count,
     required String key,
-    required int totalCount, // 总个数，非筛选过后的
   }) = _PaginationInstanceListModel;
 }
 

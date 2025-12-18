@@ -104,16 +104,12 @@ class _UpdateInstanceState extends ConsumerState<UpdateInstance> {
                     },
               child: Text(AppLocalizations.of(context)!.db_instance_test)),
           TextButton(
-              onPressed: () async {
+              onPressed: () {
                 if (updateInstanceController.validate()) {
-                  await ref.read(instancesServicesProvider.notifier).updateInstance(
+                  ref.read(instancesServicesProvider.notifier).updateInstance(
                         updateInstanceController.getInstanceModel(),
                       );
-
                   updateInstanceController.clear();
-
-                  ref.read(instancesProvider.notifier).refresh();
-
                   GoRouter.of(context).go('/instances/list');
                 }
               },

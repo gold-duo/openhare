@@ -1,5 +1,6 @@
 import 'package:client/models/instances.dart';
 import 'package:client/repositories/instances/session_conn.dart';
+import 'package:objectbox/objectbox.dart';
 import 'package:client/repositories/objectbox.g.dart';
 import 'package:client/repositories/repo.dart';
 import 'package:client/utils/active_set.dart';
@@ -126,19 +127,19 @@ class InstanceRepoImpl extends InstanceRepo {
   InstanceRepoImpl(this.ob) : _instanceBox = ob.store.box();
 
   @override
-  Future<void> add(InstanceModel instance) async {
-    await _instanceBox.putAsync(InstanceStorage.fromModel(instance));
+  void add(InstanceModel instance) {
+    _instanceBox.put(InstanceStorage.fromModel(instance));
   }
 
   @override
-  Future<void> update(InstanceModel instance) async {
-    await _instanceBox.putAsync(InstanceStorage.fromModel(instance));
+  void update(InstanceModel instance) {
+    _instanceBox.put(InstanceStorage.fromModel(instance));
     metadataCache.remove(instance.id);
   }
 
   @override
-  Future<void> delete(InstanceId id) async {
-    await _instanceBox.removeAsync(id.value);
+  void delete(InstanceId id) {
+    _instanceBox.remove(id.value);
     metadataCache.remove(id);
   }
 
@@ -163,27 +164,36 @@ class InstanceRepoImpl extends InstanceRepo {
   }
 
   @override
-// todo: aync
-  List<InstanceModel> search(String key, {int? pageNumber, int? pageSize}) {
-    final build = _instanceBox
-        .query(InstanceStorage_.name.contains(key))
-        .order(InstanceStorage_.createdAt, flags: Order.descending)
-        .build();
-    build.limit = (pageSize ?? 10);
-    build.offset = ((pageNumber ?? 1) - 1) * (pageSize ?? 10);
-    final instances = build.find();
+  InstanceListModel isntances(String key, {int? pageNumber, int? pageSize}) {
+    final sanitizedKey = key.trim();
+    Condition<InstanceStorage>? condition;
 
-    return instances.map((e) => e.toModel()).toList();
-  }
-
-  @override
-// todo: aync
-  int count({String? key}) {
-    if (key == null) {
-      return _instanceBox.count();
+    if (sanitizedKey.isNotEmpty) {
+      condition = InstanceStorage_.name.contains(sanitizedKey, caseSensitive: false);
     }
-    final build = _instanceBox.query(InstanceStorage_.name.contains(key)).build();
-    return build.count();
+
+    // 统计总数
+    final countQuery = _instanceBox.query(condition).build();
+    final totalCount = countQuery.count();
+    countQuery.close();
+
+    // 分页参数
+    final currentPage = (pageNumber != null && pageNumber > 0) ? pageNumber : 1;
+    final size = (pageSize != null && pageSize > 0) ? pageSize : 10;
+    final offset = (currentPage - 1) * size;
+
+    // 获取分页数据（按创建时间倒序）
+    final dataQuery = _instanceBox.query(condition).order(InstanceStorage_.createdAt, flags: Order.descending).build();
+    dataQuery.limit = size;
+    dataQuery.offset = offset;
+
+    final instanceList = dataQuery.find();
+    dataQuery.close();
+
+    return InstanceListModel(
+      instances: instanceList.map((e) => e.toModel()).toList(),
+      count: totalCount,
+    );
   }
 
   @override

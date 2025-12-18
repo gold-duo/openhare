@@ -47,6 +47,7 @@ dependencies:
   file_picker: ^10.3.7
   csv: ^6.0.0
   re_editor: ^0.6.0
+  re_highlight: ^0.0.3
   collection: ^1.19.1
   sql_editor:
     path:  ../pkg/sql-editor/

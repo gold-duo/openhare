@@ -4,6 +4,7 @@ import 'package:client/models/instances.dart';
 import 'package:client/models/sessions.dart';
 import 'package:db_driver/db_driver.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter/foundation.dart';
 
 part 'session_conn.g.dart';
 
@@ -138,7 +139,6 @@ class SessionConn {
       startHealthCheck();
     } catch (e) {
       errorMsg = e.toString();
-      print("conn error: $e");
       _setState(SQLConnectState.failed);
       rethrow;
     }
@@ -162,15 +162,15 @@ class SessionConn {
         return;
       }
       await conn2!.ping();
-      print("Connection $hashCode is alive");
+      debugPrint("Connection $hashCode is alive");
     } catch (e) {
-      print("Connection $hashCode check failed: $e");
+      debugPrint("Connection $hashCode check failed: $e");
 
       _setState(SQLConnectState.unHealth);
       try {
         _onStateChangedCallback?.call();
       } catch (callbackError) {
-        print("调用 onCloseCallback 时出错: $callbackError");
+        debugPrint("调用 onCloseCallback 时出错: $callbackError");
       }
     }
   }
@@ -221,7 +221,7 @@ class SessionConn {
     try {
       await conn2!.killQuery();
     } catch (e) {
-      print("Failed to kill query: $e");
+      debugPrint("Failed to kill query: $e");
     }
   }
 

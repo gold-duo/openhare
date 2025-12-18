@@ -70,15 +70,19 @@ class SessionRepoImpl extends SessionRepo {
   }
 
   @override
-  Future<SessionId> newSession() async {
-    final session = await _sessionBox.putAndGetAsync(SessionStorage());
-    _sessions.add(session);
-    return SessionId(value: session.id);
+  SessionId newSession() {
+    final sessionId = _sessionBox.put(SessionStorage());
+    final session = _sessionBox.get(sessionId);
+    // 更新缓存, 理论上不会为空
+    if (session != null) {
+      _sessions.add(session);
+    }
+    return SessionId(value: sessionId);
   }
 
   @override
-  Future<void> updateSession(SessionId sessionId, {InstanceModel? instance, String? currentSchema}) async {
-    final session = await _sessionBox.getAsync(sessionId.value);
+  void updateSession(SessionId sessionId, {InstanceModel? instance, String? currentSchema}) {
+    final session = _sessionBox.get(sessionId.value);
     if (session == null) {
       return;
     }
@@ -88,7 +92,8 @@ class SessionRepoImpl extends SessionRepo {
     if (currentSchema != null) {
       session.currentSchema = currentSchema;
     }
-    await _sessionBox.putAsync(session);
+
+    _sessionBox.put(session);
 
     // 更新缓存
     final sessionCache = _getSession(sessionId);
@@ -109,20 +114,20 @@ class SessionRepoImpl extends SessionRepo {
   }
 
   @override
-  Future<void> deleteSession(SessionId sessionId) async {
-    final session = await _sessionBox.getAsync(sessionId.value);
+  void deleteSession(SessionId sessionId) {
+    final session = _sessionBox.get(sessionId.value);
     if (session == null) {
       return;
     }
     if (session.code.hasValue) {
-      await _sessionCodeBox.removeAsync(sessionId.value);
+      _sessionCodeBox.remove(sessionId.value);
     }
-    await _sessionBox.removeAsync(sessionId.value);
+    _sessionBox.remove(sessionId.value);
 
     // 从缓存中移除
     final sessionCache = _getSession(sessionId);
     if (sessionCache != null) {
-      _sessions.remove(sessionCache);
+      _sessions.removeAt(_sessions.indexOf(sessionCache));
     }
   }
 

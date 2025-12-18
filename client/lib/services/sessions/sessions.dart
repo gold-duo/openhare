@@ -41,14 +41,15 @@ class SessionsServices extends _$SessionsServices {
   Future<void> addSession(InstanceModel instance, {String? schema}) async {
     SessionId selectedSessionId;
     if (state.selectedSession == null) {
-      selectedSessionId = await ref.read(sessionRepoProvider).newSession();
+      selectedSessionId = ref.read(sessionRepoProvider).newSession();
     } else {
       selectedSessionId = state.selectedSession!.sessionId;
     }
 
-    await ref.read(instancesServicesProvider.notifier).addActiveInstance(instance.id, schema: schema);
+    // is async
+    ref.read(instancesServicesProvider.notifier).addActiveInstance(instance.id, schema: schema);
 
-    await ref.read(sessionRepoProvider).updateSession(selectedSessionId, instance: instance, currentSchema: schema);
+    ref.read(sessionRepoProvider).updateSession(selectedSessionId, instance: instance, currentSchema: schema);
 
     ref.invalidateSelf();
 
@@ -56,8 +57,8 @@ class SessionsServices extends _$SessionsServices {
     connectSession(selectedSessionId);
   }
 
-  Future<void> newSession() async {
-    await ref.read(sessionRepoProvider).newSession();
+  void newSession() {
+    ref.read(sessionRepoProvider).newSession();
     ref.invalidateSelf();
   }
 
@@ -65,7 +66,7 @@ class SessionsServices extends _$SessionsServices {
     SessionModel session = state.sessions[index];
 
     // 1. delete session
-    await ref.read(sessionRepoProvider).deleteSession(session.sessionId);
+    ref.read(sessionRepoProvider).deleteSession(session.sessionId);
     ref.invalidateSelf();
 
     // 2. kill and close conn
@@ -110,7 +111,7 @@ class SessionsServices extends _$SessionsServices {
 
     // connect conn
     await connsServices.connect(connId, onSchemaChangedCallback: (schema) async {
-      await ref.read(sessionRepoProvider).updateSession(sessionId, currentSchema: schema);
+      ref.read(sessionRepoProvider).updateSession(sessionId, currentSchema: schema);
 
       await ref.read(instancesServicesProvider.notifier).addActiveInstance(session.instanceId!, schema: schema);
 

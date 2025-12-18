@@ -3,6 +3,7 @@ import 'package:client/repositories/ai/chat.dart';
 import 'package:client/services/ai/agent.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:llm_dart/llm_dart.dart';
+import 'package:flutter/foundation.dart';
 
 part 'chat.g.dart';
 
@@ -107,7 +108,7 @@ class AIChatService extends _$AIChatService {
             break;
 
           case ToolCallDeltaEvent(toolCall: final toolCall):
-            print('warning: $toolCall');
+            debugPrint('warning: $toolCall');
             break;
         }
       }

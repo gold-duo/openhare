@@ -10,13 +10,13 @@ import 'package:client/widgets/split_view.dart';
 part 'sessions.freezed.dart';
 
 abstract class SessionRepo {
-  Future<SessionId> newSession();
+  SessionId newSession();
   SessionListModel getSessions();
   SessionModel? getSession(SessionId sessionId);
-  Future<void> updateSession(SessionId sessionId, {InstanceModel? instance, String? currentSchema});
+  void updateSession(SessionId sessionId, {InstanceModel? instance, String? currentSchema});
   void setConnId(SessionId sessionId, ConnId connId);
   void unsetConnId(SessionId sessionId);
-  Future<void> deleteSession(SessionId sessionId);
+  void deleteSession(SessionId sessionId);
   void selectSessionByIndex(int index);
   void reorderSession(int oldIndex, int newIndex);
   String? getCode(SessionId sessionId);

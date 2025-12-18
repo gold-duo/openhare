@@ -1,6 +1,7 @@
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter/foundation.dart';
 
 import 'objectbox.g.dart';
 
@@ -22,7 +23,7 @@ class ObjectBox {
   static Future<ObjectBox> create() async {
     final docsDir = await getApplicationDocumentsDirectory();
     // Future<Store> openStore() {...} is defined in the generated objectbox.g.dart
-    print("load store from: ${p.join(docsDir.path, "openhare")}");
+    debugPrint("load store from: ${p.join(docsDir.path, "openhare")}");
     final store = await openStore(
       directory: p.join(docsDir.path, "openhare"),
       macosApplicationGroup: "openhare.store",

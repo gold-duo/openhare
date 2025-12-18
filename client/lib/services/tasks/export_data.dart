@@ -75,11 +75,7 @@ class ExportDataTasksServices extends _$ExportDataTasksServices {
     return task != null ? ExportDataModel.fromModel(task) : null;
   }
 
-  TaskListResult getTasks({
-    String? key,
-    int? pageNumber,
-    int? pageSize,
-  }) {
+  TaskListResult getTasks({String? key, int? pageNumber, int? pageSize}) {
     return _repo.getTasks(
       key: key,
       pageNumber: pageNumber,
@@ -202,11 +198,7 @@ class ExportDataTaskPaginationListNotifier extends _$ExportDataTaskPaginationLis
     return _tasks();
   }
 
-  ExportDataTaskPaginationListModel _tasks({
-    String? key,
-    int pageNumber = 1,
-    int pageSize = 10,
-  }) {
+  ExportDataTaskPaginationListModel _tasks({String? key, int pageNumber = 1, int pageSize = 10}) {
     final result = ref.read(exportDataTasksServicesProvider.notifier).getTasks(
           key: key,
           pageNumber: pageNumber,

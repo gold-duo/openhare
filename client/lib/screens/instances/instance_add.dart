@@ -111,9 +111,7 @@ class _AddInstanceState extends ConsumerState<AddInstance> {
           TextButton(
               onPressed: () async {
                 if (addInstanceController.validate()) {
-                  await ref
-                      .read(instancesServicesProvider.notifier)
-                      .addInstance(addInstanceController.getInstanceModel());
+                  ref.read(instancesServicesProvider.notifier).addInstance(addInstanceController.getInstanceModel());
 
                   addInstanceController.clear();
 
@@ -124,9 +122,7 @@ class _AddInstanceState extends ConsumerState<AddInstance> {
           TextButton(
               onPressed: () async {
                 if (addInstanceController.validate()) {
-                  await ref
-                      .read(instancesServicesProvider.notifier)
-                      .addInstance(addInstanceController.getInstanceModel());
+                  ref.read(instancesServicesProvider.notifier).addInstance(addInstanceController.getInstanceModel());
 
                   addInstanceController.clear();
 

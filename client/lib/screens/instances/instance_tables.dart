@@ -64,9 +64,7 @@ class _InstanceTableState extends ConsumerState<InstanceTable> {
           RectangleIconButton.small(
             icon: Icons.delete,
             onPressed: () async {
-              await ref.read(instancesServicesProvider.notifier).deleteInstance(instance.id);
-
-              ref.read(instancesProvider.notifier).refresh();
+              ref.read(instancesServicesProvider.notifier).deleteInstance(instance.id);
             },
           ),
           RectangleIconButton.small(
@@ -108,6 +106,8 @@ class _InstanceTableState extends ConsumerState<InstanceTable> {
     ];
 
     final model = ref.watch(instancesProvider);
+
+    final rows = model.instances.instances.map((instance) => buildDataRow(instance)).toList();
 
     return BodyPageSkeleton(
       bottomSpaceSize: kSpacingSmall,
@@ -178,9 +178,7 @@ class _InstanceTableState extends ConsumerState<InstanceTable> {
                   dividerThickness: kDividerThickness,
                   showBottomBorder: true,
                   columns: column,
-                  rows: model.instances.map((instance) {
-                    return buildDataRow(instance);
-                  }).toList(),
+                  rows: rows,
                   sortAscending: false,
                   showCheckboxColumn: true,
                 ),
@@ -188,7 +186,7 @@ class _InstanceTableState extends ConsumerState<InstanceTable> {
             ),
           ),
           TablePaginatedBar(
-            count: model.count,
+            count: model.instances.count,
             pageSize: model.pageSize,
             pageNumber: model.currentPage,
             onChange: (pageNumber) {

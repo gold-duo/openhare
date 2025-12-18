@@ -20,7 +20,7 @@ class AddSession extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final model = ref.watch(instancesProvider);
 
-    if (model.totalCount == 0) {
+    if (model.instances.count == 0) {
       return EmptyPage(
         color: Theme.of(context).colorScheme.surfaceContainerLow,
         child: Column(
@@ -164,7 +164,7 @@ class AddSession extends HookConsumerWidget {
             ],
           ),
           const SizedBox(height: kSpacingSmall),
-          for (var inst in model.instances) //todo
+          for (var inst in model.instances.instances)
             Row(
               children: [
                 SizedBox(
@@ -205,7 +205,7 @@ class AddSession extends HookConsumerWidget {
               ],
             ),
           TablePaginatedBar(
-            count: model.count,
+            count: model.instances.count,
             pageSize: model.pageSize,
             pageNumber: model.currentPage,
             onChange: (pageNumber) {
