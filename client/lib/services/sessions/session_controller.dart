@@ -84,12 +84,12 @@ class SQLResultController {
 
   /// 表格滚动控制器
   final KeepOffestLinkedScrollControllerGroup horizontalScrollGroup;
-  final KeepOffestScrollController verticalController;
+  final KeepOffestLinkedScrollControllerGroup verticalScrollGroup;
 
   SQLResultController({
     required this.controller,
     required this.horizontalScrollGroup,
-    required this.verticalController,
+    required this.verticalScrollGroup,
   });
 
   static Map<ResultId, SQLResultController> cache = {};
@@ -102,7 +102,7 @@ class SQLResultController {
     final controller = SQLResultController(
       controller: init(),
       horizontalScrollGroup: KeepOffestLinkedScrollControllerGroup(),
-      verticalController: KeepOffestScrollController(),
+      verticalScrollGroup: KeepOffestLinkedScrollControllerGroup(),
     );
     cache[resultId] = controller;
     return controller;
@@ -111,7 +111,6 @@ class SQLResultController {
   static void removeSQLResultController(ResultId resultId) {
     if (cache.containsKey(resultId)) {
       cache[resultId]!.controller.dispose();
-      cache[resultId]!.verticalController.dispose();
       cache.remove(resultId);
     }
   }

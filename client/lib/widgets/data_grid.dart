@@ -212,7 +212,7 @@ class DataGrid extends StatefulWidget {
   final LinkedScrollControllerGroup? horizontalScrollGroup;
 
   /// 垂直滚动控制器，用于数据行的垂直滚动
-  final ScrollController? verticalController;
+  final LinkedScrollControllerGroup? verticalScrollGroup;
 
   /// 单元格点击回调
   final void Function(Position position)? onCellTap;
@@ -226,7 +226,7 @@ class DataGrid extends StatefulWidget {
     this.rowHeight = 24.0,
     this.headerHeight = 32.0,
     this.horizontalScrollGroup,
-    this.verticalController,
+    this.verticalScrollGroup,
     this.onCellTap,
     this.onCellDoubleTap,
   });
@@ -240,9 +240,10 @@ class _DataGridState extends State<DataGrid> {
 
   // 滚动控制器管理
   late final LinkedScrollControllerGroup _horizontalScrollGroup;
-  late final LinkedScrollControllerGroup _verticalScrollGroup;
   late final ScrollController _headerHorizontalController;
   late final ScrollController _bodyHorizontalController;
+
+  late final LinkedScrollControllerGroup _verticalScrollGroup;
   late final ScrollController _fixedColumnVerticalController;
   late final ScrollController _scrollableColumnVerticalController;
 
@@ -270,7 +271,7 @@ class _DataGridState extends State<DataGrid> {
     _bodyHorizontalController = _horizontalScrollGroup.addAndGet();
 
     // 初始化垂直滚动联动组
-    _verticalScrollGroup = LinkedScrollControllerGroup();
+    _verticalScrollGroup = widget.verticalScrollGroup ?? LinkedScrollControllerGroup();
     _fixedColumnVerticalController = _verticalScrollGroup.addAndGet();
     _scrollableColumnVerticalController = _verticalScrollGroup.addAndGet();
   }
@@ -293,7 +294,18 @@ class _DataGridState extends State<DataGrid> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildHeader(context),
-        _buildBody(context),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              // 固定列部分 - 只有垂直滚动
+              _buildFixedColumns(context),
+              // 可滚动列部分 - 有垂直和水平滚动
+              _buildScrollableColumns(context),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -328,7 +340,7 @@ class _DataGridState extends State<DataGrid> {
                         index: i,
                         headerHeight: widget.headerHeight,
                       ),
-                    SizedBox(width: tablePadding),
+                    const SizedBox(width: tablePadding),
                   ],
                 ),
               ),
@@ -363,105 +375,88 @@ class _DataGridState extends State<DataGrid> {
     );
   }
 
-  /// 构建数据主体
-  Widget _buildBody(BuildContext context) {
-    return Expanded(
-      child: Column(
-        children: [
-          Expanded(
-            child: SizedBox(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  // 固定列部分 - 只有垂直滚动
-                  ScrollConfiguration(
-                    behavior: ScrollConfiguration.of(context).copyWith(
-                      scrollbars: false,
-                    ),
-                    child: SingleChildScrollView(
-                      controller: _fixedColumnVerticalController,
-                      scrollDirection: Axis.vertical,
-                      physics: const ClampingScrollPhysics(),
-                      child: SizedBox(
-                        child: Column(
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (_rowNumberColumn != null) _buildColumn(context, _rowNumberColumn!, 0),
-                              ],
-                            ),
-                            SizedBox(height: tablePadding), // 底部留白
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  // 可滚动列部分 - 有垂直和水平滚动
-                  Expanded(
-                    child: Scrollbar(
-                      controller: _scrollableColumnVerticalController,
-                      thumbVisibility: false,
-                      notificationPredicate: (notification) => notification.metrics.axis == Axis.vertical,
-                      child: Scrollbar(
-                        controller: _bodyHorizontalController,
-                        thumbVisibility: false,
-                        notificationPredicate: (notification) => notification.metrics.axis == Axis.horizontal,
-                        child: CustomScrollView(
-                          controller: _scrollableColumnVerticalController,
-                          physics: const ClampingScrollPhysics(),
-                          slivers: [
-                            SliverFillRemaining(
-                              hasScrollBody: false,
-                              child: SingleChildScrollView(
-                                controller: _bodyHorizontalController,
-                                scrollDirection: Axis.horizontal,
-                                physics: const ClampingScrollPhysics(),
-                                child: Stack(
-                                  children: [
-                                    // 选中状态层（全局绘制选中行的背景和选中单元格的内边框）
-                                    Positioned.fill(
-                                      child: RepaintBoundary(
-                                        child: CustomPaint(
-                                          painter: _SelectionLayerPainter(
-                                            controller: widget.controller,
-                                            rowHeight: widget.rowHeight,
-                                            colorScheme: Theme.of(context).colorScheme,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    // 数据列内容层
-                                    Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            for (int j = 0; j < widget.controller.columns.length; j++)
-                                              _buildColumn(context, widget.controller.columns[j], j),
-                                            SizedBox(width: tablePadding), // 右侧留白
-                                          ],
-                                        ),
-                                        SizedBox(height: tablePadding), // 底部留白
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+  /// 构建固定列部分
+  Widget _buildFixedColumns(BuildContext context) {
+    return ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(
+        scrollbars: false,
+      ),
+      child: SingleChildScrollView(
+        controller: _fixedColumnVerticalController,
+        scrollDirection: Axis.vertical,
+        physics: const ClampingScrollPhysics(),
+        child: Column(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_rowNumberColumn != null) _buildColumn(context, _rowNumberColumn!, 0),
+              ],
             ),
+            const SizedBox(height: tablePadding), // 底部留白
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 构建可滚动列部分
+  Widget _buildScrollableColumns(BuildContext context) {
+    return Expanded(
+      child: Scrollbar(
+        controller: _scrollableColumnVerticalController,
+        thumbVisibility: false,
+        notificationPredicate: (notification) => notification.metrics.axis == Axis.vertical,
+        child: Scrollbar(
+          controller: _bodyHorizontalController,
+          thumbVisibility: false,
+          notificationPredicate: (notification) => notification.metrics.axis == Axis.horizontal,
+          child: CustomScrollView(
+            controller: _scrollableColumnVerticalController,
+            physics: const ClampingScrollPhysics(),
+            slivers: [
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: SingleChildScrollView(
+                  controller: _bodyHorizontalController,
+                  scrollDirection: Axis.horizontal,
+                  physics: const ClampingScrollPhysics(),
+                  child: Stack(
+                    children: [
+                      // 选中状态层（全局绘制选中行的背景和选中单元格的内边框）
+                      Positioned.fill(
+                        child: RepaintBoundary(
+                          child: CustomPaint(
+                            painter: _SelectionLayerPainter(
+                              controller: widget.controller,
+                              rowHeight: widget.rowHeight,
+                              colorScheme: Theme.of(context).colorScheme,
+                            ),
+                          ),
+                        ),
+                      ),
+                      // 数据列内容层
+                      Column(
+                        children: [
+                          Row(
+                            children: [
+                              for (int j = 0; j < widget.controller.columns.length; j++)
+                                _buildColumn(context, widget.controller.columns[j], j),
+                              const SizedBox(width: tablePadding), // 右侧留白
+                            ],
+                          ),
+                          const SizedBox(height: tablePadding), // 底部留白
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

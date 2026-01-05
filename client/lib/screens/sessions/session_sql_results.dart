@@ -218,7 +218,7 @@ class SqlResultTable extends ConsumerWidget {
         key: ValueKey(model.resultId),
         controller: controller.controller,
         horizontalScrollGroup: controller.horizontalScrollGroup,
-        verticalController: controller.verticalController,
+        verticalScrollGroup: controller.verticalScrollGroup,
         onCellTap: (postion) {
           ref.read(sessionDrawerServicesProvider(model.resultId.sessionId).notifier).showSQLResult(
                 result: model.data!.rows[postion.rowIndex].values[postion.columnIndex],
