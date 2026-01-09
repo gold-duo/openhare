@@ -153,12 +153,10 @@ class SessionRepoImpl extends SessionRepo {
 
   @override
   SessionListModel getSessions() {
-    final selected = _sessions.selected();
     return SessionListModel(
       sessions: _sessions.map((s) {
         return _toModel(s);
       }).toList(),
-      selectedSession: selected != null ? _toModel(selected) : null,
     );
   }
 

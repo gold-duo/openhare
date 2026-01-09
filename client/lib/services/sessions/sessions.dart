@@ -11,8 +11,6 @@ import 'package:client/services/sessions/session_sql_editor.dart';
 import 'package:client/services/sessions/session_sql_result.dart';
 import 'package:client/services/sessions/session_controller.dart';
 import 'package:client/services/tasks/overview.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'sessions.g.dart';
@@ -198,22 +196,9 @@ class SessionTabNotifier extends _$SessionTabNotifier {
 
     final sessions = ref.read(sessionsServicesProvider.notifier).getSessions();
     // selected instance
-    SessionDetailModel? selectedSession;
-    if (sessions.selectedSession != null) {
-      InstanceModel? selectedInstance = sessions.selectedSession!.instanceId == null
-          ? null
-          : instanceServices.getInstanceById(sessions.selectedSession!.instanceId!);
-      selectedSession = SessionDetailModel(
-        sessionId: sessions.selectedSession!.sessionId,
-        instanceId: sessions.selectedSession!.instanceId,
-        instanceName: selectedInstance?.name,
-        dbType: selectedInstance?.dbType,
-        connId: conns.conns[sessions.selectedSession!.connId]?.connId,
-        connState: conns.conns[sessions.selectedSession!.connId]?.state,
-        connErrorMsg: conns.conns[sessions.selectedSession!.connId]?.errorMsg,
-        currentSchema: sessions.selectedSession!.currentSchema,
-      );
-    }
+
+    SessionDetailModel? selectedSession = ref.watch(selectedSessionDetailProvider);
+
     return SessionDetailListModel(
       sessions: sessions.sessions.map((session) {
         InstanceModel? instance =

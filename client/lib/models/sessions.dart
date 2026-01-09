@@ -95,7 +95,6 @@ abstract class SessionDetailModel with _$SessionDetailModel {
 abstract class SessionListModel with _$SessionListModel {
   const factory SessionListModel({
     required List<SessionModel> sessions,
-    SessionModel? selectedSession,
   }) = _SessionListModel;
 }
 
