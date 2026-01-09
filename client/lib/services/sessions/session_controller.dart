@@ -4,7 +4,6 @@ import 'package:client/models/sessions.dart';
 import 'package:client/widgets/data_grid.dart';
 import 'package:client/widgets/split_view.dart';
 import 'package:flutter/material.dart';
-import 'package:multi_split_view/multi_split_view.dart';
 import 'package:client/widgets/scroll.dart';
 import 'package:sql_editor/re_editor.dart';
 
@@ -41,8 +40,8 @@ class SessionController {
       return cache[sessionId]!;
     }
     final controller = SessionController(
-      multiSplitViewCtrl: SplitViewController(Area(), Area(size: 500, min: 40)),
-      metaDataSplitViewCtrl: SplitViewController(Area(), Area(size: 400, min: 360)),
+      multiSplitViewCtrl: SplitViewController(secondSize: 500, firstMinSize: 100, secondMinSize: 140),
+      metaDataSplitViewCtrl: SplitViewController(secondSize: 400, firstMinSize: 140, secondMinSize: 360),
       // sql editor
       sqlEditorScrollController: CodeScrollController(
         verticalScroller: KeepOffestScrollController(),
