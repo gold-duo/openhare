@@ -1,7 +1,6 @@
 // 下面的prompt 都用英文
 import 'package:client/models/sessions.dart';
 import 'package:client/models/tasks.dart';
-import 'package:db_driver/db_driver.dart';
 
 const testTemplate = """
 To confirm that you are available, please only return a number 1 to me.
@@ -9,8 +8,24 @@ To confirm that you are available, please only return a number 1 to me.
 
 const chatTemplate = """
 你是一个智能SQL客户端助手. 你正在与一个使用数据库工具的用户对话. 你正在帮助用户回答关于数据库的问题.
+## 数据库信息:
 db type: {dbType}
-tips: 
+
+## 用户输入的格式:
+用户会通过@符号指定表名并在当前对话里将表信息传递给你, 给你辅助回答问题.
+@table_name 表示表名, 例如: @users.
+ref:
+table_name信息:
+- 表名: users
+- 表描述: 用户表
+- 表字段:
+  - id: 用户ID
+  - name: 用户名
+  - email: 用户邮箱
+  - created_at: 创建时间
+  - updated_at: 更新时间
+
+## 注意点: 
 - 你只能回答或解决与数据库相关的问题;
 - 如果回复包含SQL, 每个SQL应该被包裹在一个 ```sql``` 块中;
 - 数据库的query查询是非常重要的工具, 你除了使用它进行数据库信息获取外，还可以用它来进行任务逻辑计算, 例如：`SELECT 100 * 30 as result`;
@@ -24,23 +39,7 @@ String genChatSystemPrompt(SessionAIChatModel model) {
   if (model.dbType != null) {
     prompt = prompt.replaceAll("{dbType}", model.dbType!.name);
   }
-  final tables = model.chatModel.tables[model.currentSchema ?? ""];
-  // 通过metadata build table 信息
-  final schema = MetaDataNode(MetaType.instance, "", items: model.metadata);
-  final schemaNodes = schema.getChildren(MetaType.schema, model.currentSchema ?? "");
-
-  if (tables == null || tables.isEmpty || schemaNodes.isEmpty) {
-    return prompt.replaceAll("{tables}", "");
-  }
-
-  final tableInfos = schemaNodes.where((e) {
-    if (e.type == MetaType.table && tables.containsKey(e.value)) {
-      return true;
-    }
-    return false;
-  });
-
-  return prompt.replaceAll("{tables}", tableInfos.map((e) => e.toString()).join("\n"));
+  return prompt;
 }
 
 // 导入任务的文件命名

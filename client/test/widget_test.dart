@@ -28,3 +28,6 @@
 //     expect(find.text('1'), findsOneWidget);
 //   });
 // }
+
+// 保持一个有效的测试入口，避免 flutter test 因缺少 main() 而编译失败。
+void main() {}
