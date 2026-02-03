@@ -110,6 +110,13 @@ class PGConnection extends BaseConnection {
   }
 
   @override
+  Future<String> version() async {
+    final results = await query("SELECT version() AS version");
+    final rows = results.rows;
+    return rows.first.getString("version") ?? "";
+  }
+
+  @override
   Future<void> killQuery() async {
     return;
     // await _conn.killQuery();

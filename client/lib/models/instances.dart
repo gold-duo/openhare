@@ -87,5 +87,6 @@ abstract class PaginationInstanceListModel with _$PaginationInstanceListModel {
 abstract class InstanceMetadataModel with _$InstanceMetadataModel {
   const factory InstanceMetadataModel({
     required List<MetaDataNode> metadata,
+    required String? version,
   }) = _InstanceMetadataModel;
 }

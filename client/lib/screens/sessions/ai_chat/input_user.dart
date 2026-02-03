@@ -30,11 +30,71 @@ class SessionChatInputCard extends ConsumerStatefulWidget {
 }
 
 class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
+  Set<String> _extractMentionedTables(String encoded) {
+    final segments = MentionSegmentSerializer.decode(encoded);
+    final tableNames = <String>{};
+
+    // 只取“真正的 mention token”
+    for (final s in segments) {
+      if (s is MentionSegment) {
+        tableNames.add(s.label);
+      }
+    }
+
+    return tableNames;
+  }
+
+  MetaDataNode? _findSchemaNode(SessionAIChatModel chatModel) {
+    if (chatModel.metadata == null || chatModel.currentSchema == null) return null;
+    final root = MetaDataNode(MetaType.instance, "", items: chatModel.metadata!.metadata);
+    MetaDataNode? schemaNode;
+    root.visitor((node, _) {
+      if (schemaNode != null) return false;
+      if (node.type == MetaType.schema && node.value == chatModel.currentSchema) {
+        schemaNode = node;
+        return false;
+      }
+      return true;
+    });
+    return schemaNode;
+  }
+
+  String _buildTableRef(SessionAIChatModel chatModel, Iterable<String> mentionedTables) {
+    final schemaNode = _findSchemaNode(chatModel);
+    if (schemaNode == null) return '';
+
+    final tables = mentionedTables.toSet().toList()..sort();
+    if (tables.isEmpty) return '';
+
+    final b = StringBuffer();
+    for (final tableName in tables) {
+      MetaDataNode? tableNode;
+      for (final n in (schemaNode.items ?? const <MetaDataNode>[])) {
+        if (n.type == MetaType.table && n.value == tableName) {
+          tableNode = n;
+          break;
+        }
+      }
+
+      // 直接复用 MetaDataNode.toString() 的 JSON 序列化（见 db_driver_metadata.dart）
+      if (tableNode != null) {
+        b.writeln(tableNode.toString());
+      }
+    }
+
+    return b.toString().trimRight();
+  }
+
   Future<void> _sendMessage(AIChatId chatId, SessionAIChatModel chatModel) async {
     final chatInputController = SessionController.sessionController(chatModel.sessionId).chatInputController;
     final encoded = chatInputController.text.trim();
-    final text = MentionSegmentSerializer.decode(encoded).map((s) => s.toDisplayText()).join().trim();
+    final segments = MentionSegmentSerializer.decode(encoded);
+    final text = segments.map((s) => s.toDisplayText()).join().trim();
     chatInputController.clear();
+
+    // 如果用户通过 @ 提及了表，则把表结构信息放到 ref 里
+    final mentionedTables = _extractMentionedTables(encoded);
+    final refText = _buildTableRef(chatModel, mentionedTables);
 
     // 调用AIChatService的chat方法
     await ref.read(aIChatServiceProvider.notifier).chat(
@@ -42,6 +102,7 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
           chatModel.llmAgents.lastUsedLLMAgent!.id,
           genChatSystemPrompt(chatModel),
           message: text,
+          refText: refText.isEmpty ? null : refText,
         );
 
     final scrollController = SessionController.sessionController(chatModel.sessionId).aiChatScrollController;
@@ -80,9 +141,8 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
             // 输入框
             ChatInputFieldWidget(
               model: widget.model,
-              onSubmitted: widget.model.canSendMessage()
-                  ? () => _sendMessage(widget.model.chatModel.id, widget.model)
-                  : null,
+              onSubmitted:
+                  widget.model.canSendMessage() ? () => _sendMessage(widget.model.chatModel.id, widget.model) : null,
             ),
 
             const SizedBox(height: kSpacingSmall),
@@ -375,12 +435,9 @@ class _ChatInputFieldWidgetState extends ConsumerState<ChatInputFieldWidget> {
     if (widget.model.metadata == null || widget.model.currentSchema == null) {
       return [];
     }
-    final schema = MetaDataNode(MetaType.instance, "", items: widget.model.metadata!);
+    final schema = MetaDataNode(MetaType.instance, "", items: widget.model.metadata!.metadata);
     final schemaNodes = schema.getChildren(MetaType.schema, widget.model.currentSchema!);
-    return schemaNodes
-        .where((e) => e.type == MetaType.table)
-        .map((e) => e.value)
-        .toList();
+    return schemaNodes.where((e) => e.type == MetaType.table).map((e) => e.value).toList();
   }
 
   List<String> _filterAndSortTables(List<String> allTables, String query) {

@@ -8,26 +8,19 @@ To confirm that you are available, please only return a number 1 to me.
 
 const chatTemplate = """
 你是一个智能SQL客户端助手. 你正在与一个使用数据库工具的用户对话. 你正在帮助用户回答关于数据库的问题.
-## 数据库信息:
+## 当前数据库connection的一些基本信息:
 db type: {dbType}
+db version: {dbVersion}
+current schema: {currentSchema}
 
 ## 用户输入的格式:
 用户会通过@符号指定表名并在当前对话里将表信息传递给你, 给你辅助回答问题.
-@table_name 表示表名, 例如: @users.
-ref:
-table_name信息:
-- 表名: users
-- 表描述: 用户表
-- 表字段:
-  - id: 用户ID
-  - name: 用户名
-  - email: 用户邮箱
-  - created_at: 创建时间
-  - updated_at: 更新时间
+@table_name 表示表名, 例如: @users. 在`ref:`后面会传递表信息给你, 你需要根据表信息来辅助回答问题.
 
 ## 注意点: 
 - 你只能回答或解决与数据库相关的问题;
 - 如果回复包含SQL, 每个SQL应该被包裹在一个 ```sql``` 块中;
+- 信任用户传递的表信息，除非用户显式的表达你需要重新查询它;
 - 数据库的query查询是非常重要的工具, 你除了使用它进行数据库信息获取外，还可以用它来进行任务逻辑计算, 例如：`SELECT 100 * 30 as result`;
 - 在使用query工具时尽可能一次获取更多想要的信息, 避免多次调用query工具;
 - 在使用query工具时要保持返回必要信息, 不要返回无关信息，例如：只返回需要的列和行;
@@ -35,11 +28,12 @@ table_name信息:
 """;
 
 String genChatSystemPrompt(SessionAIChatModel model) {
-  String prompt = chatTemplate;
-  if (model.dbType != null) {
-    prompt = prompt.replaceAll("{dbType}", model.dbType!.name);
-  }
-  return prompt;
+  final dbVersion = (model.metadata?.version ?? "").trim();
+  final currentSchema = (model.currentSchema ?? "").trim();
+  return chatTemplate
+      .replaceAll("{dbType}", model.dbType?.name ?? "-")
+      .replaceAll("{dbVersion}", dbVersion.isEmpty ? "-" : dbVersion)
+      .replaceAll("{currentSchema}", currentSchema.isEmpty ? "-" : currentSchema);
 }
 
 // 导入任务的文件命名

@@ -106,6 +106,7 @@ abstract class BaseConnection {
   Future<List<String>> schemas();
   Future<String?> getCurrentSchema();
   Future<void> setCurrentSchema(String schema);
+  Future<String> version();
 
   void listen(
       {Function()? onCloseCallback,

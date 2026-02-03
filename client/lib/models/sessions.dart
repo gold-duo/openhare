@@ -288,7 +288,7 @@ abstract class SessionAIChatModel with _$SessionAIChatModel {
     required SessionId sessionId,
     required String? currentSchema,
     required DatabaseType? dbType,
-    required List<MetaDataNode>? metadata,
+    required InstanceMetadataModel? metadata,
     required ConnId? connId,
     required SQLConnectState? state,
     required AIChatModel chatModel,

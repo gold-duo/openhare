@@ -233,6 +233,10 @@ class SessionConn {
   Future<List<MetaDataNode>> metadata() async {
     return await conn2!.metadata();
   }
+
+  Future<String?> version() async {
+    return await conn2!.version();
+  }
 }
 
 @Riverpod(keepAlive: true)

@@ -131,7 +131,13 @@ class AIChatService extends _$AIChatService {
   }
 
   /// 进行AI对话，请求接口，存储消息并刷新使用 provider 来动态刷新页面
-  Future<void> chat(AIChatId id, LLMAgentId agentId, String systemPrompt, {String? message}) async {
+  Future<void> chat(
+    AIChatId id,
+    LLMAgentId agentId,
+    String systemPrompt, {
+    String? message,
+    String? refText,
+  }) async {
     final repo = ref.read(aiChatRepoProvider);
     final model = repo.getAIChatById(id);
     if (model == null) {
@@ -142,7 +148,13 @@ class AIChatService extends _$AIChatService {
     if (message != null) {
       repo.addMessage(
         id,
-        AIChatMessageItem.userMessage(AIChatUserMessageModel(id: AIChatMessageId.generate(), content: message)),
+        AIChatMessageItem.userMessage(
+          AIChatUserMessageModel(
+            id: AIChatMessageId.generate(),
+            content: message,
+            ref: refText,
+          ),
+        ),
       );
     }
 

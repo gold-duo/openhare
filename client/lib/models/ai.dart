@@ -124,9 +124,15 @@ abstract class AIChatUserMessageModel with _$AIChatUserMessageModel {
   const factory AIChatUserMessageModel({
     required AIChatMessageId id,
     required String content,
+    String? ref,
   }) = _AIChatUserMessageModel;
 
-  String toMessage() => content;
+  String toMessage() {
+    final refText = ref?.trim() ?? '';
+    if (refText.isEmpty) return content;
+    // ref 作为“额外上下文”，拼到 user message 里供 LLM 使用，但 UI 仍可只展示 content。
+    return '$content\n\nref:\n$refText';
+  }
 }
 
 @freezed
