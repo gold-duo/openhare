@@ -92,9 +92,10 @@ class SQLResultsServices extends _$SQLResultsServices {
     }
   }
 
-  Future<void> queryAddResult(SessionId sessionId, String query) async {
+  Future<ResultId> queryAddResult(SessionId sessionId, String query) async {
     final resultModel = addSQLResult(sessionId);
-    _query(resultModel.resultId, query);
+    await _query(resultModel.resultId, query);
+    return resultModel.resultId;
   }
 
   Future<void> query(SessionId sessionId, String query) async {

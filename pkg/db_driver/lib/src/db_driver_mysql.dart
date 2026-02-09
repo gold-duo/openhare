@@ -259,6 +259,13 @@ class MySQLConnection extends BaseConnection {
   }
 
   @override
+  Future<String> version() async {
+    final results = await query("SELECT VERSION() AS version");
+    final rows = results.rows;
+    return rows.first.getString("version") ?? "";
+  }
+
+  @override
   Future<List<MetaDataNode>> metadata() async {
     // ref: https://dev.mysql.com/doc/refman/8.4/en/information-schema-columns-table.html
     final results = await query("""SELECT 

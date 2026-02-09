@@ -1,0 +1,9 @@
+site/node_modules/
+site/.astro/
+site/.cache/
+site/dist/
+
+# 避免误提交旧的 /docs 发布产物
+index.html
+logo.png
+assets/

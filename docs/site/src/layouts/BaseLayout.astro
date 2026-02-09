@@ -1,0 +1,48 @@
+---
+export type Props = {
+  title: string;
+  description?: string;
+  lang?: string;
+};
+
+const { title, description, lang } = Astro.props;
+const skipText = (lang ?? 'zh-CN').toLowerCase().startsWith('zh')
+  ? '跳到主要内容'
+  : 'Skip to main content';
+
+import '../styles/global.css';
+---
+<!doctype html>
+<html lang={lang ?? "zh-CN"}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    {description ? <meta name="description" content={description} /> : null}
+    <meta name="theme-color" content="#ffffff" />
+  </head>
+  <body>
+    <a class="skipLink" href="#main-content">{skipText}</a>
+    <slot />
+    <script is:inline>
+      // Minimal scroll-reveal (no deps). Elements with [data-reveal] will fade in.
+      const els = Array.from(document.querySelectorAll('[data-reveal]'));
+      if (els.length) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const e of entries) {
+              if (e.isIntersecting) {
+                e.target.classList.add('is-in');
+                io.unobserve(e.target);
+              }
+            }
+          },
+          { threshold: 0.12, rootMargin: '0px 0px -10% 0px' },
+        );
+        for (const el of els) io.observe(el);
+      }
+    </script>
+  </body>
+</html>
+

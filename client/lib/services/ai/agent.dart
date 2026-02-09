@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:client/models/ai.dart';
 import 'package:client/models/tasks.dart';
 import 'package:client/repositories/ai/agent.dart';
+import 'package:client/services/ai/llm_sdk.dart';
 import 'package:client/services/ai/prompt.dart';
 import 'package:client/services/settings/settings.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:llm_dart/llm_dart.dart';
 
 part 'agent.g.dart';
 
@@ -43,54 +43,6 @@ class LLMAgentService extends _$LLMAgentService {
     ref.invalidateSelf();
   }
 
-  Stream<ChatStreamEvent> callStream(LLMAgentId id, String systemMessage, List<AIChatMessageModel> messages) async* {
-    final model = ref.read(lLMAgentRepoProvider).getLLMAgentById(id);
-    if (model == null) {
-      return;
-    }
-    final provider = await ai()
-        .openai()
-        .baseUrl(model.setting.baseUrl)
-        .apiKey(model.setting.apiKey)
-        .model(model.setting.modelName)
-        .temperature(0.7)
-        .build();
-
-    // 构造初始消息
-    List<ChatMessage> chatMessages = [
-      ChatMessage.system(systemMessage),
-      for (var message in messages)
-        switch (message.role) {
-          AIRole.user => ChatMessage.user(message.content),
-          AIRole.assistant => ChatMessage.assistant(message.content),
-        }
-    ];
-
-    yield* provider.chatStream(chatMessages);
-  }
-
-  Future<String> call(LLMAgentId id, String systemMessage, List<AIChatMessageModel> messages) async {
-    final model = ref.read(lLMAgentRepoProvider).getLLMAgentById(id);
-    if (model == null) {
-      return '';
-    }
-    final provider = await ai()
-        .deepseek()
-        .baseUrl(model.setting.baseUrl)
-        .apiKey(model.setting.apiKey)
-        .model(model.setting.modelName)
-        .temperature(0.7)
-        .build();
-
-    final chatMessages = [
-      ChatMessage.system(systemMessage),
-      for (var message in messages)
-        message.role == AIRole.user ? ChatMessage.user(message.content) : ChatMessage.assistant(message.content)
-    ];
-    final response = await provider.chat(chatMessages);
-    return response.text ?? '';
-  }
-
   Future<void> ping(LLMAgentId id) async {
     try {
       final model = ref.read(lLMAgentRepoProvider).getLLMAgentById(id);
@@ -100,19 +52,14 @@ class LLMAgentService extends _$LLMAgentService {
       final repo = ref.read(lLMAgentRepoProvider);
       repo.updateStatus(id, const LLMAgentStatusModel(state: LLMAgentState.testing));
       ref.invalidateSelf();
+      final llmSdk = LLMProvider.create(model.setting, '');
+      final result = await llmSdk.call([
+        AIChatMessageItem.userMessage(
+          AIChatUserMessageModel(id: AIChatMessageId.generate(), content: testTemplate),
+        ),
+      ]);
 
-      final provider = await ai()
-          .deepseek()
-          .baseUrl(model.setting.baseUrl)
-          .apiKey(model.setting.apiKey)
-          .model(model.setting.modelName)
-          .temperature(0.7)
-          .build();
-
-      final response = await provider.chat([ChatMessage.user(testTemplate)]);
-
-      // 如果token为0，则认为接口不可用
-      final available = (response.usage?.totalTokens ?? 0) > 0;
+      final available = result.content.isNotEmpty;
       repo.updateStatus(
         id,
         available
@@ -166,6 +113,10 @@ class LLMAgentService extends _$LLMAgentService {
     LLMAgentId id,
     ExportDataParameters parameters,
   ) async {
+    final model = ref.read(lLMAgentRepoProvider).getLLMAgentById(id);
+    if (model == null) {
+      throw Exception('LLM Agent not found');
+    }
     // 获取语言设置
     final settings = ref.read(systemSettingServiceProvider);
     final language = settings.language;
@@ -173,25 +124,21 @@ class LLMAgentService extends _$LLMAgentService {
     // 生成prompt
     final prompt = getExportDataFileRenamePrompt(parameters, language);
 
+    final llmSdk = LLMProvider.create(model.setting, '');
     // 调用AI
-    final response = await call(
-      id,
-      '', // 空系统消息
-      [
-        AIChatMessageModel(
-          role: AIRole.user,
-          content: prompt,
-        ),
-      ],
-    );
+    final chatResult = await llmSdk.call([
+      AIChatMessageItem.userMessage(
+        AIChatUserMessageModel(id: AIChatMessageId.generate(), content: prompt),
+      ),
+    ]);
 
     // 检查响应是否为空
-    if (response.isEmpty) {
+    if (chatResult.content.isEmpty) {
       throw Exception('AI服务返回空响应');
     }
 
     // 提取JSON字符串（去掉markdown代码块标记）
-    final jsonString = extractJsonString(response);
+    final jsonString = extractJsonString(chatResult.content);
 
     // 解析JSON并创建对象
     final jsonData = jsonDecode(jsonString) as Map<String, dynamic>;

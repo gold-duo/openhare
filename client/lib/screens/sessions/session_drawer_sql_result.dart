@@ -60,7 +60,6 @@ class SessionDrawerSqlResult extends ConsumerWidget {
       children: [
         Expanded(
           child: buildDisplayField(context, sessionDrawer),
-          // child: buildDisplayField(context),
         ),
       ],
     );

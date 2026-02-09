@@ -45,18 +45,21 @@ class SessionDrawerMetadata extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     AsyncValue<SessionMetadataTreeModel> model = ref.watch(selectedSessionMetadataProvider);
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-            child: model.when(
-          data: (value) => bodyPage(value.metadataTreeCtrl,
-              SessionController.sessionController(value.sessionId).metadataTreeScrollController),
-          error: (error, trace) => errorPage(context, ref, error.toString()),
-          loading: () => loadingPage(),
-        )),
-      ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(kSpacingSmall - 5, kSpacingTiny, kSpacingSmall, 0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+              child: model.when(
+            data: (value) => bodyPage(value.metadataTreeCtrl,
+                SessionController.sessionController(value.sessionId).metadataTreeScrollController),
+            error: (error, trace) => errorPage(context, ref, error.toString()),
+            loading: () => loadingPage(),
+          )),
+        ],
+      ),
     );
   }
 }

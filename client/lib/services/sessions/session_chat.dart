@@ -17,7 +17,7 @@ class SessionAIChatNotifier extends _$SessionAIChatNotifier {
     if (session == null) {
       throw Exception("Session not found");
     }
-    LLMAgentsModel llmAgents = ref.watch(lLMAgentServiceProvider);
+    LLMAgentsModel llmAgents = ref.watch(lLMAgentProvider);
 
     ref.watch(aIChatServiceProvider);
 
@@ -30,7 +30,6 @@ class SessionAIChatNotifier extends _$SessionAIChatNotifier {
         id: AIChatId(value: session.sessionId.value), // todo: 暂时用session id 替代chatId
         messages: [],
         state: AIChatState.idle,
-        tables: {},
       );
 
       ref.read(aIChatServiceProvider.notifier).create(aiChatModel);
@@ -46,7 +45,7 @@ class SessionAIChatNotifier extends _$SessionAIChatNotifier {
       sessionId: session.sessionId,
       currentSchema: session.currentSchema,
       dbType: session.dbType,
-      metadata: metadata?.value?.metadata,
+      metadata: metadata?.value,
       connId: session.connId,
       state: session.connState,
       llmAgents: llmAgents,

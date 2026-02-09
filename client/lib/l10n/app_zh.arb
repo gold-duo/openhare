@@ -188,5 +188,54 @@
     "error_directory_no_permission_macos": "目录无权限，点击右侧文件夹按钮授权访问",
     "@error_directory_no_permission_macos": {
       "description": "macOS 目录无读写权限错误消息"
+    },
+    "ai_chat_result_rows_returned": "返回行数: {count}",
+    "@ai_chat_result_rows_returned": {
+      "description": "AI对话结果返回行数",
+      "placeholders": {
+        "count": {
+          "type": "int",
+          "format": "decimalPattern"
+        }
+      }
+    },
+    "ai_chat_result_rows_affected": "影响行数: {count}",
+    "@ai_chat_result_rows_affected": {
+      "description": "AI对话结果影响行数",
+      "placeholders": {
+        "count": {
+          "type": "int",
+          "format": "decimalPattern"
+        }
+      }
+    },
+    "ai_chat_execution_time": "执行时间: {time}",
+    "@ai_chat_execution_time": {
+      "description": "AI对话执行时间",
+      "placeholders": {
+        "time": {
+          "type": "String"
+        }
+      }
+    },
+    "ai_chat_tool_execute_query": "执行查询",
+    "@ai_chat_tool_execute_query": {
+      "description": "AI对话工具执行查询名称"
+    },
+    "ai_chat_execution_success": "执行成功",
+    "@ai_chat_execution_success": {
+      "description": "AI对话执行成功状态"
+    },
+    "ai_chat_execution_failed": "执行失败",
+    "@ai_chat_execution_failed": {
+      "description": "AI对话执行失败状态"
+    },
+    "ai_chat_thinking_process": "思考过程",
+    "@ai_chat_thinking_process": {
+      "description": "AI对话思考过程标签"
+    },
+    "ai_chat_thinking": "正在思考...",
+    "@ai_chat_thinking": {
+      "description": "AI对话思考消息"
     }
 }

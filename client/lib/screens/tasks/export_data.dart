@@ -127,7 +127,7 @@ class _ExportDataDialogContentState extends ConsumerState<_ExportDataDialogConte
   }
 
   Future<void> _generateFileNameWithAI() async {
-    final llmAgents = ref.read(lLMAgentServiceProvider);
+    final llmAgents = ref.read(lLMAgentProvider);
     final lastUsedAgent = llmAgents.lastUsedLLMAgent;
 
     if (lastUsedAgent == null) {

@@ -6,6 +6,7 @@ import 'package:client/widgets/split_view.dart';
 import 'package:flutter/material.dart';
 import 'package:client/widgets/scroll.dart';
 import 'package:sql_editor/re_editor.dart';
+import 'package:client/widgets/mention_text.dart';
 
 class SessionController {
   // split
@@ -16,8 +17,9 @@ class SessionController {
   final CodeScrollController sqlEditorScrollController;
 
   // ai chat
-  final TextEditingController chatInputController;
+  final MentionTextEditingController chatInputController;
   final TextEditingController aiChatSearchTextController;
+  final TextEditingController aiChatModelSearchTextController;
   final KeepOffestScrollController aiChatScrollController;
 
   // drawer
@@ -27,6 +29,7 @@ class SessionController {
     required this.multiSplitViewCtrl,
     required this.metaDataSplitViewCtrl,
     required this.aiChatSearchTextController,
+    required this.aiChatModelSearchTextController,
     required this.chatInputController,
     required this.aiChatScrollController,
     required this.sqlEditorScrollController,
@@ -49,7 +52,8 @@ class SessionController {
       ),
       // ai chat
       aiChatSearchTextController: TextEditingController(),
-      chatInputController: TextEditingController(),
+      aiChatModelSearchTextController: TextEditingController(),
+      chatInputController: MentionTextEditingController(),
       aiChatScrollController: KeepOffestScrollController(),
 
       // drawer
@@ -68,6 +72,7 @@ class SessionController {
       cache[sessionId]!.sqlEditorScrollController.horizontalScroller.dispose();
       // ai chat
       cache[sessionId]!.aiChatSearchTextController.dispose();
+      cache[sessionId]!.aiChatModelSearchTextController.dispose();
       cache[sessionId]!.chatInputController.dispose();
       cache[sessionId]!.aiChatScrollController.dispose();
       // drawer

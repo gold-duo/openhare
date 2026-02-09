@@ -257,7 +257,8 @@ class InstanceRepoImpl extends InstanceRepo {
       conn = SessionConn(model: instance);
       await conn.connect();
       final metadataNode = await conn.metadata();
-      return InstanceMetadataModel(metadata: metadataNode);
+      final version = await conn.version();
+      return InstanceMetadataModel(metadata: metadataNode, version: version);
     } catch (e) {
       rethrow;
     } finally {

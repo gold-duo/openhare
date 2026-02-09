@@ -545,5 +545,54 @@
   "error_directory_no_permission_macos": "No permission. Use folder button to select and authorize",
   "@error_directory_no_permission_macos": {
     "description": "Error message when directory has no permission on macOS"
+  },
+  "ai_chat_result_rows_returned": "Rows returned: {count}",
+  "@ai_chat_result_rows_returned": {
+    "description": "AI chat result rows returned",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "ai_chat_result_rows_affected": "Rows affected: {count}",
+  "@ai_chat_result_rows_affected": {
+    "description": "AI chat result rows affected",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "ai_chat_execution_time": "Execution time: {time}",
+  "@ai_chat_execution_time": {
+    "description": "AI chat execution time",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "ai_chat_tool_execute_query": "Execute Query",
+  "@ai_chat_tool_execute_query": {
+    "description": "AI chat tool execute query name"
+  },
+  "ai_chat_execution_success": "Execution successful",
+  "@ai_chat_execution_success": {
+    "description": "AI chat execution success status"
+  },
+  "ai_chat_execution_failed": "Execution failed",
+  "@ai_chat_execution_failed": {
+    "description": "AI chat execution failed status"
+  },
+  "ai_chat_thinking_process": "Thought process",
+  "@ai_chat_thinking_process": {
+    "description": "AI chat thinking process label"
+  },
+  "ai_chat_thinking": "Thinking...",
+  "@ai_chat_thinking": {
+    "description": "AI chat thinking message"
   }
 }
