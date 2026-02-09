@@ -73,7 +73,7 @@ class _OverlayMenuState extends State<OverlayMenu> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.surfaceContainerHigh,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
