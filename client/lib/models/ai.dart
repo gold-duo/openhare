@@ -28,6 +28,8 @@ abstract class AIChatRepo {
   void addMessage(AIChatId id, AIChatMessageItem message);
   void updateState(AIChatId id, AIChatState state);
   void updateMessageById(AIChatId chatId, AIChatMessageId messageId, AIChatMessageItem message);
+  void updateProgress(AIChatId id, AIChatProgressModel progress);
+  bool isCancel(AIChatId id);
 }
 
 enum LLMAgentState {
@@ -88,6 +90,7 @@ enum AIChatState {
   idle,
   waiting,
   error,
+  cancel,
 }
 
 @freezed
@@ -108,11 +111,50 @@ abstract class AIChatMessageId with _$AIChatMessageId {
 }
 
 @freezed
+abstract class AIChatProgressModel with _$AIChatProgressModel {
+  const AIChatProgressModel._();
+
+  const factory AIChatProgressModel({
+    @Default(0) int loopUsed,
+    @Default(50) int loopLimit,
+
+    /// 真实 usage：total tokens（prompt + completion）
+    @Default(0) int totalTokens,
+
+    /// 上下文硬上限
+    @Default(100000) int contextTokenLimit,
+  }) = _AIChatProgressModel;
+
+  /// 是否因为 loop 次数达到上限而停止
+  bool get loopStopped => loopLimit > 0 && loopUsed >= loopLimit;
+
+  /// 是否因为上下文达到硬上限而停止（硬停后不可继续）
+  bool get contextHardStopped => contextTokenLimit > 0 && totalTokens >= contextTokenLimit;
+
+  double get loopProgress {
+    if (loopLimit <= 0) return 0;
+    final v = loopUsed / loopLimit;
+    if (v < 0) return 0;
+    if (v > 1) return 1;
+    return v;
+  }
+
+  double get contextProgress {
+    if (contextTokenLimit <= 0) return 0;
+    final v = totalTokens / contextTokenLimit;
+    if (v < 0) return 0;
+    if (v > 1) return 1;
+    return v;
+  }
+}
+
+@freezed
 abstract class AIChatModel with _$AIChatModel {
   const factory AIChatModel({
     required AIChatId id,
     required List<AIChatMessageItem> messages,
     required AIChatState state,
+    @Default(AIChatProgressModel()) AIChatProgressModel progress,
   }) = _AIChatModel;
 }
 

@@ -5,6 +5,19 @@ import 'package:openai_dart/openai_dart.dart';
 
 import 'package:client/services/ai/tool.dart';
 
+/// 跨 Provider 的 usage 统一结构
+class ChatUsage {
+  final int? promptTokens;
+  final int? completionTokens;
+  final int? totalTokens;
+
+  const ChatUsage({
+    this.promptTokens,
+    this.completionTokens,
+    this.totalTokens,
+  });
+}
+
 /// AI 工具调用适配器类
 ///
 /// 用于将不同 LLM 提供者的工具调用转换为统一的格式
@@ -26,11 +39,13 @@ class ChatResult {
   final String? thinking;
   final String content;
   final List<AIChatMessageToolCall>? toolCalls;
+  final ChatUsage? usage;
 
   ChatResult({
     required this.content,
     this.toolCalls,
     this.thinking,
+    this.usage,
   });
 
   /// 合并两个 ChatResult，用于流式响应累积
@@ -40,6 +55,7 @@ class ChatResult {
       content: content + other.content,
       toolCalls: other.toolCalls ?? toolCalls,
       thinking: combinedThinking.isNotEmpty ? combinedThinking : null,
+      usage: other.usage ?? usage,
     );
   }
 }
@@ -280,6 +296,7 @@ class OpenAIProvider implements LLMProvider {
         temperature: temperature,
         tools: tools,
         stream: true,
+        streamOptions: const ChatCompletionStreamOptions(includeUsage: true),
       );
 
       final stream = _client.createChatCompletionStream(request: request);
@@ -290,6 +307,21 @@ class OpenAIProvider implements LLMProvider {
       final Map<int, Map<String, String>> toolCallAccumulators = {};
 
       await for (final response in stream) {
+        // usage：当 include_usage=true 时，最后会额外推一个仅含 usage 的 chunk（choices 为空）
+        if (response.usage != null) {
+          accumulatedResult = accumulatedResult.concat(
+            ChatResult(
+              content: '',
+              usage: ChatUsage(
+                promptTokens: response.usage?.promptTokens,
+                completionTokens: response.usage?.completionTokens,
+                totalTokens: response.usage?.totalTokens,
+              ),
+            ),
+          );
+          yield accumulatedResult;
+        }
+
         if (response.choices != null && response.choices!.isNotEmpty) {
           final choice = response.choices!.first;
 

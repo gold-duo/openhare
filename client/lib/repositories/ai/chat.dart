@@ -7,11 +7,13 @@ class AIChatStorage {
   final AIChatId id;
   final List<AIChatMessageItem> messages;
   AIChatState state;
+  AIChatProgressModel progress;
 
   AIChatStorage({
     required this.id,
     required this.messages,
     required this.state,
+    required this.progress,
   });
 
   factory AIChatStorage.fromModel(AIChatModel model) {
@@ -19,6 +21,7 @@ class AIChatStorage {
       id: model.id,
       messages: List<AIChatMessageItem>.from(model.messages),
       state: model.state,
+      progress: model.progress,
     );
   }
 
@@ -27,6 +30,7 @@ class AIChatStorage {
       id: id,
       messages: List<AIChatMessageItem>.from(messages),
       state: state,
+      progress: progress,
     );
   }
 }
@@ -83,6 +87,15 @@ class AIChatRepoImpl extends AIChatRepo {
   }
 
   @override
+  void updateProgress(AIChatId id, AIChatProgressModel progress) {
+    final chat = _aiChats[id];
+    if (chat == null) {
+      return;
+    }
+    chat.progress = progress;
+  }
+
+  @override
   void delete(AIChatId id) {
     _aiChats.remove(id);
   }
@@ -114,6 +127,15 @@ class AIChatRepoImpl extends AIChatRepo {
     } else {
       chat.messages.add(message);
     }
+  }
+
+  @override
+  bool isCancel(AIChatId chatId) {
+    final chat = _aiChats[chatId];
+    if (chat == null) {
+      return false;
+    }
+    return chat.state == AIChatState.cancel;
   }
 }
 

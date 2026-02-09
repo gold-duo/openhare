@@ -8,7 +8,6 @@ import 'package:client/services/sessions/session_controller.dart';
 import 'package:client/widgets/button.dart';
 import 'package:client/widgets/code_auto_complete.dart';
 import 'package:client/widgets/const.dart';
-import 'package:client/widgets/loading.dart';
 import 'package:client/widgets/menu.dart';
 import 'package:client/widgets/mention_text.dart';
 import 'package:client/widgets/sql_highlight.dart';
@@ -30,6 +29,73 @@ class SessionChatInputCard extends ConsumerStatefulWidget {
 }
 
 class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
+  @override
+  void initState() {
+    super.initState();
+    final controller = SessionController.sessionController(widget.model.sessionId).chatInputController;
+    controller.addListener(_onInputChanged);
+  }
+
+  @override
+  void dispose() {
+    SessionController.sessionController(widget.model.sessionId).chatInputController.removeListener(_onInputChanged);
+    super.dispose();
+  }
+
+  void _onInputChanged() {
+    setState(() {});
+  }
+
+  bool _hasInputContent() {
+    final text = SessionController.sessionController(widget.model.sessionId).chatInputController.displayText;
+    return text.trim().isNotEmpty;
+  }
+
+  String _formatTokens(int v) {
+    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}k';
+    return '$v';
+  }
+
+  String _buildBudgetTooltip(BuildContext context, AIChatProgressModel b) {
+    final l10n = AppLocalizations.of(context)!;
+    final loopLimit = b.loopLimit <= 0 ? '-' : '${b.loopLimit}';
+    final lines = <String>[
+      l10n.ai_chat_budget_tooltip_loop(
+        b.loopUsed.toString(),
+        loopLimit,
+      ),
+      l10n.ai_chat_budget_tooltip_context(
+        _formatTokens(b.totalTokens),
+        _formatTokens(b.contextTokenLimit),
+      ),
+    ];
+    if (b.contextHardStopped) {
+      lines.add(l10n.ai_chat_budget_context_hard_stopped);
+    }
+    return lines.join('\n');
+  }
+
+  Widget _buildBudgetIndicator(BuildContext context, AIChatProgressModel b) {
+    final scheme = Theme.of(context).colorScheme;
+    final bg = scheme.surfaceContainerHighest;
+    final contextColor = b.contextHardStopped ? scheme.error : scheme.primary;
+
+    return Tooltip(
+      message: _buildBudgetTooltip(context, b),
+      waitDuration: const Duration(milliseconds: 250),
+      child: SizedBox(
+        width: kIconSizeSmall,
+        height: kIconSizeSmall,
+        child: CircularProgressIndicator(
+          value: b.contextProgress,
+          strokeWidth: 3,
+          backgroundColor: bg,
+          valueColor: AlwaysStoppedAnimation(contextColor),
+        ),
+      ),
+    );
+  }
+
   MetaDataNode? _findSchemaNode(SessionAIChatModel chatModel) {
     if (chatModel.metadata == null || chatModel.currentSchema == null) return null;
     final root = MetaDataNode(MetaType.instance, "", items: chatModel.metadata!.metadata);
@@ -48,12 +114,9 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
   String _buildTableRef(SessionAIChatModel chatModel, Iterable<String> mentionedTables) {
     final schemaNode = _findSchemaNode(chatModel);
     if (schemaNode == null) return '';
-
-    final tables = mentionedTables.toSet().toList()..sort();
-    if (tables.isEmpty) return '';
-
+    if (mentionedTables.isEmpty) return '';
     final b = StringBuffer();
-    for (final tableName in tables) {
+    for (final tableName in mentionedTables) {
       MetaDataNode? tableNode;
       for (final n in (schemaNode.items ?? const <MetaDataNode>[])) {
         if (n.type == MetaType.table && n.value == tableName) {
@@ -61,7 +124,6 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
           break;
         }
       }
-
       // 直接复用 MetaDataNode.toString() 的 JSON 序列化（见 db_driver_metadata.dart）
       if (tableNode != null) {
         b.writeln(tableNode.toString());
@@ -74,7 +136,7 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
   Future<void> _sendMessage(AIChatId chatId, SessionAIChatModel chatModel) async {
     final chatInputController = SessionController.sessionController(chatModel.sessionId).chatInputController;
     final text = chatInputController.displayText;
-    chatInputController.clear();
+    if (text.trim().isEmpty) return;
 
     // 如果用户通过 @ 提及了表，则把表结构信息放到 ref 里
     final mentionedTables = chatInputController.segments.whereType<MentionSegment>().map((s) => s.label).toList();
@@ -106,6 +168,8 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
   @override
   Widget build(BuildContext context) {
     final services = ref.read(aIChatServiceProvider.notifier);
+    final progress = widget.model.chatModel.progress;
+    final hardStopped = progress.contextHardStopped;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(kSpacingSmall - 5, 0, kSpacingSmall, 0),
@@ -125,8 +189,10 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
             // 输入框
             ChatInputFieldWidget(
               model: widget.model,
-              onSubmitted:
-                  widget.model.canSendMessage() ? () => _sendMessage(widget.model.chatModel.id, widget.model) : null,
+              onSubmitted: (widget.model.canSendMessage() && !hardStopped && _hasInputContent())
+                  ? () => _sendMessage(widget.model.chatModel.id, widget.model)
+                  : null,
+              enabled: !hardStopped,
             ),
 
             const SizedBox(height: kSpacingSmall),
@@ -139,6 +205,9 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
                 ModelSelectorWidget(model: widget.model),
                 const Spacer(),
 
+                _buildBudgetIndicator(context, progress),
+                const SizedBox(width: kSpacingTiny),
+
                 // 清空聊天记录
                 RectangleIconButton.small(
                   tooltip: AppLocalizations.of(context)!.button_tooltip_clear_chat,
@@ -147,13 +216,20 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
                       widget.model.canClearMessage() ? () => services.cleanMessages(widget.model.chatModel.id) : null,
                 ),
 
-                // 发送消息
+                // 发送消息 / 中止生成
                 (widget.model.chatModel.state == AIChatState.waiting)
-                    ? const Loading.small()
+                    ? RectangleIconButton(
+                        size: kIconButtonSizeSmall,
+                        iconSize: kIconSizeMedium,
+                        padding: 2,
+                        tooltip: AppLocalizations.of(context)!.button_tooltip_stop_chat,
+                        icon: Icons.stop_circle,
+                        onPressed: () => services.cancelChat(widget.model.chatModel.id),
+                      )
                     : RectangleIconButton.small(
                         tooltip: AppLocalizations.of(context)!.button_tooltip_send_message,
                         icon: Icons.send,
-                        onPressed: widget.model.canSendMessage()
+                        onPressed: (widget.model.canSendMessage() && !hardStopped && _hasInputContent())
                             ? () => _sendMessage(widget.model.chatModel.id, widget.model)
                             : null,
                       ),
@@ -297,11 +373,13 @@ class _TablePrompt extends FuzzyMatchCodePrompt {
 class ChatInputFieldWidget extends ConsumerStatefulWidget {
   final SessionAIChatModel model;
   final VoidCallback? onSubmitted;
+  final bool enabled;
 
   const ChatInputFieldWidget({
     super.key,
     required this.model,
     this.onSubmitted,
+    this.enabled = true,
   });
 
   @override
@@ -411,7 +489,7 @@ class _ChatInputFieldWidgetState extends ConsumerState<ChatInputFieldWidget> {
       textAlignVertical: TextAlignVertical.center,
       minLines: 1,
       maxLines: 5,
-      enabled: widget.model.chatModel.state != AIChatState.waiting,
+      enabled: widget.enabled && widget.model.chatModel.state != AIChatState.waiting,
       textInputAction: TextInputAction.done,
       selectionColor: tokenBg,
       decoration: InputDecoration(

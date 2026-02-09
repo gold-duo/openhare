@@ -87,29 +87,16 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
   Widget _buildResultStatistics(BuildContext context, BaseQueryResult result) {
     return Padding(
       padding: const EdgeInsets.all(kSpacingSmall),
-      child: Row(
-        children: [
-          Text(
-            AppLocalizations.of(context)!.ai_chat_result_rows_returned(result.rows.length),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-          ),
-          const SizedBox(width: kSpacingMedium),
-          Text(
-            AppLocalizations.of(context)!.ai_chat_result_rows_affected(result.affectedRows.toInt()),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-          ),
-          const SizedBox(width: kSpacingMedium),
-          Text(
-            AppLocalizations.of(context)!.ai_chat_execution_time(widget.toolCall.executeTime?.format() ?? '-'),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-          ),
-        ],
+      child: Text(
+        [
+          AppLocalizations.of(context)!.ai_chat_result_rows_returned(result.rows.length),
+          AppLocalizations.of(context)!.ai_chat_result_rows_affected(result.affectedRows.toInt()),
+          AppLocalizations.of(context)!.ai_chat_execution_time(widget.toolCall.executeTime?.format() ?? '-'),
+        ].join(' · '),
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

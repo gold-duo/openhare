@@ -1,4 +1,6 @@
+import 'package:collection/collection.dart';
 import 'package:pg/pg.dart';
+import 'package:sql_parser/parser.dart';
 import 'package:uuid/uuid.dart';
 import 'db_driver_interface.dart';
 import 'db_driver_conn_meta.dart';
@@ -80,8 +82,10 @@ class PGQueryColumn extends BaseQueryColumn {
 
 class PGConnection extends BaseConnection {
   final PGConn _conn;
+  final ConnectValue _meta;
+  int? _backendPid;
 
-  PGConnection(this._conn);
+  PGConnection(this._conn, this._meta);
 
   static Future<BaseConnection> open(
       {required ConnectValue meta, String? schema}) async {
@@ -97,11 +101,17 @@ class PGConnection extends BaseConnection {
       queryTimeout: Duration(seconds: meta.getIntValue("queryTimeout", 600)),
     );
 
-    final pgConn = PGConnection(conn);
+    final pgConn = PGConnection(conn, meta);
+    await pgConn._loadBackendPid();
     if (schema != null) {
       pgConn.setCurrentSchema(schema);
     }
     return pgConn;
+  }
+
+  Future<void> _loadBackendPid() async {
+    final results = await query("SELECT pg_backend_pid() AS pid");
+    _backendPid = int.tryParse(results.rows.first.getString("pid") ?? "");
   }
 
   @override
@@ -118,8 +128,26 @@ class PGConnection extends BaseConnection {
 
   @override
   Future<void> killQuery() async {
-    return;
-    // await _conn.killQuery();
+    if (_backendPid == null) return;
+    // 使用新连接取消当前连接上运行的查询
+    PGConn? tmp;
+    try {
+      tmp = await PGConn.open(
+        endpoint: Endpoint(
+          host: _meta.host,
+          port: _meta.port ?? 5432,
+          password: _meta.password,
+          username: _meta.user,
+          database: _meta.getValue("database", "postgres"),
+        ),
+        connectTimeout:
+            Duration(seconds: _meta.getIntValue("connectTimeout", 10)),
+        queryTimeout: Duration(seconds: _meta.getIntValue("queryTimeout", 600)),
+      );
+      await tmp.query(query: "SELECT pg_cancel_backend($_backendPid)");
+    } finally {
+      if (tmp != null) await tmp.close();
+    }
   }
 
   @override
@@ -146,25 +174,41 @@ class PGConnection extends BaseConnection {
     return BaseQueryResult(queryId, resultColumns, rows, resultAffectedRows);
   }
 
+  String _wrapLimit(String sql, int limit) {
+    sql = sql.trimRight();
+    if (sql.endsWith(";")) sql = sql.substring(0, sql.length - 1);
+    return "SELECT * FROM ($sql) AS dt_1 LIMIT $limit;";
+  }
+
   @override
   Stream<BaseQueryStreamItem> queryStream(String sql, {int? limit}) async* {
-    // todo: 暂时不支持 limit
-    final qs = await _conn.query(query: sql);
-    final columns = qs.schema.columns
-        .map<PGQueryColumn>((qs) => PGQueryColumn(qs))
-        .toList();
-    
-    // 先发送 header
-    yield QueryStreamItemHeader(
-      columns: columns,
-      affectedRows: BigInt.from(qs.affectedRows),
-    );
-    
-    // 然后发送 rows
-    for (final r in qs) {
-      yield QueryStreamItemRow(
-        row: QueryResultRow(columns, r.map((v) => PGQueryValue(v)).toList()),
-      );
+    final firstTok = Lexer(sql).firstTrim();
+    if (limit != null &&
+        firstTok != null &&
+        firstTok.content.toLowerCase() == "select") {
+      sql = _wrapLimit(sql, limit);
+    }
+    List<BaseQueryColumn>? columns;
+    await for (final item in _conn.queryStream(query: sql)) {
+      switch (item) {
+        case PGStreamHeader(:final schema, :final affectedRows):
+          columns = schema.columns
+              .map<PGQueryColumn>((c) => PGQueryColumn(c))
+              .toList();
+          yield QueryStreamItemHeader(
+            columns: columns,
+            affectedRows: BigInt.from(affectedRows),
+          );
+        case ResultRow row when columns != null:
+          yield QueryStreamItemRow(
+            row: QueryResultRow(
+              columns,
+              row.map((v) => PGQueryValue(v)).toList(),
+            ),
+          );
+        case ResultRow():
+          throw StateError('Received row before header');
+      }
     }
   }
 
@@ -173,11 +217,92 @@ class PGConnection extends BaseConnection {
     await _conn.close();
   }
 
-  // TODO: 实现
   @override
   Future<List<MetaDataNode>> metadata() async {
+    // ref: https://www.postgresql.org/docs/current/information-schema.html
+    final results = await query("""SELECT 
+    t.table_schema,
+    t.table_name,
+    c.column_name,
+    c.data_type
+FROM 
+    information_schema.tables t
+JOIN 
+    information_schema.columns c 
+    ON t.table_name = c.table_name 
+    AND t.table_schema = c.table_schema
+WHERE 
+    t.table_type IN ('BASE TABLE', 'VIEW')
+ORDER BY
+    t.table_schema,
+    t.table_name, 
+    c.ordinal_position;
+""");
+    final rows = results.rows;
     List<MetaDataNode> schemaNodes = List.empty(growable: true);
+    // group by Schema Name
+    final schemaRows =
+        rows.groupListsBy((result) => result.getString("table_schema")!);
+
+    for (final schema in schemaRows.keys) {
+      final schemaNode = MetaDataNode(MetaType.schema, schema);
+      schemaNodes.add(schemaNode);
+
+      // group by Table Name
+      List<MetaDataNode> tableNodes = List.empty(growable: true);
+      final tableRows = schemaRows[schema]!
+          .groupListsBy((result) => result.getString("table_name")!);
+      for (final table in tableRows.keys) {
+        final tableNode = MetaDataNode(MetaType.table, table);
+        tableNodes.add(tableNode);
+
+        // handler columns
+        final columnRows = tableRows[table]!;
+        final columnNodes = columnRows
+            .map((result) => MetaDataNode(MetaType.column,
+                    result.getString("column_name")!)
+                ..withProp(MetaDataPropType.dataType,
+                    _getDataType(result.getString("data_type")!)))
+            .toList();
+        tableNode.items = columnNodes;
+      }
+      schemaNode.items = tableNodes;
+    }
     return schemaNodes;
+  }
+
+  static DataType _getDataType(String dataType) {
+    return switch (dataType) {
+      "integer" ||
+      "bigint" ||
+      "smallint" ||
+      "serial" ||
+      "bigserial" ||
+      "smallserial" ||
+      "numeric" ||
+      "decimal" ||
+      "real" ||
+      "double precision" =>
+        DataType.number,
+      "character varying" || "varchar" || "character" || "char" || "text" =>
+        DataType.char,
+      "timestamp without time zone" ||
+      "timestamp with time zone" ||
+      "timestamptz" ||
+      "timestamp" ||
+      "date" ||
+      "time without time zone" ||
+      "time with time zone" ||
+      "time" ||
+      "interval" =>
+        DataType.time,
+      "bytea" => DataType.blob,
+      "json" || "jsonb" => DataType.json,
+      "boolean" => DataType.dataSet,
+      "uuid" => DataType.char,
+      "array" || "USER-DEFINED" => DataType.blob,
+      _ => DataType.char,
+    };
   }
 
   @override

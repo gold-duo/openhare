@@ -244,6 +244,10 @@
     "description": "Button tooltip clear chat history"
   },
   "button_tooltip_send_message": "Send message",
+  "button_tooltip_stop_chat": "Stop generation",
+  "@button_tooltip_stop_chat": {
+    "description": "Button tooltip stop AI chat generation"
+  },
   "@button_tooltip_send_message": {
     "description": "Button tooltip send message"
   },
@@ -594,5 +598,25 @@
   "ai_chat_thinking": "Thinking...",
   "@ai_chat_thinking": {
     "description": "AI chat thinking message"
+  },
+  "ai_chat_budget_tooltip_loop": "Loop: {used}/{limit}",
+  "@ai_chat_budget_tooltip_loop": {
+    "description": "AI chat budget tooltip - loop",
+    "placeholders": {
+      "used": { "type": "String" },
+      "limit": { "type": "String" }
+    }
+  },
+  "ai_chat_budget_tooltip_context": "Context: {used}/{limit} tokens",
+  "@ai_chat_budget_tooltip_context": {
+    "description": "AI chat budget tooltip - context",
+    "placeholders": {
+      "used": { "type": "String" },
+      "limit": { "type": "String" }
+    }
+  },
+  "ai_chat_budget_context_hard_stopped": "Context limit reached; cannot continue",
+  "@ai_chat_budget_context_hard_stopped": {
+    "description": "AI chat context limit reached message"
   }
 }

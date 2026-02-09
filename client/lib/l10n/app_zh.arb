@@ -61,6 +61,7 @@
     "ai_chat_table_tip_more_than_10": "表过多，超过10，可能影响性能并消耗过多token",
     "button_tooltip_clear_chat": "清空对话记录",
     "button_tooltip_send_message": "发送消息",
+    "button_tooltip_stop_chat": "中止生成",
     "button_tooltip_run_sql": "执行SQL在当前标签",
     "button_tooltip_run_sql_new_tab": "执行SQL并打开新标签",
     "button_tooltip_save": "保存SQL",
@@ -237,5 +238,25 @@
     "ai_chat_thinking": "正在思考...",
     "@ai_chat_thinking": {
       "description": "AI对话思考消息"
+    },
+    "ai_chat_budget_tooltip_loop": "循环：{used}/{limit}",
+    "@ai_chat_budget_tooltip_loop": {
+      "description": "AI对话预算提示-循环",
+      "placeholders": {
+        "used": { "type": "String" },
+        "limit": { "type": "String" }
+      }
+    },
+    "ai_chat_budget_tooltip_context": "上下文：{used}/{limit} tokens",
+    "@ai_chat_budget_tooltip_context": {
+      "description": "AI对话预算提示-上下文",
+      "placeholders": {
+        "used": { "type": "String" },
+        "limit": { "type": "String" }
+      }
+    },
+    "ai_chat_budget_context_hard_stopped": "已达到上下文上限；无法继续",
+    "@ai_chat_budget_context_hard_stopped": {
+      "description": "AI对话上下文已达上限提示"
     }
 }

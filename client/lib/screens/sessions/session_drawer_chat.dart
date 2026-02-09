@@ -61,7 +61,7 @@ class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
   Widget _buildMessage(
       BuildContext context, WidgetRef ref, SessionAIChatModel model, AIChatMessageItem message, int index) {
     return message.when(
-      userMessage: (msg) => UserMessage(message: msg),
+      userMessage: (msg) => UserMessage(message: msg, sessionChatModel: model),
       assistantMessage: (msg) => AIMessage(
         message: msg,
         onRunSQL: SQLConnectState.isIdle(model.state) ? (code) => _runSQL(context, ref, model, code) : null,
