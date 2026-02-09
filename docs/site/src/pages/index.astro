@@ -5,6 +5,7 @@ const title = 'openhare - Professional Cross-Platform Desktop SQL Query Tool';
 const description =
   'openhare is a professional, cross-platform desktop SQL query tool built with Flutter. Designed for DBAs, developers, and data analysts, it delivers a powerful yet intuitive experience for managing and querying databases.';
 const repoUrl = import.meta.env.PUBLIC_REPO_URL ?? 'https://github.com/sjjian/openhare';
+const downloadUrl = `${repoUrl}/releases`;
 ---
 
 <BaseLayout title={title} description={description} lang="en">
@@ -35,7 +36,7 @@ const repoUrl = import.meta.env.PUBLIC_REPO_URL ?? 'https://github.com/sjjian/op
           developers, and data analysts—powerful yet intuitive for managing and querying databases.
         </p>
         <div class="heroActions" data-reveal>
-          <a class="btn btnPrimary" href={repoUrl} target="_blank" rel="noreferrer">
+          <a class="btn btnPrimary" href={downloadUrl} target="_blank" rel="noreferrer">
             <svg class="btnIcon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path
                 fill="currentColor"
