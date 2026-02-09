@@ -332,7 +332,7 @@ ORDER BY
 
   @override
   Future<void> setCurrentSchema(String schema) async {
-    await query("USE $schema");
+    await query("USE `$schema`");
     final currentSchema = await getCurrentSchema();
     onSchemaChanged(currentSchema!);
   }

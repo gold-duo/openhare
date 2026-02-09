@@ -19,8 +19,15 @@ class QueryTool extends AITool {
   String get name => 'execute_query';
 
   @override
-  String get description =>
-      '在当前选中的数据库连接上执行 SQL 查询。输入 SQL 语句，返回查询结果（包括列信息和数据行）。只能执行 SELECT 查询，不能执行 INSERT、UPDATE、DELETE 等修改数据的操作。';
+  String get description => '''
+Execute a SQL query on the currently selected database connection.
+
+Accepts a SQL statement and returns the query result (including column metadata and rows).
+
+Only SELECT queries are allowed; do not use this tool for INSERT, UPDATE, DELETE, or other data-modifying operations.
+
+The result will include at most the first 100 rows.
+''';
 
   @override
   Map<String, dynamic> get inputJsonSchema => {
@@ -28,7 +35,7 @@ class QueryTool extends AITool {
         'properties': {
           'query': {
             'type': 'string',
-            'description': '要执行的 SQL 查询语句，例如：SELECT * FROM users LIMIT 10',
+            'description': 'The SQL query string to execute, for example: SELECT * FROM users LIMIT 10',
           },
         },
         'required': ['query'],
