@@ -1,29 +1,30 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 
-const title = 'openhare - 专业跨平台桌面 SQL 查询工具';
+const title = 'openhare - Professional Cross-Platform Desktop SQL Query Tool';
 const description =
-  'openhare 是一款专业的跨平台桌面 SQL 查询工具，使用 Flutter 构建，面向 DBA、开发者与数据分析师，提供强大且直观的数据库管理与查询体验。';
+  'openhare is a professional, cross-platform desktop SQL query tool built with Flutter. Designed for DBAs, developers, and data analysts, it delivers a powerful yet intuitive experience for managing and querying databases.';
 const repoUrl = import.meta.env.PUBLIC_REPO_URL ?? 'https://github.com/sjjian/openhare';
+const downloadUrl = `${repoUrl}/releases`;
 ---
 
-<BaseLayout title={title} description={description} lang="zh-CN">
+<BaseLayout title={title} description={description} lang="en">
   <div class="container">
     <header class="topbar">
-      <a class="topbarBrand" href={import.meta.env.BASE_URL} aria-label="返回首页">
+      <a class="topbarBrand" href={import.meta.env.BASE_URL} aria-label="Back to home">
         <span class="brandMark" aria-hidden="true">
           <img src={`${import.meta.env.BASE_URL}logo.png`} width="28" height="28" alt="" />
         </span>
         <span class="brandText">openhare</span>
       </a>
-      <a class="topbarLang" href={`${import.meta.env.BASE_URL}en/`} aria-label="Switch to English">
+      <a class="topbarLang" href={`${import.meta.env.BASE_URL}zh/`} aria-label="切换到中文">
         <svg class="langIcon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path
             fill="currentColor"
             d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm7.94 9h-3.18c-.12-2.3-.7-4.4-1.63-5.96A8.02 8.02 0 0 1 19.94 11zM12 4c.9 0 2.22 2.12 2.6 7H9.4C9.78 6.12 11.1 4 12 4zM4.06 13h3.18c.12 2.3.7 4.4 1.63 5.96A8.02 8.02 0 0 1 4.06 13zM4.06 11a8.02 8.02 0 0 1 4.81-5.96C7.94 6.6 7.36 8.7 7.24 11H4.06zm7.94 9c-.9 0-2.22-2.12-2.6-7h5.2c-.38 4.88-1.7 7-2.6 7zm3.13-1.04c.93-1.56 1.5-3.66 1.63-5.96h3.18a8.02 8.02 0 0 1-4.81 5.96zM16.76 11H7.24c.05-.64.08-1.31.08-2s-.03-1.36-.08-2h9.52c.05.64.08 1.31.08 2s-.03 1.36-.08 2z"
           />
         </svg>
-        <span>EN</span>
+        <span>中文</span>
       </a>
     </header>
 
@@ -31,19 +32,20 @@ const repoUrl = import.meta.env.PUBLIC_REPO_URL ?? 'https://github.com/sjjian/op
       <section class="hero">
         <h1 class="heroTitle" data-reveal>openhare</h1>
         <p class="heroSub" data-reveal>
-          一款专业的跨平台桌面 SQL 查询工具，使用 Flutter 构建。面向数据库管理员、开发者与数据分析师，提供强大且直观的数据库管理与查询体验。
+          A professional, cross-platform desktop SQL query tool built with Flutter. Designed for database administrators,
+          developers, and data analysts—powerful yet intuitive for managing and querying databases.
         </p>
         <div class="heroActions" data-reveal>
-          <a class="btn btnPrimary" href={repoUrl} target="_blank" rel="noreferrer">
+          <a class="btn btnPrimary" href={downloadUrl} target="_blank" rel="noreferrer">
             <svg class="btnIcon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path
                 fill="currentColor"
                 d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4.01 4.01a1 1 0 0 1-1.4 0l-4.01-4.01a1 1 0 1 1 1.4-1.42L11 12.59V4a1 1 0 0 1 1-1zm-7 16a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1z"
               />
             </svg>
-            <span>下载</span>
+            <span>Download</span>
           </a>
-          <a class="btn btnGhost" href={repoUrl} target="_blank" rel="noreferrer" aria-label="打开 GitHub 仓库">
+          <a class="btn btnGhost" href={repoUrl} target="_blank" rel="noreferrer" aria-label="Open GitHub repository">
             <svg class="btnIcon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path
                 fill="currentColor"
@@ -56,7 +58,7 @@ const repoUrl = import.meta.env.PUBLIC_REPO_URL ?? 'https://github.com/sjjian/op
       </section>
 
       <section id="features" class="section" data-reveal>
-        <h2 class="sectionTitle">功能特性</h2>
+        <h2 class="sectionTitle">Key Features</h2>
         <div class="cards">
           <article class="card">
             <div class="cardIcon" aria-hidden="true">
@@ -67,8 +69,8 @@ const repoUrl = import.meta.env.PUBLIC_REPO_URL ?? 'https://github.com/sjjian/op
                 />
               </svg>
             </div>
-            <h3>AI 助手</h3>
-            <p>增强的 AI 能力，帮助你编写、优化并理解 SQL 查询。</p>
+            <h3>AI-Powered Assistance</h3>
+            <p>Enhanced AI features to help you write, optimize, and understand SQL queries.</p>
           </article>
           <article class="card">
             <div class="cardIcon" aria-hidden="true">
@@ -79,20 +81,8 @@ const repoUrl = import.meta.env.PUBLIC_REPO_URL ?? 'https://github.com/sjjian/op
                 />
               </svg>
             </div>
-            <h3>跨平台</h3>
-            <p>基于 Flutter 构建，支持 Windows、macOS 与 Linux。</p>
-          </article>
-          <article class="card">
-            <div class="cardIcon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path
-                  fill="currentColor"
-                  d="M12 2a7 7 0 0 1 7 7v3a3 3 0 0 1-3 3h-1v2a3 3 0 0 1-3 3H7a1 1 0 1 1 0-2h6a1 1 0 0 0 1-1v-2h-2a3 3 0 0 1-3-3V9a7 7 0 0 1 7-7zm0 2a5 5 0 0 0-5 5v3a1 1 0 0 0 1 1h4v-2a1 1 0 1 1 2 0v2h2a1 1 0 0 0 1-1V9a5 5 0 0 0-5-5z"
-                />
-              </svg>
-            </div>
-            <h3>多数据库支持</h3>
-            <p>轻松连接并管理多种 SQL 数据库。</p>
+            <h3>Cross-Platform</h3>
+            <p>Runs seamlessly on Windows, macOS, and Linux.</p>
           </article>
           <article class="card">
             <div class="cardIcon" aria-hidden="true">
@@ -103,8 +93,8 @@ const repoUrl = import.meta.env.PUBLIC_REPO_URL ?? 'https://github.com/sjjian/op
                 />
               </svg>
             </div>
-            <h3>完全开源</h3>
-            <p>Apache License 2.0，透明、可审计、社区驱动。</p>
+            <h3>Fully Open Source</h3>
+            <p>Licensed under Apache License 2.0—transparent and community-driven.</p>
           </article>
           <article class="card">
             <div class="cardIcon" aria-hidden="true">
@@ -115,8 +105,20 @@ const repoUrl = import.meta.env.PUBLIC_REPO_URL ?? 'https://github.com/sjjian/op
                 />
               </svg>
             </div>
-            <h3>简洁易用</h3>
-            <p>现代直观的界面，专注效率与生产力。</p>
+            <h3>Simple &amp; Intuitive UI</h3>
+            <p>A modern interface focused on ease of use and productivity.</p>
+          </article>
+          <article class="card">
+            <div class="cardIcon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path
+                  fill="currentColor"
+                  d="M12 2a7 7 0 0 1 7 7v3a3 3 0 0 1-3 3h-1v2a3 3 0 0 1-3 3H7a1 1 0 1 1 0-2h6a1 1 0 0 0 1-1v-2h-2a3 3 0 0 1-3-3V9a7 7 0 0 1 7-7zm0 2a5 5 0 0 0-5 5v3a1 1 0 0 0 1 1h4v-2a1 1 0 1 1 2 0v2h2a1 1 0 0 0 1-1V9a5 5 0 0 0-5-5z"
+                />
+              </svg>
+            </div>
+            <h3>Multi-Database Support</h3>
+            <p>Connect to and manage various SQL databases effortlessly.</p>
           </article>
         </div>
       </section>
@@ -127,4 +129,3 @@ const repoUrl = import.meta.env.PUBLIC_REPO_URL ?? 'https://github.com/sjjian/op
     </footer>
   </div>
 </BaseLayout>
-
