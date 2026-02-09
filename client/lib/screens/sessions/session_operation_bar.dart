@@ -406,6 +406,7 @@ class SessionDrawerBar extends ConsumerWidget {
           RectangleIconButton.medium(
               tooltip: AppLocalizations.of(context)!.button_tooltip_ai_chat,
               icon: Icons.auto_awesome,
+              iconColor: Colors.purple[600]!,
               backgroundColor:
                   (model.drawerPage == DrawerPage.aiChat) ? Theme.of(context).colorScheme.primaryContainer : null,
               onPressed: () {
