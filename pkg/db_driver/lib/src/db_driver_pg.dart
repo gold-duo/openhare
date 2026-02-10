@@ -307,7 +307,9 @@ ORDER BY
 
   @override
   Future<void> setCurrentSchema(String schema) async {
-    await query("SET search_path TO $schema");
+    // 使用字符串字面量设置 search_path，避免空格等字符导致语法错误
+    final escaped = schema.replaceAll("'", "''");
+    await query("SET search_path TO '$escaped'");
     final currentSchema = await getCurrentSchema();
     onSchemaChanged(currentSchema!);
     return;

@@ -333,6 +333,7 @@ class _ModelSelectorWidgetState extends ConsumerState<ModelSelectorWidget> {
             },
           ),
       ],
+      header: OverlayMenuHeader(height: 10, child: SizedBox()), // 顶部空间
       footer: OverlayMenuFooter(
         height: 36,
         child: Padding(

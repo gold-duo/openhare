@@ -9,10 +9,12 @@ import 'package:client/services/sessions/session_sql_result.dart';
 import 'package:client/services/sessions/session_conn.dart';
 import 'package:client/services/sessions/sessions.dart';
 import 'package:client/widgets/const.dart';
+import 'package:client/widgets/menu.dart';
 import 'package:client/widgets/dialog.dart';
 import 'package:client/widgets/button.dart';
 import 'package:client/widgets/divider.dart';
 import 'package:client/widgets/loading.dart';
+import 'package:client/widgets/tooltip.dart';
 import 'package:flutter/material.dart';
 import 'package:sql_parser/parser.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -293,77 +295,160 @@ class SchemaBar extends ConsumerStatefulWidget {
 
 class _SchemaBarState extends ConsumerState<SchemaBar> {
   bool isEnter = false;
+  List<String>? _schemas;
+  late final TextEditingController _schemaSearchController;
+
+  @override
+  void initState() {
+    super.initState();
+    _schemaSearchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _schemaSearchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant SchemaBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.instanceId != widget.instanceId) {
+      _schemas = null;
+      _schemaSearchController.clear();
+    }
+  }
+
+  void _onSchemaSearchChanged() {
+    setState(() {});
+  }
+
+  List<String> _filteredSchemas(List<String> schemas, String searchText) {
+    if (searchText.isEmpty) return schemas;
+    return schemas.where((s) => s.toLowerCase().contains(searchText.toLowerCase())).toList();
+  }
+
+  Future<void> _fetchSchemas() async {
+    if (widget.disable || widget.instanceId == null) return;
+    if (_schemas != null) return;
+    final schemas = await ref.read(instancesServicesProvider.notifier).getSchemas(widget.instanceId!);
+    if (mounted) {
+      setState(() => _schemas = schemas);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final color = (isEnter && !widget.disable)
         ? Theme.of(context).colorScheme.primary // schema 鼠标移入的颜色
         : Theme.of(context).colorScheme.onSurface;
-    return Padding(
+
+    final schemaBarContent = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 5),
       child: MouseRegion(
-        onEnter: (_) {
-          setState(() {
-            isEnter = true;
-          });
-        },
-        onExit: (_) {
-          setState(() {
-            isEnter = false;
-          });
-        },
-        child: GestureDetector(
-          onTapUp: (detail) async {
-            if (widget.disable) {
-              return;
-            }
-            final position = detail.globalPosition;
-            final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-            final overlayPos = overlay.localToGlobal(Offset.zero);
-
-            List<String>? schemas = await ref.read(instancesServicesProvider.notifier).getSchemas(widget.instanceId!);
-
-            // todo
-            showMenu(
-                context: context,
-                position: RelativeRect.fromLTRB(
-                  position.dx - overlayPos.dx,
-                  position.dy - overlayPos.dy,
-                  position.dx - overlayPos.dx,
-                  position.dy - overlayPos.dy,
-                ),
-                items: schemas.map((schema) {
-                  return PopupMenuItem<String>(
-                      height: 30,
-                      onTap: () async {
-                        await ref.read(sessionConnsServicesProvider.notifier).setCurrentSchema(widget.connId!, schema);
-                      },
-                      child: Text(schema, overflow: TextOverflow.ellipsis));
-                }).toList());
-          },
+        onEnter: (_) => setState(() => isEnter = true),
+        onExit: (_) => setState(() => isEnter = false),
+        child: Listener(
+          onPointerDown: (_) => _fetchSchemas(),
           child: Container(
-              padding: const EdgeInsets.fromLTRB(0, kSpacingTiny, 0, kSpacingTiny),
-              child: Row(
-                children: [
-                  HugeIcon(
-                    icon: HugeIcons.strokeRoundedDatabase,
-                    color: color,
-                    size: kIconSizeSmall,
+            padding: const EdgeInsets.fromLTRB(0, kSpacingTiny, 0, kSpacingTiny),
+            child: Row(
+              children: [
+                HugeIcon(
+                  icon: HugeIcons.strokeRoundedDatabase,
+                  color: color,
+                  size: kIconSizeSmall,
+                ),
+                Container(
+                  padding: const EdgeInsets.only(left: kSpacingTiny),
+                  width: 120,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      widget.currentSchema ?? "",
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: color),
+                    ),
                   ),
-                  Container(
-                      padding: const EdgeInsets.only(left: kSpacingTiny),
-                      width: 120,
-                      child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            widget.currentSchema ?? "",
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: color),
-                          ))),
-                ],
-              )),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
+    );
+
+    final filteredSchemas = _schemas == null ? null : _filteredSchemas(_schemas!, _schemaSearchController.text);
+
+    final tabs = filteredSchemas == null
+        ? [
+            OverlayMenuItem(
+              height: 36,
+              child: const Center(child: Loading.medium()),
+            ),
+          ]
+        : filteredSchemas.map((schema) {
+            final isSelected = schema == widget.currentSchema;
+            final color = isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface;
+            return OverlayMenuItem(
+              height: 30,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: kSpacingSmall),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    children: [
+                      HugeIcon(
+                        icon: HugeIcons.strokeRoundedDatabase,
+                        color: color,
+                        size: kIconSizeSmall,
+                      ),
+                      const SizedBox(width: kSpacingTiny),
+                      Expanded(
+                        child: TooltipText(text: schema, style: TextStyle(color: color)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              onTabSelected: () async {
+                await ref.read(sessionConnsServicesProvider.notifier).setCurrentSchema(widget.connId!, schema);
+              },
+            );
+          }).toList();
+
+    if (widget.disable) {
+      return schemaBarContent;
+    }
+
+    final header = OverlayMenuHeader(
+      height: 36,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(kSpacingSmall, kSpacingTiny, kSpacingSmall, kSpacingTiny),
+        child: SearchBarTheme(
+          data: SearchBarThemeData(
+            textStyle: WidgetStatePropertyAll(Theme.of(context).textTheme.bodySmall),
+            backgroundColor: WidgetStatePropertyAll(Theme.of(context).colorScheme.surfaceContainer),
+            elevation: const WidgetStatePropertyAll(0),
+            constraints: const BoxConstraints(minHeight: 24),
+          ),
+          child: SearchBar(
+            controller: _schemaSearchController,
+            onChanged: (_) => _onSchemaSearchChanged(),
+            trailing: const [Icon(Icons.search, size: kIconSizeSmall)],
+          ),
+        ),
+      ),
+    );
+
+    return OverlayMenu(
+      spacing: kSpacingTiny,
+      maxHeight: 300,
+      maxWidth: 300,
+      tabs: tabs,
+      header: header,
+      footer: OverlayMenuFooter(height: kSpacingSmall, child: SizedBox()),
+      child: schemaBarContent,
     );
   }
 }
