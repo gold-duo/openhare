@@ -31,13 +31,16 @@ class InstanceStorage {
   String password;
   String desc;
 
+  /// 使用字符串类型存储 custom 的 json 字符串， 使用时进行 json 解析。 原因：ObjectBox 不支持 json 类型。
+  /// 本来使用的 @Transient 注解加自定义类型，但是更新后好像失效，弃用了。
+  String customJson;
+  
   @Transient()
-  Map<String, String> custom = {};
-
-  String get stCustom => jsonEncode(custom);
-
-  set stCustom(String value) {
-    custom = jsonDecode(value).map((key, value) => MapEntry(key, value.toString()));
+  Map<String, String> get custom {
+    if (customJson.isEmpty) {
+      return {};
+    }
+    return Map<String, String>.from(jsonDecode(customJson));
   }
 
   List<String> initQuerys;
@@ -76,7 +79,7 @@ class InstanceStorage {
     required this.user,
     required this.password,
     required this.desc,
-    required String stCustom,
+    required this.customJson,
     required this.initQuerys,
     ActiveSet<String>? activeSchemas,
     DateTime? createdAt,
@@ -95,11 +98,11 @@ class InstanceStorage {
         user = model.user,
         password = model.password,
         desc = model.desc,
-        custom = model.custom,
+        customJson = jsonEncode(model.custom),
         initQuerys = model.initQuerys,
         activeSchemas = ActiveSet<String>(model.activeSchemas),
         createdAt = model.createdAt,
-        latestOpenAt = model.latestOpenAt;
+        latestOpenAt = model.latestOpenAt; 
 
   InstanceModel toModel() => InstanceModel(
         id: InstanceId(value: id),
