@@ -13,6 +13,8 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:client/l10n/app_localizations.dart';
 
+const double paddingButtonLeftSize = 10.0; // 为了使其他组件与`最近使用的数据库`的TextButton对齐
+
 class AddSession extends HookConsumerWidget {
   const AddSession({super.key});
 
@@ -57,7 +59,7 @@ class AddSession extends HookConsumerWidget {
             children: [
               SizedBox(width: 200, child: Text(AppLocalizations.of(context)!.db_instance_name)),
               Container(
-                  padding: const EdgeInsets.only(left: 12), // 与下面的TextButton的padding对齐
+                  padding: EdgeInsets.only(left: paddingButtonLeftSize),
                   child: Text(AppLocalizations.of(context)!.recently_used_schema))
             ],
           ),
@@ -151,59 +153,76 @@ class AddSession extends HookConsumerWidget {
           const SizedBox(height: kSpacingSmall),
           const PixelDivider(),
           const SizedBox(height: kSpacingMedium),
-          Row(
-            children: [
-              SizedBox(width: 200, child: Text(AppLocalizations.of(context)!.db_instance_name)),
-              Container(
-                  width: 200,
-                  padding: const EdgeInsets.only(left: 12),
-                  child: Text(AppLocalizations.of(context)!.db_instance_host)),
-              Container(
-                  padding: const EdgeInsets.only(left: 12),
-                  child: Text(AppLocalizations.of(context)!.db_instance_desc)),
-            ],
-          ),
-          const SizedBox(height: kSpacingSmall),
-          for (var inst in model.instances.instances)
-            Row(
-              children: [
-                SizedBox(
-                  width: 200,
-                  child: Row(
-                    children: [
-                      Image.asset(
-                        connectionMetaMap[inst.dbType]!.logoAssertPath,
-                        height: kIconSizeMedium,
-                      ),
-                      LinkButton(
-                        text: inst.connectValue.name,
-                        onPressed: () {
-                          ref.read(sessionsServicesProvider.notifier).addSession(inst);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.only(left: 12),
-                  width: 200,
-                  child: Row(
-                    children: [
-                      Text(inst.connectValue.target.toString(), overflow: TextOverflow.ellipsis),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.only(left: 12),
-                    child: Text(
-                      inst.connectValue.desc,
-                      overflow: TextOverflow.ellipsis,
+          Expanded(
+            child: Scrollbar(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.vertical,
+                child: DataTable(
+                  dataRowMinHeight: 42,
+                  dataRowMaxHeight: 42,
+                  headingRowHeight: 42,
+                  horizontalMargin: 0,
+                  columnSpacing: 0,
+                  columns: [
+                    DataColumn(
+                      label: Text(AppLocalizations.of(context)!.db_instance_name),
+                      columnWidth: const FixedColumnWidth(200),
                     ),
-                  ),
+                    DataColumn(
+                      label: Padding(
+                        padding: EdgeInsets.only(left: paddingButtonLeftSize),
+                        child: Text(AppLocalizations.of(context)!.db_instance_target),
+                      ),
+                      columnWidth: const FlexColumnWidth(1),
+                    ),
+                    DataColumn(
+                      label: Text(AppLocalizations.of(context)!.db_instance_user),
+                      columnWidth: const FixedColumnWidth(120),
+                    ),
+                    DataColumn(
+                      label: Text(AppLocalizations.of(context)!.db_instance_desc),
+                      columnWidth: const FlexColumnWidth(1),
+                    ),
+                  ],
+                  rows: model.instances.instances.map((inst) {
+                    return DataRow(
+                      cells: [
+                        DataCell(
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Image.asset(
+                                connectionMetaMap[inst.dbType]!.logoAssertPath,
+                                height: kIconSizeMedium,
+                              ),
+                              LinkButton(
+                                text: inst.connectValue.name,
+                                onPressed: () {
+                                  ref.read(sessionsServicesProvider.notifier).addSession(inst);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        DataCell(
+                          Padding(
+                            padding: EdgeInsets.only(left: paddingButtonLeftSize),
+                            child: Text(inst.connectValue.target.toString(), overflow: TextOverflow.ellipsis),
+                          ),
+                        ),
+                        DataCell(
+                          Text(inst.connectValue.user, overflow: TextOverflow.ellipsis),
+                        ),
+                        DataCell(
+                          Text(inst.connectValue.desc, overflow: TextOverflow.ellipsis),
+                        ),
+                      ],
+                    );
+                  }).toList(),
                 ),
-              ],
+              ),
             ),
+          ),
           TablePaginatedBar(
             count: model.instances.count,
             pageSize: model.pageSize,
