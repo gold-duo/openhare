@@ -34,7 +34,29 @@ A new Flutter FFI plugin project.
     :script => <<-SCRIPT,
 set -e
 cd "$PODS_TARGET_SRCROOT/../go"
-CGO_ENABLED=1 go build -buildmode=c-archive -o "${BUILT_PRODUCTS_DIR}/liboracle_go.a" .
+OUT="${BUILT_PRODUCTS_DIR}/liboracle_go.a"
+
+# 构建通用二进制：为 ARCHS 中的每个架构分别构建，然后用 lipo 合并
+build_arch() {
+  case "$1" in
+    arm64)  GOARCH="arm64" ;;
+    x86_64) GOARCH="amd64" ;;
+    *) echo "Unsupported architecture: $1"; exit 1 ;;
+  esac
+  CGO_ENABLED=1 GOOS=darwin GOARCH=$GOARCH go build -buildmode=c-archive -o "$2" .
+}
+
+LIPO_INPUTS=""
+for arch in $ARCHS; do
+  build_arch "$arch" "${OUT}.${arch}"
+  LIPO_INPUTS="$LIPO_INPUTS ${OUT}.${arch}"
+done
+if echo "$ARCHS" | grep -q " "; then
+  lipo -create -output "$OUT" $LIPO_INPUTS
+  rm -f ${OUT}.*
+else
+  mv "${OUT}.${ARCHS}" "$OUT"
+fi
 SCRIPT
     :execution_position => :before_compile,
     :input_files => ['${BUILT_PRODUCTS_DIR}/oracle_go_phony'],
@@ -77,7 +99,29 @@ Oracle driver via Go + go-ora.
     :script => <<-SCRIPT,
 set -e
 cd "$PODS_TARGET_SRCROOT/../go"
-CGO_ENABLED=1 go build -buildmode=c-archive -o "${BUILT_PRODUCTS_DIR}/liboracle_go.a" .
+OUT="${BUILT_PRODUCTS_DIR}/liboracle_go.a"
+
+# 构建通用二进制：为 ARCHS 中的每个架构分别构建，然后用 lipo 合并
+build_arch() {
+  case "$1" in
+    arm64)  GOARCH="arm64" ;;
+    x86_64) GOARCH="amd64" ;;
+    *) echo "Unsupported architecture: $1"; exit 1 ;;
+  esac
+  CGO_ENABLED=1 GOOS=darwin GOARCH=$GOARCH go build -buildmode=c-archive -o "$2" .
+}
+
+LIPO_INPUTS=""
+for arch in $ARCHS; do
+  build_arch "$arch" "${OUT}.${arch}"
+  LIPO_INPUTS="$LIPO_INPUTS ${OUT}.${arch}"
+done
+if echo "$ARCHS" | grep -q " "; then
+  lipo -create -output "$OUT" $LIPO_INPUTS
+  rm -f ${OUT}.*
+else
+  mv "${OUT}.${ARCHS}" "$OUT"
+fi
 SCRIPT
     :execution_position => :before_compile,
     :input_files => ['${BUILT_PRODUCTS_DIR}/oracle_go_phony'],
