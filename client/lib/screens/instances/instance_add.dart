@@ -703,7 +703,7 @@ class AddInstanceBottomBar extends StatelessWidget {
       status = const Loading.medium();
     } else if (isDatabaseConnectable == null) {
       msg = const Text("");
-      status = const Spacer();
+      status = const SizedBox.shrink();
     } else if (isDatabaseConnectable == true) {
       msg = Text(AppLocalizations.of(context)!.test_success);
       status = const Icon(
