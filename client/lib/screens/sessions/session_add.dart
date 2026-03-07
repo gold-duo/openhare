@@ -24,7 +24,7 @@ class AddSession extends HookConsumerWidget {
 
     if (model.instances.count == 0) {
       return EmptyPage(
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
