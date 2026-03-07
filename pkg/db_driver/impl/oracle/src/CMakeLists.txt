@@ -11,30 +11,25 @@ if (NOT GO_EXECUTABLE)
 endif()
 
 set(ORACLE_GO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../go")
-set(ORACLE_GO_ARCHIVE "${CMAKE_CURRENT_BINARY_DIR}/liboracle_go.a")
+if (WIN32)
+  set(ORACLE_SHARED_LIB "${CMAKE_CURRENT_BINARY_DIR}/oracle.dll")
+elseif(APPLE)
+  set(ORACLE_SHARED_LIB "${CMAKE_CURRENT_BINARY_DIR}/liboracle.dylib")
+else()
+  set(ORACLE_SHARED_LIB "${CMAKE_CURRENT_BINARY_DIR}/liboracle.so")
+endif()
+set(ORACLE_SHARED_HEADER "${CMAKE_CURRENT_BINARY_DIR}/oracle.h")
 
 add_custom_target(oracle_go ALL
-  COMMAND "${CMAKE_COMMAND}" -E env CGO_ENABLED=1 "${GO_EXECUTABLE}" build -buildmode=c-archive -o "${ORACLE_GO_ARCHIVE}" .
-  BYPRODUCTS "${ORACLE_GO_ARCHIVE}" "${CMAKE_CURRENT_BINARY_DIR}/liboracle_go.h"
+  COMMAND "${CMAKE_COMMAND}" -E env CGO_ENABLED=1 "${GO_EXECUTABLE}" build -buildmode=c-shared -o "${ORACLE_SHARED_LIB}" .
+  BYPRODUCTS "${ORACLE_SHARED_LIB}" "${ORACLE_SHARED_HEADER}"
   WORKING_DIRECTORY "${ORACLE_GO_DIR}"
-  COMMENT "Building Go oracle archive"
+  COMMENT "Building Go oracle shared library"
   VERBATIM
 )
 
-add_library(oracle SHARED
-  "oracle.c"
-)
-
+add_library(oracle SHARED IMPORTED GLOBAL)
 set_target_properties(oracle PROPERTIES
-  PUBLIC_HEADER oracle.h
-  OUTPUT_NAME "oracle"
+  IMPORTED_LOCATION "${ORACLE_SHARED_LIB}"
 )
-
-target_compile_definitions(oracle PUBLIC DART_SHARED_LIB)
 add_dependencies(oracle oracle_go)
-target_link_libraries(oracle PRIVATE "${ORACLE_GO_ARCHIVE}")
-
-if (ANDROID)
-  # Support Android 15 16k page size
-  target_link_options(oracle PRIVATE "-Wl,-z,max-page-size=16384")
-endif()

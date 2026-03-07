@@ -303,8 +303,8 @@ func queryFromHandle(handle int64) (*queryCursor, bool) {
 	return q, ok
 }
 
-//export oraclego_open
-func oraclego_open(dsn *C.char, errOut **C.char) C.int64_t {
+//export oracle_open
+func oracle_open(dsn *C.char, errOut **C.char) C.int64_t {
 	conn, err := go_ora.NewConnection(C.GoString(dsn), nil)
 	if err != nil {
 		setErr(errOut, err)
@@ -329,8 +329,8 @@ func oraclego_open(dsn *C.char, errOut **C.char) C.int64_t {
 	return C.int64_t(h)
 }
 
-//export oraclego_close
-func oraclego_close(handle C.int64_t) {
+//export oracle_close
+func oracle_close(handle C.int64_t) {
 	h := cgo.Handle(handle)
 	if c, ok := h.Value().(*oracleConn); ok {
 		c.close()
@@ -338,8 +338,8 @@ func oraclego_close(handle C.int64_t) {
 	h.Delete()
 }
 
-//export oraclego_query_open
-func oraclego_query_open(handle C.int64_t, sqlText *C.char, errOut **C.char) C.int64_t {
+//export oracle_query_open
+func oracle_query_open(handle C.int64_t, sqlText *C.char, errOut **C.char) C.int64_t {
 	c, ok := connFromHandle(int64(handle))
 	if !ok {
 		setErr(errOut, fmt.Errorf("invalid connection handle: %d", handle))
@@ -355,8 +355,8 @@ func oraclego_query_open(handle C.int64_t, sqlText *C.char, errOut **C.char) C.i
 	return C.int64_t(h)
 }
 
-//export oraclego_query_close
-func oraclego_query_close(queryHandle C.int64_t) {
+//export oracle_query_close
+func oracle_query_close(queryHandle C.int64_t) {
 	h := cgo.Handle(queryHandle)
 	if q, ok := h.Value().(*queryCursor); ok {
 		q.close()
@@ -364,8 +364,8 @@ func oraclego_query_close(queryHandle C.int64_t) {
 	h.Delete()
 }
 
-//export oraclego_query_header
-func oraclego_query_header(queryHandle C.int64_t, errOut **C.char) *C.oracle_query_header_t {
+//export oracle_query_header
+func oracle_query_header(queryHandle C.int64_t, errOut **C.char) *C.oracle_query_header_t {
 	q, ok := queryFromHandle(int64(queryHandle))
 	if !ok {
 		setErr(errOut, fmt.Errorf("invalid query handle: %d", queryHandle))
@@ -380,8 +380,8 @@ func oraclego_query_header(queryHandle C.int64_t, errOut **C.char) *C.oracle_que
 	return out
 }
 
-//export oraclego_query_next_batch
-func oraclego_query_next_batch(queryHandle C.int64_t, batchSize C.int32_t, errOut **C.char) *C.oracle_query_batch_t {
+//export oracle_query_next_batch
+func oracle_query_next_batch(queryHandle C.int64_t, batchSize C.int32_t, errOut **C.char) *C.oracle_query_batch_t {
 	q, ok := queryFromHandle(int64(queryHandle))
 	if !ok {
 		setErr(errOut, fmt.Errorf("invalid query handle: %d", queryHandle))
@@ -407,8 +407,8 @@ func oraclego_query_next_batch(queryHandle C.int64_t, batchSize C.int32_t, errOu
 	return out
 }
 
-//export oraclego_query_free_header
-func oraclego_query_free_header(header *C.oracle_query_header_t) {
+//export oracle_query_free_header
+func oracle_query_free_header(header *C.oracle_query_header_t) {
 	if header == nil {
 		return
 	}
@@ -427,8 +427,8 @@ func oraclego_query_free_header(header *C.oracle_query_header_t) {
 	C.free(unsafe.Pointer(header))
 }
 
-//export oraclego_query_free_batch
-func oraclego_query_free_batch(batch *C.oracle_query_batch_t) {
+//export oracle_query_free_batch
+func oracle_query_free_batch(batch *C.oracle_query_batch_t) {
 	if batch == nil {
 		return
 	}
@@ -448,6 +448,14 @@ func oraclego_query_free_batch(batch *C.oracle_query_batch_t) {
 		C.free(unsafe.Pointer(batch.rows))
 	}
 	C.free(unsafe.Pointer(batch))
+}
+
+//export oracle_free_string
+func oracle_free_string(s *C.char) {
+	if s == nil {
+		return
+	}
+	C.free(unsafe.Pointer(s))
 }
 
 func main() {}

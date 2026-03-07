@@ -12,7 +12,14 @@ import 'oracle_bindings_generated.dart';
 const String _libName = 'oracle';
 
 final DynamicLibrary _dylib = () {
-  if (Platform.isMacOS || Platform.isIOS) {
+  if (Platform.isMacOS) {
+    try {
+      return DynamicLibrary.open('lib$_libName.dylib');
+    } catch (_) {
+      return DynamicLibrary.open('$_libName.framework/$_libName');
+    }
+  }
+  if (Platform.isIOS) {
     return DynamicLibrary.open('$_libName.framework/$_libName');
   }
   if (Platform.isAndroid || Platform.isLinux) {

@@ -33,5 +33,6 @@ migrate_working_dir/
 /coverage/
 
 go/oracle.so
-go/oracle
+go/oracles
 *.a
+*.dll
