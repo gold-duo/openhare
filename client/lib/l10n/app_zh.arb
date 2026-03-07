@@ -277,5 +277,55 @@
         "current": { "type": "int" },
         "total": { "type": "int" }
       }
+    },
+    "about_check_update": "检查更新",
+    "@about_check_update": {
+      "description": "关于页检查更新按钮"
+    },
+    "about_update_available": "发现新版本",
+    "@about_update_available": {
+      "description": "发现新版本标题"
+    },
+    "about_update_available_desc": "最新版本 {latest}，当前版本 {current}",
+    "@about_update_available_desc": {
+      "description": "发现新版本描述",
+      "placeholders": {
+        "latest": { "type": "String" },
+        "current": { "type": "String" }
+      }
+    },
+    "about_open_release": "前往下载",
+    "@about_open_release": {
+      "description": "打开 release 页面按钮"
+    },
+    "about_update_already_latest": "当前已经是最新版本",
+    "@about_update_already_latest": {
+      "description": "已经是最新版本提示"
+    },
+    "about_update_check_failed": "检查更新失败，请稍后重试",
+    "@about_update_check_failed": {
+      "description": "检查更新失败提示"
+    },
+    "about_version_info": "版本信息",
+    "@about_version_info": {
+      "description": "版本信息区块标题"
+    },
+    "about_current_version": "当前版本：{version}",
+    "@about_current_version": {
+      "description": "当前版本标签",
+      "placeholders": {
+        "version": { "type": "String" }
+      }
+    },
+    "about_latest_version": "最新版本：{version}",
+    "@about_latest_version": {
+      "description": "最新版本标签",
+      "placeholders": {
+        "version": { "type": "String" }
+      }
+    },
+    "about_more_info": "更多信息",
+    "@about_more_info": {
+      "description": "更多信息区块标题"
     }
 }

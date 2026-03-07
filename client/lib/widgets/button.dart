@@ -144,12 +144,14 @@ class LinkButton extends StatefulWidget {
   final String text;
   final VoidCallback? onPressed;
   final double? maxWidth;
+  final EdgeInsetsGeometry? padding;
 
   const LinkButton({
     super.key,
     required this.text,
     this.onPressed,
     this.maxWidth,
+    this.padding,
   });
 
   @override
@@ -173,7 +175,7 @@ class _LinkButtonState extends State<LinkButton> {
           constraints: BoxConstraints(
             maxWidth: widget.maxWidth ?? 200,
           ),
-          padding: const EdgeInsets.fromLTRB(kSpacingSmall, 0, kSpacingSmall, 0),
+          padding: widget.padding ?? const EdgeInsets.fromLTRB(kSpacingSmall, 0, kSpacingSmall, 0),
           // 只有当TextOverflow.ellipsis实际发生时才显示tooltip
           child: TooltipText(
             text: widget.text,

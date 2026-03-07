@@ -646,5 +646,55 @@
       "current": { "type": "int" },
       "total": { "type": "int" }
     }
+  },
+  "about_check_update": "Check for updates",
+  "@about_check_update": {
+    "description": "About page check update button"
+  },
+  "about_update_available": "Update available",
+  "@about_update_available": {
+    "description": "Update available title"
+  },
+  "about_update_available_desc": "Latest version {latest}, current version {current}",
+  "@about_update_available_desc": {
+    "description": "Update available description",
+    "placeholders": {
+      "latest": { "type": "String" },
+      "current": { "type": "String" }
+    }
+  },
+  "about_open_release": "Open release page",
+  "@about_open_release": {
+    "description": "Open release page button"
+  },
+  "about_update_already_latest": "You are already on the latest version",
+  "@about_update_already_latest": {
+    "description": "Already latest version prompt"
+  },
+  "about_update_check_failed": "Failed to check updates. Please try again later.",
+  "@about_update_check_failed": {
+    "description": "Update check failed prompt"
+  },
+  "about_version_info": "Version",
+  "@about_version_info": {
+    "description": "Version info section title"
+  },
+  "about_current_version": "Current version: {version}",
+  "@about_current_version": {
+    "description": "Current version label",
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "about_latest_version": "Latest version: {version}",
+  "@about_latest_version": {
+    "description": "Latest version label",
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "about_more_info": "More info",
+  "@about_more_info": {
+    "description": "More info section title"
   }
 }
