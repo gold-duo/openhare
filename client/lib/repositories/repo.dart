@@ -21,13 +21,10 @@ class ObjectBox {
 
   /// Create an instance of ObjectBox to use throughout the app.
   static Future<ObjectBox> create() async {
-    final docsDir = await getApplicationDocumentsDirectory();
-    // Future<Store> openStore() {...} is defined in the generated objectbox.g.dart
-    debugPrint("load store from: ${p.join(docsDir.path, "openhare")}");
-    final store = await openStore(
-      directory: p.join(docsDir.path, "openhare"),
-      macosApplicationGroup: "openhare.store",
-    );
+    final appSupportDir = await getApplicationSupportDirectory();
+    final storePath = p.join(appSupportDir.path, "data");
+    debugPrint("load store from: $storePath");
+    final store = await openStore(directory: storePath);
     return ObjectBox(store);
   }
 }
