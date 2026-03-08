@@ -39,5 +39,10 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_macos_build_settings(target)
+    next unless target.name == 'oracle'
+
+    target.build_configurations.each do |config|
+      config.build_settings['OTHER_LDFLAGS'] = '$(inherited) -force_load ${BUILT_PRODUCTS_DIR}/liboracle.a'
+    end
   end
 end

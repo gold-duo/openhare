@@ -1,2 +1,2 @@
 // Intentionally empty.
-// The Oracle native implementation is provided by liboracle.dylib built from Go.
+// The Oracle native implementation is force-linked from liboracle.a built by Go.

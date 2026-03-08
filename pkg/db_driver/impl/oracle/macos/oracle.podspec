@@ -15,13 +15,12 @@ Oracle driver via Go + go-ora.
   s.platform         = :osx, '10.11'
 
   s.script_phase = {
-    :name => 'Build Go shared library',
+    :name => 'Build Go static library',
     :script => <<-SCRIPT,
 set -e
 cd "$PODS_TARGET_SRCROOT/../go"
 
-OUT="${BUILT_PRODUCTS_DIR}/liboracle.dylib"
-DEST="${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/liboracle.dylib"
+OUT_A="${BUILT_PRODUCTS_DIR}/liboracle.a"
 
 build_arch() {
   case "$1" in
@@ -29,28 +28,25 @@ build_arch() {
     x86_64) GOARCH="amd64" ;;
     *) echo "Unsupported architecture: $1"; exit 1 ;;
   esac
-  CGO_ENABLED=1 GOOS=darwin GOARCH=$GOARCH go build -buildmode=c-shared -o "${OUT}.$1" .
+  CGO_ENABLED=1 GOOS=darwin GOARCH=$GOARCH go build -buildmode=c-archive -o "${OUT_A}.$1" .
 }
 
 LIPO_INPUTS=""
 for arch in $ARCHS; do
   build_arch "$arch"
-  LIPO_INPUTS="$LIPO_INPUTS ${OUT}.${arch}"
+  LIPO_INPUTS="$LIPO_INPUTS ${OUT_A}.${arch}"
 done
 
 if echo "$ARCHS" | grep -q " "; then
-  lipo -create -output "$OUT" $LIPO_INPUTS
-  rm -f ${OUT}.*
+  lipo -create -output "$OUT_A" $LIPO_INPUTS
 else
-  mv "${OUT}.${ARCHS}" "$OUT"
+  mv "${OUT_A}.${ARCHS}" "$OUT_A"
 fi
-
-mkdir -p "${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}"
-cp -f "$OUT" "$DEST"
+rm -f ${OUT_A}.*
 SCRIPT
     :execution_position => :before_compile,
     :input_files => ['${BUILT_PRODUCTS_DIR}/oracle_go_phony'],
-    :output_files => ['${BUILT_PRODUCTS_DIR}/liboracle.dylib', '${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/liboracle.dylib'],
+    :output_files => ['${BUILT_PRODUCTS_DIR}/liboracle.a'],
   }
 
   s.pod_target_xcconfig = {
