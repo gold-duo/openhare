@@ -11,6 +11,10 @@
   "@llm_api": {
     "description": "LLM API"
   },
+  "llm_api_only_openai_compatible": "OpenAI-compatible only",
+  "@llm_api_only_openai_compatible": {
+    "description": "LLM API support notice"
+  },
   "update": "Update",
   "@update": {
     "description": "Update"

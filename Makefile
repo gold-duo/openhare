@@ -27,4 +27,3 @@ build_macos:
 		--app-drop-link 450 150 \
 		$(DMG_NAME) \
 		client/build/macos/Build/Products/Release/$(APP_NAME).app
-	mv $(DMG_NAME) client/

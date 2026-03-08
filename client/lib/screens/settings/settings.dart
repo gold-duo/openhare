@@ -216,15 +216,28 @@ void showLLMApiSettingDialog(
     builder: (context) {
       return Dialog(
         child: Container(
-          width: 400,
+          width: 600,
           height: 400,
           padding: const EdgeInsets.fromLTRB(kSpacingMedium, kSpacingLarge, kSpacingMedium, kSpacingMedium),
           child: Column(
-            // mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: Theme.of(context).textTheme.titleLarge),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleLarge,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (model == null) ...[
+                    const SizedBox(width: kSpacingSmall),
+                    const _OnlyOpenAICompatibleTip(),
+                  ],
+                ],
+              ),
               const SizedBox(height: kSpacingMedium),
               TextField(
                 controller: nameController,
@@ -449,6 +462,29 @@ class _InfoRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _OnlyOpenAICompatibleTip extends StatelessWidget {
+  const _OnlyOpenAICompatibleTip();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      child: Text(
+        AppLocalizations.of(context)!.llm_api_only_openai_compatible,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+      ),
     );
   }
 }

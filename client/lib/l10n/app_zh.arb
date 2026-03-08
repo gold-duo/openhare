@@ -2,6 +2,7 @@
     "settings": "设置",
     "preferences": "偏好",
     "llm_api": "大模型API",
+    "llm_api_only_openai_compatible": "暂时仅支持openai兼容接口",
     "update": "更新",
     "create": "创建",
     "language": "语言",
