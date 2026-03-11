@@ -1,7 +1,8 @@
 import 'package:client/models/ai.dart';
 import 'package:client/repositories/repo.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:objectbox/objectbox.dart';
+// ignore: unnecessary_import
+import 'package:objectbox/objectbox.dart'; // 必须引入, 不然objectbox不能正常使用
 import 'package:client/repositories/objectbox.g.dart';
 
 part 'agent.g.dart';

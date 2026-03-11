@@ -1,7 +1,4 @@
-/// Dart/Flutter 模糊字符串匹配库。
-///
-/// 提供受 fuzzywuzzy 启发的统一模糊匹配算法。
-library fuzzy_match;
+// Dart/Flutter 模糊字符串匹配库。
 
 /// 找到的匹配类型。
 enum MatchType {
