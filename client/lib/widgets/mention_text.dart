@@ -1031,19 +1031,16 @@ class _MentionTokenState extends State<_MentionToken> {
     bool hovering,
     VoidCallback onDelete,
   ) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final cardBg = colorScheme.primaryContainer;
-    final cardFg = colorScheme.onSurface;
     final fontSize = baseStyle.fontSize ?? 14;
     // 让 token 的高度尽量贴近 TextField 的行高（selection 背景高度也会更一致）。
     final heightFactor = baseStyle.height ?? 1.0;
     final tokenHeight = fontSize * heightFactor;
-    final labelStyle = baseStyle.copyWith(color: cardFg, height: heightFactor);
+    final labelStyle = baseStyle.copyWith(color: Theme.of(context).colorScheme.onSurface, height: heightFactor);
     return Container(
       key: ValueKey('table_mention_${segment.label}'),
       padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
-        color: cardBg,
+        color: Theme.of(context).colorScheme.primaryContainer, // mention text 提示窗口选中项背景色
         borderRadius: BorderRadius.circular(5),
       ),
       child: SizedBox(
@@ -1059,14 +1056,14 @@ class _MentionTokenState extends State<_MentionToken> {
                 child: Icon(
                   Icons.close_rounded,
                   size: fontSize,
-                  color: cardFg,
+                  color: Theme.of(context).colorScheme.onSurface, // mention text 里的删除icon颜色
                 ),
               )
             else
               HugeIcon(
                 icon: HugeIcons.strokeRoundedTable,
                 size: fontSize,
-                color: cardFg,
+                color: Theme.of(context).colorScheme.onSurface, // mention text 里的表格icon颜色
               ),
             const SizedBox(width: 4),
             Center(
