@@ -267,6 +267,8 @@ class MySQLConnection extends BaseConnection {
 
   @override
   Future<List<MetaDataNode>> metadata() async {
+    final schemaList = await schemas();
+
     // ref: https://dev.mysql.com/doc/refman/8.4/en/information-schema-columns-table.html
     final results = await query("""SELECT 
     t.TABLE_SCHEMA,
@@ -287,32 +289,32 @@ ORDER BY
     c.ORDINAL_POSITION;
 """);
     final rows = results.rows;
-    List<MetaDataNode> schemaNodes = List.empty(growable: true);
-    // group by Schema Name
     final schemaRows =
         rows.groupListsBy((result) => result.getString("TABLE_SCHEMA")!);
 
-    for (final schema in schemaRows.keys) {
+    List<MetaDataNode> schemaNodes = List.empty(growable: true);
+    for (final schema in schemaList) {
       final schemaNode = MetaDataNode(MetaType.schema, schema);
       schemaNodes.add(schemaNode);
 
-      // group by Table Name
       List<MetaDataNode> tableNodes = List.empty(growable: true);
-      final tableRows = schemaRows[schema]!
-          .groupListsBy((result) => result.getString("TABLE_NAME")!);
-      for (final table in tableRows.keys) {
-        final tableNode = MetaDataNode(MetaType.table, table);
-        tableNodes.add(tableNode);
+      final tableRows = schemaRows[schema];
+      if (tableRows != null) {
+        final byTable =
+            tableRows.groupListsBy((result) => result.getString("TABLE_NAME")!);
+        for (final table in byTable.keys) {
+          final tableNode = MetaDataNode(MetaType.table, table);
+          tableNodes.add(tableNode);
 
-        // handler columns
-        final columnRows = tableRows[table]!;
-        final columnNodes = columnRows
-            .map((result) =>
-                MetaDataNode(MetaType.column, result.getString("COLUMN_NAME")!)
-                  ..withProp(MetaDataPropType.dataType,
-                      getDataType(result.getString("DATA_TYPE")!)))
-            .toList();
-        tableNode.items = columnNodes;
+          final columnRows = byTable[table]!;
+          final columnNodes = columnRows
+              .map((result) =>
+                  MetaDataNode(MetaType.column, result.getString("COLUMN_NAME")!)
+                    ..withProp(MetaDataPropType.dataType,
+                        getDataType(result.getString("DATA_TYPE")!)))
+              .toList();
+          tableNode.items = columnNodes;
+        }
       }
       schemaNode.items = tableNodes;
     }
@@ -328,7 +330,7 @@ ORDER BY
       schemas.add(result.getString("Database") ?? "");
     }
     return schemas;
-  }
+  } 
 
   @override
   Future<void> setCurrentSchema(String schema) async {
