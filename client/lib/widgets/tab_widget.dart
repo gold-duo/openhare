@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:client/widgets/button.dart';
 import 'package:client/widgets/const.dart';
 import 'package:client/widgets/menu.dart';
+import 'package:client/widgets/tooltip.dart';
 import 'package:flutter/material.dart';
 
 const double defaultTabMaxWidth = 200;
@@ -312,18 +313,16 @@ class _CommonTabState extends State<CommonTab> {
                     children: [
                       if (widget.avatar != null)
                         SizedBox(
-                          width: 20,
-                          height: 20,
+                          width: 18,
+                          height: 18,
                           child: widget.avatar,
                         ),
                       const SizedBox(width: kSpacingTiny),
                       Expanded(
                         child: Container(
                           constraints: const BoxConstraints(maxWidth: 50),
-                          child: Text(
-                            widget.label,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: widget.style?.labelAlign,
+                          child: TooltipText(
+                            text: widget.label,
                           ),
                         ),
                       ),

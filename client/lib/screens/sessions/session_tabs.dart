@@ -41,10 +41,11 @@ class SessionTabs extends ConsumerWidget {
             child: CommonTabBar(
               tabStyle: CommonTabStyle(
                 minWidth: 90,
+                maxWidth: 160,
                 color: Theme.of(context).colorScheme.surfaceContainerLow, // session tab 背景色
                 selectedColor: Theme.of(context).colorScheme.primaryContainer, // session tab 选择的颜色
                 hoverColor: Theme.of(context).colorScheme.surfaceContainer, // session tab 鼠标移入的颜色
-                borderRadius: const BorderRadius.all(Radius.circular(10)),
+                borderRadius: const BorderRadius.all(Radius.circular(8)),
               ),
               addTab: () {
                 ref.read(sessionsServicesProvider.notifier).newSession();

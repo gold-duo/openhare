@@ -42,8 +42,10 @@ class _AddInstancePageState extends State<AddInstancePage> {
     return PageSkeleton(
       topBar: Row(
         children: [
+          SizedBox(width: kSpacingMedium),
           RectangleIconButton.medium(
             icon: Icons.arrow_back,
+            iconColor: Theme.of(context).colorScheme.onSurfaceVariant,
             onPressed: () => GoRouter.of(context).go('/instances/list'),
           ),
         ],

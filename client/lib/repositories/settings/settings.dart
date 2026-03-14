@@ -33,7 +33,7 @@ class SettingsRepoImpl implements SettingsRepo {
     if (settings != null) {
       return settings;
     } else {
-      return SettingsStorage(theme: 'light', language: 'zh');
+      return SettingsStorage(theme: 'light', language: 'en');
     }
   }
 
