@@ -276,7 +276,7 @@ class _ExportDataDialogContentState extends ConsumerState<_ExportDataDialogConte
   }) {
     final defaultBorder = OutlineInputBorder(
       borderSide: BorderSide(
-        color: Theme.of(context).colorScheme.outlineVariant, // 输入框边框颜色
+        color: Theme.of(context).colorScheme.outline, // 输入框边框颜色
       ),
     );
     final errorBorderStyle = OutlineInputBorder(

@@ -107,7 +107,7 @@ class SessionOpBar extends ConsumerWidget {
       return RectangleIconButton.medium(
         tooltip: AppLocalizations.of(context)!.button_tooltip_connect,
         icon: Icons.link_rounded,
-        iconColor: Theme.of(context).primaryColor,
+        iconColor: Theme.of(context).colorScheme.primary, // 连接数据库按钮颜色
         onPressed: () async {
           await ref.read(sessionsServicesProvider.notifier).connectSession(model.sessionId);
         },
@@ -119,7 +119,7 @@ class SessionOpBar extends ConsumerWidget {
       return RectangleIconButton.medium(
         tooltip: AppLocalizations.of(context)!.button_tooltip_disconnect,
         icon: Icons.link_off_rounded,
-        iconColor: Theme.of(context).primaryColor,
+        iconColor: Theme.of(context).colorScheme.primary, // 连接数据库按钮颜色
         onPressed: () async {
           disconnectDialog(context, ref, model);
         },

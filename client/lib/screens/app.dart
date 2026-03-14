@@ -174,9 +174,7 @@ class _ScaffoldWithNavRailState extends State<ScaffoldWithNavRail> {
               NavigationRailDestination(
                 icon: HugeIcon(
                   icon: HugeIcons.strokeRoundedDatabase,
-                  color:
-                      Theme.of(context).iconTheme.color ??
-                      Theme.of(context).colorScheme.onSurfaceVariant, // iconTheme.coloricon 默认颜色
+                  color: Theme.of(context).colorScheme.onSurfaceVariant, // navigation rail 默认icon颜色
                 ),
                 label: Center(
                   child: Text(
