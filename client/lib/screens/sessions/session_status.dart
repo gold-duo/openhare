@@ -44,19 +44,34 @@ class SessionStatusTab extends ConsumerWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        Text("${AppLocalizations.of(context)!.short_conn}:"),
+                        Text(
+                          "${AppLocalizations.of(context)!.short_conn}:",
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        ),
                         const SizedBox(width: kSpacingSmall),
                         Expanded(
                           child: switch (model.connState) {
-                            SQLConnectState.connected || SQLConnectState.executing => const Icon(
-                              Icons.check_circle,
-                              size: kIconSizeSmall,
-                              color: Colors.green,
+                            SQLConnectState.connected || SQLConnectState.executing => const Align(
+                              alignment: Alignment.centerLeft,
+                              child: SizedBox(
+                                width: 6,
+                                height: 6,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(color: Colors.green, shape: BoxShape.circle),
+                                ),
+                              ),
                             ),
-                            SQLConnectState.failed || SQLConnectState.unHealth => const Icon(
-                              Icons.error,
-                              size: kIconSizeSmall,
-                              color: Colors.red,
+                            SQLConnectState.failed || SQLConnectState.unHealth => const Align(
+                              alignment: Alignment.centerLeft,
+                              child: SizedBox(
+                                width: 6,
+                                height: 6,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                                ),
+                              ),
                             ),
                             _ => const Text("-"),
                           }, // 根据model.state展示不同的图标
@@ -116,6 +131,12 @@ class ValueStatusWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textStyle =
+        Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        );
     return Tooltip(
       message: tooltip ?? value,
       child: MouseRegion(
@@ -126,11 +147,12 @@ class ValueStatusWidget extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Text('$label:'),
+                Text('$label:', style: textStyle),
                 const SizedBox(width: kSpacingTiny),
                 Expanded(
                   child: Text(
                     value,
+                    style: textStyle,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
