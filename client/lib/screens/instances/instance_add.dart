@@ -45,7 +45,7 @@ class _AddInstancePageState extends State<AddInstancePage> {
           SizedBox(width: kSpacingMedium),
           RectangleIconButton.medium(
             icon: Icons.arrow_back,
-            iconColor: Theme.of(context).colorScheme.onSurfaceVariant,
+            iconColor: Theme.of(context).colorScheme.onSurfaceVariant, // 新建数据源页面返回按钮颜色
             onPressed: () => GoRouter.of(context).go('/instances/list'),
           ),
         ],

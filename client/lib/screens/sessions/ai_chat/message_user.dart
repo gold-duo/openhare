@@ -53,41 +53,38 @@ class _UserMessageState extends ConsumerState<UserMessage> {
         child: MouseRegion(
           onEnter: (_) => setState(() => _hovering = true),
           onExit: (_) => setState(() => _hovering = false),
-          child: Container(
-            padding: const EdgeInsets.all(kSpacingSmall),
-            constraints: const BoxConstraints(
-              maxHeight: 300,
-              minHeight: 54, // 最小行高, icon + panding + outline height
-            ),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerLow, // 用户消息卡片背景颜色
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Theme.of(context).colorScheme.outlineVariant, // 用户消息卡片边框颜色
-              ),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Expanded(
-                  child: MentionTextField(
-                    controller: MentionTextEditingController(text: widget.message.content),
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    readOnly: true,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(kSpacingSmall),
+                constraints: const BoxConstraints(
+                  maxHeight: 300,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.secondaryContainer, // 用户消息卡片背景颜色
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outline, // 用户消息卡片边框颜色
                   ),
                 ),
-                if (showRetry) ...[
-                  const SizedBox(width: kSpacingTiny),
-                  RectangleIconButton.small(
+                child: MentionTextField(
+                  controller: MentionTextEditingController(text: widget.message.content),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  readOnly: true,
+                ),
+              ),
+              if (showRetry)
+                Positioned(
+                  right: kSpacingSmall,
+                  bottom: kSpacingTiny,
+                  child: RectangleIconButton.small(
                     tooltip: AppLocalizations.of(context)!.button_tooltip_retry_message,
                     icon: Icons.send,
                     onPressed: canRetry ? _onRetry : null,
                   ),
-                ],
-              ],
-            ),
+                ),
+            ],
           ),
         ),
       ),
