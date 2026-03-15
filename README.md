@@ -33,7 +33,7 @@ openhare is an AI-powered, cross-platform desktop SQL client with multi-database
 - **Multi-Database Support**: Effortlessly connect to and manage various SQL databases.
 
 ## Framework
-1. Application: - [Flutter](https://flutter.dev/), [flutter_rust_bridge](https://github.com/fzyzcjy/flutter_rust_bridge)
+1. Application: [Flutter](https://flutter.dev/), [flutter_rust_bridge](https://github.com/fzyzcjy/flutter_rust_bridge)
 2. State Management: [Riverpod](https://riverpod.dev/), [GoRouter](https://pub.dev/packages/go_router)
 3. UI: [SQL Editor](https://github.com/reqable/re-editor), [HugeIcons](https://github.com/hugeicons/hugeicons-flutter), [Window Manager](https://github.com/leanflutter/window_manager)
 4. Storage: [ObjectBox](https://objectbox.io/)
