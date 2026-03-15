@@ -125,12 +125,12 @@ class OpenAIProvider implements LLMProvider {
     this.systemMessage, {
     this.temperature = 0.7,
     List<AITool>? tools,
-  })  : _client = OpenAIClient(
-          apiKey: setting.apiKey,
-          baseUrl: setting.baseUrl.isNotEmpty ? setting.baseUrl : null,
-        ),
-        modelName = setting.modelName,
-        tools = tools?.map((tool) => _convertToolToOpenAI(tool)).toList();
+  }) : _client = OpenAIClient(
+         apiKey: setting.apiKey,
+         baseUrl: setting.baseUrl.isNotEmpty ? setting.baseUrl : null,
+       ),
+       modelName = setting.modelName,
+       tools = tools?.map((tool) => _convertToolToOpenAI(tool)).toList();
 
   /// 将 AITool 转换为 OpenAI 的 ChatCompletionTool 对象
   ///
@@ -159,9 +159,11 @@ class OpenAIProvider implements LLMProvider {
       item.map(
         userMessage: (v) {
           final s = v.message.toMessage();
-          chatMessages.add(ChatCompletionMessage.user(
-            content: ChatCompletionUserMessageContent.string(s),
-          ));
+          chatMessages.add(
+            ChatCompletionMessage.user(
+              content: ChatCompletionUserMessageContent.string(s),
+            ),
+          );
         },
         assistantMessage: (v) {
           final s = v.message.toMessage();
@@ -170,9 +172,11 @@ class OpenAIProvider implements LLMProvider {
         toolsResult: (v) {
           final s = v.toolsResult.toMessage();
           if (s.isNotEmpty) {
-            chatMessages.add(ChatCompletionMessage.user(
-              content: ChatCompletionUserMessageContent.string(s),
-            ));
+            chatMessages.add(
+              ChatCompletionMessage.user(
+                content: ChatCompletionUserMessageContent.string(s),
+              ),
+            );
           }
         },
       );
@@ -228,20 +232,21 @@ class OpenAIProvider implements LLMProvider {
     final convertedToolCalls = toolCallAccumulators.values
         .where((acc) => acc['name']!.isNotEmpty) // 只包含已完成的工具调用
         .map((acc) {
-      try {
-        final arguments = jsonDecode(acc['arguments']!) as Map<String, dynamic>;
-        return AIChatMessageToolCall(
-          name: acc['name']!,
-          arguments: arguments,
-        );
-      } catch (e) {
-        // 如果解析失败，返回空 arguments
-        return AIChatMessageToolCall(
-          name: acc['name']!,
-          arguments: {},
-        );
-      }
-    }).toList();
+          try {
+            final arguments = jsonDecode(acc['arguments']!) as Map<String, dynamic>;
+            return AIChatMessageToolCall(
+              name: acc['name']!,
+              arguments: arguments,
+            );
+          } catch (e) {
+            // 如果解析失败，返回空 arguments
+            return AIChatMessageToolCall(
+              name: acc['name']!,
+              arguments: {},
+            );
+          }
+        })
+        .toList();
 
     return convertedToolCalls.isNotEmpty ? convertedToolCalls : null;
   }
@@ -272,7 +277,8 @@ class OpenAIProvider implements LLMProvider {
     final convertedToolCalls = _buildToolCalls(delta.toolCalls, toolCallAccumulators);
 
     // 只要有新的 delta（content、thinking 或 toolCalls），就返回增量结果
-    final hasNewData = incrementalContent != null ||
+    final hasNewData =
+        incrementalContent != null ||
         incrementalThinking != null ||
         (delta.toolCalls != null && delta.toolCalls!.isNotEmpty);
 

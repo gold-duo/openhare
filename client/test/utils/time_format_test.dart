@@ -6,8 +6,7 @@ import 'package:client/l10n/app_localizations.dart';
 void main() {
   group('Duration.format', () {
     test('test duation format', () {
-      var d = const Duration(
-          days: 1, hours: 2, minutes: 3, seconds: 4, milliseconds: 567);
+      var d = const Duration(days: 1, hours: 2, minutes: 3, seconds: 4, milliseconds: 567);
       expect(d.format(), "26h3m4.57s");
 
       d = const Duration(days: 1);
@@ -40,8 +39,7 @@ void main() {
   });
 
   group('DateTime.formatFullDateTime', () {
-    testWidgets('formats date time correctly with English locale',
-        (WidgetTester tester) async {
+    testWidgets('formats date time correctly with English locale', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -59,8 +57,7 @@ void main() {
       );
     });
 
-    testWidgets('formats with zero padding with English locale',
-        (WidgetTester tester) async {
+    testWidgets('formats with zero padding with English locale', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -78,8 +75,7 @@ void main() {
       );
     });
 
-    testWidgets('formats end of year correctly with English locale',
-        (WidgetTester tester) async {
+    testWidgets('formats end of year correctly with English locale', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -97,8 +93,7 @@ void main() {
       );
     });
 
-    testWidgets('formats date time correctly with Chinese locale',
-        (WidgetTester tester) async {
+    testWidgets('formats date time correctly with Chinese locale', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -231,4 +226,3 @@ void main() {
     });
   });
 }
-

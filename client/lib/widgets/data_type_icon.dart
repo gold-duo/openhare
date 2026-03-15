@@ -16,34 +16,34 @@ class DataTypeIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (type) {
       DataType.number => Icon(
-          Icons.onetwothree,
-          color: Colors.teal,
-          size: size,
-        ),
+        Icons.onetwothree,
+        color: Colors.teal,
+        size: size,
+      ),
       DataType.char => Icon(
-          Icons.abc,
-          color: Colors.blueAccent,
-          size: size,
-        ),
+        Icons.abc,
+        color: Colors.blueAccent,
+        size: size,
+      ),
       DataType.time => Icon(
-          Icons.access_time,
-          color: Colors.deepPurple,
-          size: size,
-        ),
+        Icons.access_time,
+        color: Colors.deepPurple,
+        size: size,
+      ),
       DataType.blob => Icon(
-          Icons.insert_drive_file_outlined,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-          size: size,
-        ),
+        Icons.insert_drive_file_outlined,
+        color: Theme.of(context).colorScheme.onSurfaceVariant, // todo: 换一个固定颜色
+        size: size,
+      ),
       DataType.json => Icon(
-          Icons.data_object,
-          color: Colors.orangeAccent,
-          size: size,
-        ),
+        Icons.data_object,
+        color: Colors.orangeAccent,
+        size: size,
+      ),
       _ => Icon(
-          Icons.question_mark,
-          size: size,
-        )
+        Icons.question_mark,
+        size: size,
+      ),
     };
   }
 }

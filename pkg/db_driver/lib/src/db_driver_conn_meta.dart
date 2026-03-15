@@ -135,13 +135,6 @@ class CustomMeta extends SettingMeta {
       this.isRequired = false});
 }
 
-class SettingValue<SettingMeta, E> {
-  SettingMeta meta;
-  E value;
-
-  SettingValue({required this.meta, required this.value});
-}
-
 class ConnectValue {
   String name;
   ConnectTarget target;

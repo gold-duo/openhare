@@ -35,53 +35,59 @@ class InstanceTable extends ConsumerStatefulWidget {
 
 class _InstanceTableState extends ConsumerState<InstanceTable> {
   DataRow buildDataRow(InstanceModel instance) {
-    return DataRow(cells: [
-      DataCell(Row(
-        children: [
-          Image.asset(
-            connectionMetaMap[instance.dbType]!.logoAssertPath,
-            width: kIconSizeMedium,
-            height: kIconSizeMedium,
+    return DataRow(
+      cells: [
+        DataCell(
+          Row(
+            children: [
+              Image.asset(
+                connectionMetaMap[instance.dbType]!.logoAssertPath,
+                width: kIconSizeMedium,
+                height: kIconSizeMedium,
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: kSpacingSmall),
+                child: Text(instance.connectValue.name),
+              ),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.only(left: kSpacingSmall),
-            child: Text(instance.connectValue.name),
-          )
-        ],
-      )),
-      DataCell(Text(instance.connectValue.target.toString())),
-      DataCell(Text(instance.connectValue.user)),
-      DataCell(Text(instance.connectValue.desc, overflow: TextOverflow.ellipsis)),
-      DataCell(Row(
-        children: [
-          RectangleIconButton.small(
-            icon: Icons.edit,
-            onPressed: () {
-              updateInstanceController.tryUpdateInstance(instance);
-              GoRouter.of(context).go('/instances/update');
-            },
-          ),
-          RectangleIconButton.small(
-            icon: Icons.delete,
-            onPressed: () {
-              doActionDialog(
-                context,
-                AppLocalizations.of(context)!.tip_delete_instance,
-                AppLocalizations.of(context)!.tip_delete_instance_desc,
-                () async {
-                  await ref.read(instancesServicesProvider.notifier).deleteInstance(instance.id);
+        ),
+        DataCell(Text(instance.connectValue.target.toString())),
+        DataCell(Text(instance.connectValue.user)),
+        DataCell(Text(instance.connectValue.desc, overflow: TextOverflow.ellipsis)),
+        DataCell(
+          Row(
+            children: [
+              RectangleIconButton.small(
+                icon: Icons.edit,
+                onPressed: () {
+                  updateInstanceController.tryUpdateInstance(instance);
+                  GoRouter.of(context).go('/instances/update');
                 },
-                icon: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
-              );
-            },
+              ),
+              RectangleIconButton.small(
+                icon: Icons.delete,
+                onPressed: () {
+                  doActionDialog(
+                    context,
+                    AppLocalizations.of(context)!.tip_delete_instance,
+                    AppLocalizations.of(context)!.tip_delete_instance_desc,
+                    () async {
+                      await ref.read(instancesServicesProvider.notifier).deleteInstance(instance.id);
+                    },
+                    icon: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
+                  );
+                },
+              ),
+              RectangleIconButton.small(
+                icon: Icons.more_vert_outlined,
+                onPressed: () {},
+              ),
+            ],
           ),
-          RectangleIconButton.small(
-            icon: Icons.more_vert_outlined,
-            onPressed: () {},
-          )
-        ],
-      ))
-    ]);
+        ),
+      ],
+    );
   }
 
   @override
@@ -123,49 +129,52 @@ class _InstanceTableState extends ConsumerState<InstanceTable> {
             overflow: TextOverflow.ellipsis,
           ),
           Expanded(
-              child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              SizedBox(
-                width: kIconSizeLarge,
-                height: kIconSizeLarge,
-                child: FloatingActionButton.small(
-                  elevation: 2,
-                  onPressed: () => GoRouter.of(context).go('/instances/add'),
-                  child: const Icon(Icons.add),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                SizedBox(
+                  width: kIconSizeLarge,
+                  height: kIconSizeLarge,
+                  child: FloatingActionButton.small(
+                    elevation: 2,
+                    onPressed: () => GoRouter.of(context).go('/instances/add'),
+                    child: const Icon(Icons.add),
+                  ),
                 ),
-              ),
-              const SizedBox(width: kSpacingSmall),
-              SearchBarTheme(
-                data: const SearchBarThemeData(
+                const SizedBox(width: kSpacingSmall),
+                SearchBarTheme(
+                  data: const SearchBarThemeData(
                     elevation: WidgetStatePropertyAll(0),
                     constraints: BoxConstraints(
                       minHeight: kIconSizeLarge,
                       maxWidth: 200,
-                    )),
-                child: SearchBar(
-                  controller: instanceSearchTextController,
-                  backgroundColor: WidgetStatePropertyAll(
-                    Theme.of(context).colorScheme.surfaceContainerLow,
-                  ),
-                  side: WidgetStatePropertyAll(
-                    BorderSide(
-                      color: Theme.of(context).colorScheme.surfaceContainerHigh,
-                      width: 0.5,
                     ),
                   ),
-                  onChanged: (value) {
-                    ref.read(instancesProvider.notifier).changePage(
-                          value,
-                          pageNumber: model.currentPage,
-                          pageSize: model.pageSize,
-                        );
-                  },
-                  trailing: const [Icon(Icons.search)],
+                  child: SearchBar(
+                    controller: instanceSearchTextController,
+                    backgroundColor: WidgetStatePropertyAll(
+                      Theme.of(context).colorScheme.surfaceContainerLow, // instance 页面搜索框背景色
+                    ),
+                    side: WidgetStatePropertyAll(
+                      BorderSide(
+                        color: Theme.of(context).colorScheme.outlineVariant, // instance 页面搜索框边框颜色
+                      ),
+                    ),
+                    onChanged: (value) {
+                      ref
+                          .read(instancesProvider.notifier)
+                          .changePage(
+                            value,
+                            pageNumber: model.currentPage,
+                            pageSize: model.pageSize,
+                          );
+                    },
+                    trailing: const [Icon(Icons.search)],
+                  ),
                 ),
-              ),
-            ],
-          ))
+              ],
+            ),
+          ),
         ],
       ),
       child: Column(
@@ -195,7 +204,9 @@ class _InstanceTableState extends ConsumerState<InstanceTable> {
             pageSize: model.pageSize,
             pageNumber: model.currentPage,
             onChange: (pageNumber) {
-              ref.read(instancesProvider.notifier).changePage(
+              ref
+                  .read(instancesProvider.notifier)
+                  .changePage(
                     instanceSearchTextController.text,
                     pageNumber: pageNumber,
                     pageSize: model.pageSize,

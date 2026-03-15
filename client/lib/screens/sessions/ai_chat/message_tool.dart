@@ -94,7 +94,7 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
           AppLocalizations.of(context)!.ai_chat_execution_time(widget.toolCall.executeTime?.format() ?? '-'),
         ].join(' · '),
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          color: Theme.of(context).colorScheme.onSurface, // tool 里执行结果统计字体颜色
         ),
         overflow: TextOverflow.ellipsis,
       ),
@@ -125,8 +125,8 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
       child: SelectableText(
         error,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onErrorContainer,
-            ),
+          color: Theme.of(context).colorScheme.onErrorContainer, // tool 错误消息颜色
+        ),
       ),
     );
   }
@@ -135,7 +135,7 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
     return Container(
       height: bottomBarHeight,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        color: Theme.of(context).colorScheme.surfaceContainerLow, // tool 头部背景颜色
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(10),
           topRight: Radius.circular(10),
@@ -187,11 +187,11 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
   }
 
   Widget _buildFooter(BuildContext context) {
-    final baseColor = Theme.of(context).colorScheme.surfaceContainerLow;
-    final hoverColor = Theme.of(context).colorScheme.surfaceContainer;
+    final baseColor = Theme.of(context).colorScheme.surfaceContainerLow; // tool 底部背景颜色
+    final hoverColor = Theme.of(context).colorScheme.surfaceContainer; // tool 底部 hover 背景颜色
     final statusStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        );
+      color: Theme.of(context).colorScheme.onSurfaceVariant, // tool 底部状态文字颜色
+    );
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -219,7 +219,7 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
                     Icon(
                       _expanded ? Icons.expand_less : Icons.expand_more,
                       size: kIconSizeSmall,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      color: Theme.of(context).colorScheme.onSurface, // tool 底部 icon 颜色
                     ),
                   const Spacer(),
                   _resultState == null
@@ -258,7 +258,7 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
               text: getSQLHighlightTextSpan(
                 _expanded ? widget.toolCall.query : _sqlToSingleLine(widget.toolCall.query),
                 defalutStyle: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: Theme.of(context).colorScheme.onSurface, // tool 查询文字颜色默认色
                 ),
               ),
             ),
@@ -270,17 +270,13 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final dpr = MediaQuery.of(context).devicePixelRatio;
-
     return Padding(
       padding: const EdgeInsets.only(bottom: kSpacingMedium),
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: Theme.of(context).dividerColor,
-            width: 1 / dpr,
+            color: Theme.of(context).colorScheme.outlineVariant, // tool 边框颜色
           ),
         ),
         child: Column(

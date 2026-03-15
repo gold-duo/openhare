@@ -3,8 +3,8 @@ import 'package:client/models/instances.dart';
 import 'package:client/models/sessions.dart';
 import 'package:client/services/ai/agent.dart';
 import 'package:client/services/ai/chat.dart';
-import 'package:client/services/instances/metadata.dart';
 import 'package:client/services/sessions/sessions.dart';
+import 'package:client/services/sessions/session_metadata.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'session_chat.g.dart';
@@ -21,7 +21,9 @@ class SessionAIChatNotifier extends _$SessionAIChatNotifier {
 
     ref.watch(aIChatServiceProvider);
 
-    AIChatModel? aiChatModel = ref.read(aIChatServiceProvider.notifier).getAIChatById(
+    AIChatModel? aiChatModel = ref
+        .read(aIChatServiceProvider.notifier)
+        .getAIChatById(
           AIChatId(value: session.sessionId.value),
         );
 
@@ -37,7 +39,7 @@ class SessionAIChatNotifier extends _$SessionAIChatNotifier {
 
     AsyncValue<InstanceMetadataModel>? metadata; //todo: 如何优雅处理嵌套异步
     if (session.instanceId != null) {
-      metadata = ref.watch(instanceMetadataServicesProvider(session.instanceId!));
+      metadata = ref.watch(selectedSessionMetadataProvider);
     }
 
     return SessionAIChatModel(

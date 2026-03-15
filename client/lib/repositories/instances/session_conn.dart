@@ -20,14 +20,16 @@ class SessionConnRepoImpl extends SessionConnRepo {
   @override
   SessionConnListModel getConns() {
     return SessionConnListModel(
-      conns: conns.map((key, value) => MapEntry(
-            ConnId(value: key),
-            SessionConnModel(
-              connId: ConnId(value: key),
-              state: value.state,
-              errorMsg: value.errorMsg,
-            ),
-          )),
+      conns: conns.map(
+        (key, value) => MapEntry(
+          ConnId(value: key),
+          SessionConnModel(
+            connId: ConnId(value: key),
+            state: value.state,
+            errorMsg: value.errorMsg,
+          ),
+        ),
+      ),
     );
   }
 

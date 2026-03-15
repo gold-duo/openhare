@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:client/widgets/button.dart';
 import 'package:client/widgets/const.dart';
 import 'package:client/widgets/menu.dart';
+import 'package:client/widgets/tooltip.dart';
 import 'package:flutter/material.dart';
 
 const double defaultTabMaxWidth = 200;
@@ -77,83 +78,85 @@ class _CommonTabBarState extends State<CommonTabBar> {
             widget.onReorder(i, widget.tabs.length);
             widget.tabs[i].onTap?.call();
           },
-        )
+        ),
     ];
   }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (ctx, c) {
-      CommonTabStyle style = widget.tabStyle ?? CommonTabStyle();
-      // 设置的tab最小width;
-      final minWidth = style.minWidth ?? (35 + 20 + 10);
-      final addTabWidth = widget.addTab != null ? 36 : 0;
-      const moreWidth = 36;
-      // tab 可用的总width;
-      final sumTabLength = c.maxWidth - addTabWidth - moreWidth;
+    return LayoutBuilder(
+      builder: (ctx, c) {
+        CommonTabStyle style = widget.tabStyle ?? CommonTabStyle();
+        // 设置的tab最小width;
+        final minWidth = style.minWidth ?? (35 + 20 + 10);
+        final addTabWidth = widget.addTab != null ? 36 : 0;
+        const moreWidth = 36;
+        // tab 可用的总width;
+        final sumTabLength = c.maxWidth - addTabWidth - moreWidth;
 
-      // 每个tab的平均 width；
-      double width = min(sumTabLength / widget.tabs.length, style.maxWidth ?? defaultTabMaxWidth);
+        // 每个tab的平均 width；
+        double width = min(sumTabLength / widget.tabs.length, style.maxWidth ?? defaultTabMaxWidth);
 
-      // 如果总宽度不够，就只能展示后面length个tab
-      int length = widget.tabs.length;
-      int start = 0;
-      if (width < minWidth) {
-        width = minWidth;
-        length = sumTabLength ~/ minWidth; // 取整
+        // 如果总宽度不够，就只能展示后面length个tab
+        int length = widget.tabs.length;
+        int start = 0;
+        if (width < minWidth) {
+          width = minWidth;
+          length = sumTabLength ~/ minWidth; // 取整
 
-        start = widget.tabs.length - length;
-        // 重新计算width, 让length个tab占据总宽度
-        width = sumTabLength / length;
-      }
+          start = widget.tabs.length - length;
+          // 重新计算width, 让length个tab占据总宽度
+          width = sumTabLength / length;
+        }
 
-      // todo: 统一成一个icon button
-      final moreTabIcon = SizedBox(
-        width: kIconButtonSizeMedium,
-        height: kIconButtonSizeMedium,
-        child: Icon(
-          size: 20,
-          Icons.more_vert,
-          color: Theme.of(context).colorScheme.onSurface,
-        ),
-      );
-
-      return Container(
-        constraints: BoxConstraints(maxHeight: widget.height ?? 36),
-        decoration: BoxDecoration(
-          color: widget.color,
-        ),
-        child: SizedBox(
-          child: ReorderableListView(
-            header: start > 0
-                ? OverlayMenu(
-                    tabs: _buildItems(start),
-                    child: moreTabIcon,
-                  )
-                : moreTabIcon,
-            footer: widget.addTab != null ? addTabWidget() : null,
-            buildDefaultDragHandles: false,
-            scrollDirection: Axis.horizontal,
-            onReorder: (oldIndex, newIndex) {
-              widget.onReorder(oldIndex + start, newIndex + start);
-            },
-            children: [
-              for (var i = start; i < widget.tabs.length; i++)
-                ReorderableDragStartListener(
-                  index: i - start,
-                  key: ValueKey(i - start),
-                  child: CommonTab.fromWarp(
-                    warp: widget.tabs[i],
-                    width: width,
-                    height: widget.height,
-                    style: style,
-                  ),
-                )
-            ],
+        // todo: 统一成一个icon button
+        final moreTabIcon = SizedBox(
+          width: kIconButtonSizeMedium,
+          height: kIconButtonSizeMedium,
+          child: Icon(
+            size: 20,
+            Icons.more_vert,
+            color: Theme.of(context).colorScheme.onSurface, // 更多tab图标颜色
           ),
-        ),
-      );
-    });
+        );
+
+        return Container(
+          constraints: BoxConstraints(maxHeight: widget.height ?? 36),
+          decoration: BoxDecoration(
+            color: widget.color,
+          ),
+          child: SizedBox(
+            child: ReorderableListView(
+              header: start > 0
+                  ? OverlayMenu(
+                      tabs: _buildItems(start),
+                      child: moreTabIcon,
+                    )
+                  : moreTabIcon,
+              footer: widget.addTab != null ? addTabWidget() : null,
+              buildDefaultDragHandles: false,
+              scrollDirection: Axis.horizontal,
+              onReorder: (oldIndex, newIndex) {
+                widget.onReorder(oldIndex + start, newIndex + start);
+              },
+              children: [
+                for (var i = start; i < widget.tabs.length; i++)
+                  ReorderableDragStartListener(
+                    index: i - start,
+                    key: ValueKey(i - start),
+                    child: CommonTab.fromWarp(
+                      warp: widget.tabs[i],
+                      width: width,
+                      height: widget.height,
+                      style: style,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -228,12 +231,12 @@ class CommonTab extends StatefulWidget {
     this.style,
     this.width,
     this.height,
-  })  : avatar = warp.avatar,
-        label = warp.label,
-        items = warp.items,
-        onTap = warp.onTap,
-        onDeleted = warp.onDeleted,
-        selected = warp.selected;
+  }) : avatar = warp.avatar,
+       label = warp.label,
+       items = warp.items,
+       onTap = warp.onTap,
+       onDeleted = warp.onDeleted,
+       selected = warp.selected;
 
   @override
   State<CommonTab> createState() => _CommonTabState();
@@ -258,88 +261,87 @@ class _CommonTabState extends State<CommonTab> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-        onEnter: (_) {
-          setState(() {
-            isEnter = true;
-          });
-        },
-        onExit: (_) {
-          setState(() {
-            isEnter = false;
-          });
-        },
-        child: GestureDetector(
-          onTap: widget.onTap,
-          onSecondaryTapUp: widget.items == null
-              ? null
-              : (detail) {
-                  final position = detail.globalPosition;
-                  final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-                  final overlayPos = overlay.localToGlobal(Offset.zero);
+      onEnter: (_) {
+        setState(() {
+          isEnter = true;
+        });
+      },
+      onExit: (_) {
+        setState(() {
+          isEnter = false;
+        });
+      },
+      child: GestureDetector(
+        onTap: widget.onTap,
+        onSecondaryTapUp: widget.items == null
+            ? null
+            : (detail) {
+                final position = detail.globalPosition;
+                final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+                final overlayPos = overlay.localToGlobal(Offset.zero);
 
-                  showMenu(
-                    context: context,
-                    position: RelativeRect.fromLTRB(
-                      position.dx - overlayPos.dx,
-                      position.dy - overlayPos.dy,
-                      position.dx - overlayPos.dx,
-                      position.dy - overlayPos.dy,
-                    ),
-                    items: widget.items!,
-                  );
-                },
-          child: SizedBox(
-            width: widget.width ?? defaultTabMaxWidth,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const SizedBox(width: kSpacingTiny / 2),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(kSpacingTiny, 0, 0, 0),
-                    height: widget.height ?? 40,
-                    decoration: BoxDecoration(
-                      color: color(),
-                      borderRadius: widget.style?.borderRadius ?? const BorderRadius.all(Radius.circular(10)),
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        width: 0.5,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        if (widget.avatar != null)
-                          SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: widget.avatar,
-                          ),
-                        const SizedBox(width: kSpacingTiny),
-                        Expanded(
-                          child: Container(
-                            constraints: const BoxConstraints(maxWidth: 50),
-                            child: Text(
-                              widget.label,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: widget.style?.labelAlign,
-                            ),
-                          ),
-                        ),
-                        if (widget.onDeleted != null) ...[
-                          RectangleIconButton.tiny(
-                            icon: Icons.close,
-                            onPressed: widget.onDeleted,
-                          ),
-                          const SizedBox(width: kSpacingTiny),
-                        ],
-                      ],
+                showMenu(
+                  context: context,
+                  position: RelativeRect.fromLTRB(
+                    position.dx - overlayPos.dx,
+                    position.dy - overlayPos.dy,
+                    position.dx - overlayPos.dx,
+                    position.dy - overlayPos.dy,
+                  ),
+                  items: widget.items!,
+                );
+              },
+        child: SizedBox(
+          width: widget.width ?? defaultTabMaxWidth,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(width: kSpacingTiny / 2),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(kSpacingTiny, 0, 0, 0),
+                  height: widget.height ?? 40,
+                  decoration: BoxDecoration(
+                    color: color(),
+                    borderRadius: widget.style?.borderRadius ?? const BorderRadius.all(Radius.circular(10)),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                      width: 0.5,
                     ),
                   ),
+                  child: Row(
+                    children: [
+                      if (widget.avatar != null)
+                        SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: widget.avatar,
+                        ),
+                      const SizedBox(width: kSpacingTiny),
+                      Expanded(
+                        child: Container(
+                          constraints: const BoxConstraints(maxWidth: 50),
+                          child: TooltipText(
+                            text: widget.label,
+                          ),
+                        ),
+                      ),
+                      if (widget.onDeleted != null) ...[
+                        RectangleIconButton.tiny(
+                          icon: Icons.close,
+                          onPressed: widget.onDeleted,
+                        ),
+                        const SizedBox(width: kSpacingTiny),
+                      ],
+                    ],
+                  ),
                 ),
-                const SizedBox(width: kSpacingTiny / 2),
-              ],
-            ),
+              ),
+              const SizedBox(width: kSpacingTiny / 2),
+            ],
           ),
-        ));
+        ),
+      ),
+    );
   }
 }

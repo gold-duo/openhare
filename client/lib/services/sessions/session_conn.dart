@@ -31,13 +31,15 @@ class SessionConnsServices extends _$SessionConnsServices {
     ConnId connId, {
     Function(String)? onSchemaChangedCallback,
   }) async {
-    await ref.read(sessionConnRepoProvider).connect(
-      connId,
-      onStateChangedCallback: () {
-        ref.invalidateSelf();
-      },
-      onSchemaChangedCallback: onSchemaChangedCallback,
-    );
+    await ref
+        .read(sessionConnRepoProvider)
+        .connect(
+          connId,
+          onStateChangedCallback: () {
+            ref.invalidateSelf();
+          },
+          onSchemaChangedCallback: onSchemaChangedCallback,
+        );
     ref.invalidateSelf();
   }
 

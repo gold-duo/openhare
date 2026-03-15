@@ -1,8 +1,8 @@
 import 'package:client/models/instances.dart';
 import 'package:client/models/sessions.dart';
 import 'package:client/repositories/sessions/sessions.dart';
-import 'package:client/services/instances/metadata.dart';
 import 'package:client/services/sessions/sessions.dart';
+import 'package:client/services/sessions/session_metadata.dart';
 import 'package:client/widgets/sql_highlight.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sql_editor/re_editor.dart';
@@ -38,8 +38,9 @@ class SelectedSessionSQLEditorNotifier extends _$SelectedSessionSQLEditorNotifie
       return const SessionSQLEditorModel(sessionId: SessionId(value: 0));
     }
     if (sessionModel.instanceId != null) {
-      AsyncValue<InstanceMetadataModel>? sessionMeta =
-          ref.watch(instanceMetadataServicesProvider(sessionModel.instanceId!));
+      AsyncValue<InstanceMetadataModel>? sessionMeta = ref.watch(
+        selectedSessionMetadataProvider,
+      );
       return SessionSQLEditorModel(
         sessionId: sessionModel.sessionId,
         currentSchema: sessionModel.currentSchema,

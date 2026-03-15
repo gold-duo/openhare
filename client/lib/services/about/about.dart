@@ -13,7 +13,8 @@ class VersionInfoService extends _$VersionInfoService {
     try {
       final latestRelease = await fetchLatestReleaseFromGitHub();
       final latestVersion = latestRelease.version;
-      final hasNew = latestVersion.isNotEmpty &&
+      final hasNew =
+          latestVersion.isNotEmpty &&
           packageInfo.version.isNotEmpty &&
           compareVersion(latestVersion, packageInfo.version) > 0;
       return VersionInfoModel(

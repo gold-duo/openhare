@@ -15,7 +15,7 @@ void doActionDialog(
     context: context,
     builder: (context) {
       return AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest, // 对话框默认背景色
         title: Row(
           children: [
             if (icon != null) ...[
@@ -41,7 +41,7 @@ void doActionDialog(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
               AppLocalizations.of(context)!.cancel,
-              style: TextStyle(color: Theme.of(context).colorScheme.secondary),
+              style: TextStyle(color: Theme.of(context).colorScheme.secondary), // 取消按钮文字颜色
             ),
           ),
           TextButton(
@@ -51,7 +51,7 @@ void doActionDialog(
             },
             child: Text(
               AppLocalizations.of(context)!.confirm,
-              style: TextStyle(color: icon?.color ?? Theme.of(context).colorScheme.primary),
+              style: TextStyle(color: icon?.color ?? Theme.of(context).colorScheme.primary), // 确认按钮文字颜色
             ),
           ),
         ],
@@ -64,6 +64,7 @@ void doActionDialog(
 class CustomDialog extends StatelessWidget {
   final String title;
   final Widget? titleIcon;
+  final Widget? titleTail;
   final Widget content;
   final List<Widget>? actions;
   final double? maxWidth;
@@ -73,6 +74,7 @@ class CustomDialog extends StatelessWidget {
     super.key,
     required this.title,
     this.titleIcon,
+    this.titleTail,
     required this.content,
     this.actions,
     this.maxWidth = 640,
@@ -81,15 +83,12 @@ class CustomDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
-    final colorScheme = theme.colorScheme;
-
     return Dialog(
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: maxWidth ?? 640,
-          maxHeight: maxHeight ??
+          maxHeight:
+              maxHeight ??
               min(
                 MediaQuery.of(context).size.height - tabbarHeight - bottomBarHeight - 10,
                 800,
@@ -97,7 +96,7 @@ class CustomDialog extends StatelessWidget {
         ),
         child: Container(
           decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerLowest,
+            color: Theme.of(context).colorScheme.surfaceContainerLowest, // 对话框默认背景色
             borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.fromLTRB(
@@ -112,7 +111,17 @@ class CustomDialog extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   if (titleIcon != null) titleIcon!,
-                  Text(title, style: textTheme.titleLarge, textAlign: TextAlign.center),
+                  Text(title, style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
+                  if (titleTail != null)
+                    Expanded(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          titleTail!,
+                          const SizedBox(width: kSpacingSmall),
+                        ],
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(height: kSpacingMedium),

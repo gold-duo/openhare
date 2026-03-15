@@ -5,12 +5,12 @@ class ReorderSelectedList<E> extends DelegatingList<E> {
   E? _selected;
 
   ReorderSelectedList({List<E>? data, E? selected})
-      : _data = (data ?? <E>[]).toList(growable: true),
-        _selected = selected ?? (data != null && data.isNotEmpty ? data[0] : null);
+    : _data = (data ?? <E>[]).toList(growable: true),
+      _selected = selected ?? (data != null && data.isNotEmpty ? data[0] : null);
 
   ReorderSelectedList.copyWith(ReorderSelectedList<E> origin)
-      : _data = List<E>.from(origin._data),
-        _selected = origin._selected;
+    : _data = List<E>.from(origin._data),
+      _selected = origin._selected;
 
   @override
   List<E> get delegate => _data;

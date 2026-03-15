@@ -1,6 +1,6 @@
 import 'package:client/models/sessions.dart';
 import 'package:client/services/sessions/session_controller.dart';
-import 'package:client/services/sessions/session_metadata_tree.dart';
+import 'package:client/services/sessions/session_metadata.dart';
 import 'package:client/widgets/button.dart';
 import 'package:client/widgets/const.dart';
 import 'package:client/widgets/data_tree.dart';
@@ -32,7 +32,7 @@ class SessionDrawerMetadata extends ConsumerWidget {
           onPressed: () {
             ref.read(selectedSessionMetadataProvider.notifier).refreshMetadata();
           },
-        )
+        ),
       ],
     );
   }
@@ -43,7 +43,7 @@ class SessionDrawerMetadata extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    AsyncValue<SessionMetadataTreeModel> model = ref.watch(selectedSessionMetadataProvider);
+    AsyncValue<SessionMetadataTreeModel> model = ref.watch(selectedSessionMetadataTreeProvider);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(kSpacingSmall - 5, kSpacingTiny, kSpacingSmall, 0),
@@ -52,12 +52,15 @@ class SessionDrawerMetadata extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-              child: model.when(
-            data: (value) => bodyPage(value.metadataTreeCtrl,
-                SessionController.sessionController(value.sessionId).metadataTreeScrollController),
-            error: (error, trace) => errorPage(context, ref, error.toString()),
-            loading: () => loadingPage(),
-          )),
+            child: model.when(
+              data: (value) => bodyPage(
+                value.metadataTreeCtrl,
+                SessionController.sessionController(value.sessionId).metadataTreeScrollController,
+              ),
+              error: (error, trace) => errorPage(context, ref, error.toString()),
+              loading: () => loadingPage(),
+            ),
+          ),
         ],
       ),
     );

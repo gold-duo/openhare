@@ -29,7 +29,9 @@ class _UserMessageState extends ConsumerState<UserMessage> {
   void _onRetry() {
     final model = widget.sessionChatModel;
     if (model == null || model.llmAgents.lastUsedLLMAgent == null) return;
-    ref.read(aIChatServiceProvider.notifier).retryChat(
+    ref
+        .read(aIChatServiceProvider.notifier)
+        .retryChat(
           model.chatModel.id,
           model.llmAgents.lastUsedLLMAgent!.id,
           genChatSystemPrompt(model),
@@ -51,40 +53,38 @@ class _UserMessageState extends ConsumerState<UserMessage> {
         child: MouseRegion(
           onEnter: (_) => setState(() => _hovering = true),
           onExit: (_) => setState(() => _hovering = false),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: kSpacingSmall),
-            height: 42,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                width: 0.5,
-              ),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Expanded(
-                  child: MentionTextField(
-                    controller: MentionTextEditingController(text: widget.message.content),
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    readOnly: true,
-                    selectionColor: Theme.of(context).colorScheme.primaryContainer,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(kSpacingSmall),
+                constraints: const BoxConstraints(
+                  maxHeight: 300,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.secondaryContainer, // 用户消息卡片背景颜色
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outline, // 用户消息卡片边框颜色
                   ),
                 ),
-                if (showRetry) ...[
-                  const SizedBox(width: kSpacingTiny),
-                  RectangleIconButton.small(
+                child: MentionTextField(
+                  controller: MentionTextEditingController(text: widget.message.content),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  readOnly: true,
+                ),
+              ),
+              if (showRetry)
+                Positioned(
+                  right: kSpacingSmall,
+                  bottom: kSpacingTiny,
+                  child: RectangleIconButton.small(
                     tooltip: AppLocalizations.of(context)!.button_tooltip_retry_message,
                     icon: Icons.send,
                     onPressed: canRetry ? _onRetry : null,
                   ),
-                ],
-              ],
-            ),
+                ),
+            ],
           ),
         ),
       ),

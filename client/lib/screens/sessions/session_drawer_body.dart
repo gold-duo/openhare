@@ -13,19 +13,16 @@ class SessionDrawerBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionDrawer = ref.watch(sessionDrawerProvider);
-    return Container(
-      color: Theme.of(context).colorScheme.surfaceContainerLowest,
-      child: Column(
-        children: [
-          Expanded(
-            child: switch (sessionDrawer.drawerPage) {
-              DrawerPage.sqlResult => const SessionDrawerSqlResult(),
-              DrawerPage.aiChat => const SessionDrawerChat(),
-              _ => const SessionDrawerMetadata(),
-            },
-          ),
-        ],
-      ),
+    return Column(
+      children: [
+        Expanded(
+          child: switch (sessionDrawer.drawerPage) {
+            DrawerPage.sqlResult => const SessionDrawerSqlResult(),
+            DrawerPage.aiChat => const SessionDrawerChat(),
+            _ => const SessionDrawerMetadata(),
+          },
+        ),
+      ],
     );
   }
 }

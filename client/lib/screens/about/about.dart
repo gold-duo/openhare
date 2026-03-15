@@ -84,9 +84,7 @@ class AboutPage extends ConsumerWidget {
         style: Theme.of(context).textTheme.bodySmall,
       ),
     );
-    if (message == l10n.about_update_check_failed &&
-        errorDetail != null &&
-        errorDetail.isNotEmpty) {
+    if (message == l10n.about_update_check_failed && errorDetail != null && errorDetail.isNotEmpty) {
       return Tooltip(
         message: errorDetail,
         preferBelow: false,
@@ -135,9 +133,7 @@ class AboutPage extends ConsumerWidget {
           icon: SizedBox(
             width: 18,
             height: 18,
-            child: isLoading
-                ? const CircularProgressIndicator(strokeWidth: 2)
-                : const Icon(Icons.refresh, size: 18),
+            child: isLoading ? const CircularProgressIndicator(strokeWidth: 2) : const Icon(Icons.refresh, size: 18),
           ),
           label: Text(l10n.about_check_update),
         ),
@@ -275,8 +271,8 @@ class AboutPage extends ConsumerWidget {
         Text(
           error.toString(),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.error,
-              ),
+            color: Theme.of(context).colorScheme.error,
+          ),
         ),
         const SizedBox(height: kSpacingSmall),
         OutlinedButton(

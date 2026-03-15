@@ -59,7 +59,12 @@ class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
   }
 
   Widget _buildMessage(
-      BuildContext context, WidgetRef ref, SessionAIChatModel model, AIChatMessageItem message, int index) {
+    BuildContext context,
+    WidgetRef ref,
+    SessionAIChatModel model,
+    AIChatMessageItem message,
+    int index,
+  ) {
     return message.when(
       userMessage: (msg) => UserMessage(message: msg, sessionChatModel: model),
       assistantMessage: (msg) => AIMessage(
@@ -163,17 +168,26 @@ class SessionChatGuide extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return EmptyPage(
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      Text(AppLocalizations.of(context)!.ai_chat_guide_tip),
-      const SizedBox(height: kSpacingSmall),
-      LinkButton(
-        text: AppLocalizations.of(context)!.ai_chat_guide_tip_add_model,
-        onPressed: () {
-          // 切换到模型设置tab
-          ref.read(settingTabServiceProvider.notifier).setSelectedSettingType(SettingType.llmApi);
-          GoRouter.of(context).go('/settings');
-        },
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            AppLocalizations.of(context)!.ai_chat_guide_tip,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant), // 没有模型时显示的文字颜色
+          ),
+          const SizedBox(height: kSpacingSmall),
+          LinkButton(
+            text: AppLocalizations.of(context)!.ai_chat_guide_tip_add_model,
+            onPressed: () {
+              // 切换到模型设置tab
+              ref.read(settingTabServiceProvider.notifier).setSelectedSettingType(SettingType.llmApi);
+              GoRouter.of(context).go('/settings');
+            },
+          ),
+        ],
       ),
-    ]));
+    );
   }
 }

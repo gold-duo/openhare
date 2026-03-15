@@ -93,15 +93,17 @@ class ExportDataTasksServices extends _$ExportDataTasksServices {
     final finalParameters = parameters.copyWith(fileName: uniqueFileName);
 
     final now = DateTime.now();
-    ExportDataModel task = _createTask(ExportDataModel(
-      id: TaskId.empty(),
-      parameters: finalParameters,
-      desc: desc,
-      status: TaskStatus.running,
-      progressMessage: l10n.export_progress_creating_task,
-      createdAt: now,
-      completedAt: null,
-    ));
+    ExportDataModel task = _createTask(
+      ExportDataModel(
+        id: TaskId.empty(),
+        parameters: finalParameters,
+        desc: desc,
+        status: TaskStatus.running,
+        progressMessage: l10n.export_progress_creating_task,
+        createdAt: now,
+        completedAt: null,
+      ),
+    );
 
     final connServices = ref.read(sessionConnsServicesProvider.notifier);
     SessionConnModel? connModel;
@@ -174,11 +176,13 @@ class ExportDataTasksServices extends _$ExportDataTasksServices {
       );
       _updateTask(task);
     } catch (e) {
-      _updateTask(task.copyWith(
-        status: TaskStatus.failed,
-        errorMessage: e.toString(),
-        completedAt: DateTime.now(),
-      ));
+      _updateTask(
+        task.copyWith(
+          status: TaskStatus.failed,
+          errorMessage: e.toString(),
+          completedAt: DateTime.now(),
+        ),
+      );
     } finally {
       if (sink != null) {
         await sink.close();
@@ -199,7 +203,9 @@ class ExportDataTaskPaginationListNotifier extends _$ExportDataTaskPaginationLis
   }
 
   ExportDataTaskPaginationListModel _tasks({String? key, int pageNumber = 1, int pageSize = 10}) {
-    final result = ref.read(exportDataTasksServicesProvider.notifier).getTasks(
+    final result = ref
+        .read(exportDataTasksServicesProvider.notifier)
+        .getTasks(
           key: key,
           pageNumber: pageNumber,
           pageSize: pageSize,
@@ -209,8 +215,9 @@ class ExportDataTaskPaginationListNotifier extends _$ExportDataTaskPaginationLis
       tasks: result.tasks.map((task) {
         final exportDataModel = ExportDataModel.fromModel(task);
         final instanceId = exportDataModel.parameters?.instanceId;
-        final instanceName =
-            instanceId != null ? ref.read(instancesServicesProvider.notifier).getInstanceById(instanceId)?.name : null;
+        final instanceName = instanceId != null
+            ? ref.read(instancesServicesProvider.notifier).getInstanceById(instanceId)?.name
+            : null;
         return ExportDataTaskListItemModel(
           id: exportDataModel.id,
           status: exportDataModel.status,

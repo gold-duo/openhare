@@ -13,10 +13,8 @@ class GitHubLatestRelease {
 final Uri githubLatestReleaseUrl = Uri.parse('https://github.com/sjjian/openhare/releases');
 final Uri giteeLatestReleaseUrl = Uri.parse('https://gitee.com/sjjian/openhare/releases');
 
-final Uri _githubLatestReleaseApi =
-    Uri.parse('https://api.github.com/repos/sjjian/openhare/releases/latest');
-final Uri _giteeLatestReleaseApi =
-    Uri.parse('https://gitee.com/api/v5/repos/sjjian/openhare/releases/latest');
+final Uri _githubLatestReleaseApi = Uri.parse('https://api.github.com/repos/sjjian/openhare/releases/latest');
+final Uri _giteeLatestReleaseApi = Uri.parse('https://gitee.com/api/v5/repos/sjjian/openhare/releases/latest');
 
 const Map<String, String> _githubHeaders = {
   'Accept': 'application/vnd.github+json',
@@ -63,10 +61,7 @@ List<int> parseVersion(String raw) {
     ];
   }
 
-  final numericParts = RegExp(r'\d+')
-      .allMatches(normalized)
-      .map((m) => int.parse(m.group(0)!))
-      .toList(growable: false);
+  final numericParts = RegExp(r'\d+').allMatches(normalized).map((m) => int.parse(m.group(0)!)).toList(growable: false);
   if (numericParts.isEmpty) {
     return const [0];
   }

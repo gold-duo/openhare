@@ -184,7 +184,7 @@ void main() {
       expect(result.matched, isTrue);
       expect(result.matchType, MatchType.fuzzy);
     });
-    
+
     test('acronym match works when camelCase does not match', () {
       // 找到驼峰命名不匹配但缩写匹配的情况
       // 这很棘手，因为驼峰命名匹配非常灵活
@@ -211,7 +211,7 @@ void main() {
       // 驼峰命名比缩写有更高的优先级
       expect(result.matchType, MatchType.fuzzy);
     });
-    
+
     test('acronym match when camelCase does not match', () {
       // 使用只能作为缩写匹配的模式（每个段的第一个字符）
       // 这很棘手，因为驼峰命名可能仍然匹配，所以我们用更明确的案例测试
@@ -297,7 +297,7 @@ void main() {
     test('single character target', () {
       final result1 = FuzzyMatch.matchWithResult('a', 'a');
       expect(result1.matchType, MatchType.exact);
-      
+
       final result2 = FuzzyMatch.matchWithResult('a', 'b');
       expect(result2.matched, isFalse);
     });
@@ -365,7 +365,7 @@ void main() {
       final result1 = FuzzyMatch.matchWithResult('abc', 'abc');
       // 这是完全匹配，所以逻辑不同
       expect(result1.matchType, MatchType.exact);
-      
+
       final result2 = FuzzyMatch.matchWithResult('abc', 'abcdef');
       expect(result2.score, lessThan(1.0));
     });
@@ -572,4 +572,3 @@ void main() {
     });
   });
 }
-

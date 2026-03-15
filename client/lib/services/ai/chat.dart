@@ -135,8 +135,13 @@ class AIChatService extends _$AIChatService {
   }
 
   /// 进行AI对话，请求接口，存储消息并刷新使用 provider 来动态刷新页面
-  Future<void> chat(AIChatId chatId, LLMAgentId agentId, String systemPrompt,
-      {String? message, String? refText}) async {
+  Future<void> chat(
+    AIChatId chatId,
+    LLMAgentId agentId,
+    String systemPrompt, {
+    String? message,
+    String? refText,
+  }) async {
     // 获取当前选中的 LLM Agent
     LLMAgentModel? lastUsedLLMAgent = ref.read(lLMAgentRepoProvider).getLastUsedLLMAgent();
     if (lastUsedLLMAgent == null) {
@@ -288,10 +293,12 @@ class AIChatService extends _$AIChatService {
 
   void retryChat(AIChatId id, LLMAgentId agentId, String systemPrompt, AIChatUserMessageModel retryMessage) {
     final messages = _getChatMessage(id);
-    final index = messages.indexWhere((item) => item.maybeWhen(
-          userMessage: (msg) => msg.id.value == retryMessage.id.value,
-          orElse: () => false,
-        ));
+    final index = messages.indexWhere(
+      (item) => item.maybeWhen(
+        userMessage: (msg) => msg.id.value == retryMessage.id.value,
+        orElse: () => false,
+      ),
+    );
     if (index == -1) return;
     // 保留当前及之前的 message（含当前这条用户消息），然后重新 chat
     ref.read(aiChatRepoProvider).updateMessages(id, messages.sublist(0, index + 1));

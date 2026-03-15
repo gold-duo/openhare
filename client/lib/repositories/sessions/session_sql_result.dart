@@ -18,8 +18,10 @@ class SQLResultRepoImpl extends SQLResultRepo {
     return !sqlResults.containsKey(sessionId)
         ? 0
         : sessionSqlResults(sessionId).fold(
-                0, (previousId, element) => previousId < element.resultId.value ? element.resultId.value : previousId) +
-            1;
+                0,
+                (previousId, element) => previousId < element.resultId.value ? element.resultId.value : previousId,
+              ) +
+              1;
   }
 
   @override

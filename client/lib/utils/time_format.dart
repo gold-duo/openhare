@@ -7,7 +7,8 @@ extension DateTimeFormat on DateTime {
     final l10n = AppLocalizations.of(context)!;
     final local = toLocal();
     final nowLocal = (now ?? DateTime.now()).toLocal();
-    final timeStr = '${local.hour.toString().padLeft(2, '0')}:'
+    final timeStr =
+        '${local.hour.toString().padLeft(2, '0')}:'
         '${local.minute.toString().padLeft(2, '0')}';
 
     if (local.year == nowLocal.year && local.month == nowLocal.month && local.day == nowLocal.day) {

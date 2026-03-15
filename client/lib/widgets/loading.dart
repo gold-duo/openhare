@@ -30,17 +30,17 @@ class Loading extends StatelessWidget {
   }
 
   const Loading.large({super.key})
-      : size = kIconButtonSizeLarge,
-        strokeWidth = 2.5,
-        paddingSize = (kIconButtonSizeLarge - kIconSizeLarge) / 2 + 4;
+    : size = kIconButtonSizeLarge,
+      strokeWidth = 2.5,
+      paddingSize = (kIconButtonSizeLarge - kIconSizeLarge) / 2 + 4;
 
   const Loading.medium({super.key})
-      : strokeWidth = 2,
-        size = kIconButtonSizeMedium,
-        paddingSize = (kIconButtonSizeMedium - kIconSizeMedium) / 2 + 2;
+    : strokeWidth = 2,
+      size = kIconButtonSizeMedium,
+      paddingSize = (kIconButtonSizeMedium - kIconSizeMedium) / 2 + 2;
 
   const Loading.small({super.key})
-      : strokeWidth = 1.5,
-        size = kIconButtonSizeSmall,
-        paddingSize = (kIconButtonSizeSmall - kIconSizeSmall) / 2;
+    : strokeWidth = 1.5,
+      size = kIconButtonSizeSmall,
+      paddingSize = (kIconButtonSizeSmall - kIconSizeSmall) / 2;
 }

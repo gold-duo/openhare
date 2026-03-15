@@ -18,7 +18,7 @@ class EmptyPage extends StatelessWidget {
             Icon(
               Icons.inbox,
               size: 64,
-              color: Theme.of(context).colorScheme.surfaceDim,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest, // 空页面图标颜色
             ),
             const SizedBox(height: kSpacingSmall),
             child,

@@ -118,9 +118,11 @@ class SelectedSQLResultTabNotifier extends _$SelectedSQLResultTabNotifier {
     if (sessionModel == null) {
       return null;
     }
-    return ref.watch(sQLResultsServicesProvider.select((m) {
-      return m.cache[sessionModel.sessionId];
-    }));
+    return ref.watch(
+      sQLResultsServicesProvider.select((m) {
+        return m.cache[sessionModel.sessionId];
+      }),
+    );
   }
 }
 
@@ -132,9 +134,11 @@ class SelectedSQLResultNotifier extends _$SelectedSQLResultNotifier {
     if (sessionModel == null) {
       return null;
     }
-    SQLResultModel? sqlResultModel = ref.watch(sQLResultsServicesProvider.select((m) {
-      return m.cache[sessionModel.sessionId]?.selected;
-    }));
+    SQLResultModel? sqlResultModel = ref.watch(
+      sQLResultsServicesProvider.select((m) {
+        return m.cache[sessionModel.sessionId]?.selected;
+      }),
+    );
     if (sqlResultModel == null) {
       return null;
     }

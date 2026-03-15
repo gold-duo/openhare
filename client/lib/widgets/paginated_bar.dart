@@ -40,22 +40,22 @@ class TablePaginatedBar extends StatelessWidget {
           ),
           RectangleIconButton.medium(
             icon: Icons.first_page,
-            iconColor: isFirstPage ? Theme.of(context).colorScheme.outline : null,
+            iconColor: isFirstPage ? Theme.of(context).colorScheme.onSurfaceVariant : null,
             onPressed: isFirstPage ? null : () => onChange(1),
           ),
           RectangleIconButton.medium(
             icon: Icons.keyboard_arrow_left,
-            iconColor: isFirstPage ? Theme.of(context).colorScheme.outline : null,
+            iconColor: isFirstPage ? Theme.of(context).colorScheme.onSurfaceVariant : null,
             onPressed: isFirstPage ? null : () => onChange(pageNumber - 1),
           ),
           RectangleIconButton.medium(
             icon: Icons.keyboard_arrow_right_outlined,
-            iconColor: isLastPage ? Theme.of(context).colorScheme.outline : null,
+            iconColor: isLastPage ? Theme.of(context).colorScheme.onSurfaceVariant : null,
             onPressed: isLastPage ? null : () => onChange(pageNumber + 1),
           ),
           RectangleIconButton.medium(
             icon: Icons.last_page,
-            iconColor: isLastPage ? Theme.of(context).colorScheme.outline : null,
+            iconColor: isLastPage ? Theme.of(context).colorScheme.onSurfaceVariant : null,
             onPressed: isLastPage ? null : () => onChange(totalPageNumber),
           ),
         ],

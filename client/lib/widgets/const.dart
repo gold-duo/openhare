@@ -1,7 +1,7 @@
 // size
-const double tabbarHeight = 42;
-const double bottomBarHeight = 36;
-const double navigationRailWidth = 70;
+const double tabbarHeight = 40;
+const double bottomBarHeight = 32;
+const double navigationRailWidth = 68;
 
 // 组件之间的间距
 const double kSpacingTiny = 5.0;

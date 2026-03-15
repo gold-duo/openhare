@@ -42,10 +42,12 @@ class _AddInstancePageState extends State<AddInstancePage> {
     return PageSkeleton(
       topBar: Row(
         children: [
+          SizedBox(width: kSpacingMedium),
           RectangleIconButton.medium(
             icon: Icons.arrow_back,
+            iconColor: Theme.of(context).colorScheme.onSurfaceVariant, // 新建数据源页面返回按钮颜色
             onPressed: () => GoRouter.of(context).go('/instances/list'),
-          )
+          ),
         ],
       ),
       bottomBar: AddInstanceBottomBar(
@@ -104,64 +106,70 @@ class _AddInstanceState extends ConsumerState<AddInstance> {
           ),
           const Spacer(),
           TextButton(
-              onPressed: addInstanceController.isDatabasePingDoing
-                  ? null
-                  : () {
-                      addInstanceController.databasePing();
-                    },
-              child: Text(AppLocalizations.of(context)!.db_instance_test)),
+            onPressed: addInstanceController.isDatabasePingDoing
+                ? null
+                : () {
+                    addInstanceController.databasePing();
+                  },
+            child: Text(AppLocalizations.of(context)!.db_instance_test),
+          ),
           TextButton(
-              onPressed: () async {
-                if (addInstanceController.validate()) {
-                  ref.read(instancesServicesProvider.notifier).addInstance(addInstanceController.getInstanceModel());
+            onPressed: () async {
+              if (addInstanceController.validate()) {
+                ref.read(instancesServicesProvider.notifier).addInstance(addInstanceController.getInstanceModel());
 
-                  addInstanceController.clear();
+                addInstanceController.clear();
 
-                  ref.read(instancesProvider.notifier).changePage("");
-                }
-              },
-              child: Text(AppLocalizations.of(context)!.submit_and_continue)),
+                ref.read(instancesProvider.notifier).changePage("");
+              }
+            },
+            child: Text(AppLocalizations.of(context)!.submit_and_continue),
+          ),
           TextButton(
-              onPressed: () async {
-                if (addInstanceController.validate()) {
-                  ref.read(instancesServicesProvider.notifier).addInstance(addInstanceController.getInstanceModel());
+            onPressed: () async {
+              if (addInstanceController.validate()) {
+                ref.read(instancesServicesProvider.notifier).addInstance(addInstanceController.getInstanceModel());
 
-                  addInstanceController.clear();
+                addInstanceController.clear();
 
-                  ref.read(instancesProvider.notifier).changePage("");
+                ref.read(instancesProvider.notifier).changePage("");
 
-                  GoRouter.of(context).go('/instances/list');
-                }
-              },
-              child: Text(AppLocalizations.of(context)!.submit)),
+                GoRouter.of(context).go('/instances/list');
+              }
+            },
+            child: Text(AppLocalizations.of(context)!.submit),
+          ),
         ],
       ),
       child: Container(
         padding: const EdgeInsets.fromLTRB(0, kSpacingSmall, 0, 0),
-        child: Column(mainAxisAlignment: MainAxisAlignment.start, children: [
-          DatabaseTypeCardList(
-            connectionMetas: connectionMetas,
-            selectedDatabaseType: addInstanceController.selectedDatabaseType,
-            onDatabaseTypeChange: (type) {
-              addInstanceController.onDatabaseTypeChange(type);
-            },
-            selectedColor: selectedColor(addInstanceController),
-          ),
-          const SizedBox(height: kSpacingMedium),
-          Expanded(
-            child: AddInstanceForm(
-              infos: addInstanceController.dbInfos,
-              selectedGroup: addInstanceController.selectedGroup,
-              onValid: (info, isValid) {
-                addInstanceController.updateValidState(info, isValid);
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            DatabaseTypeCardList(
+              connectionMetas: connectionMetas,
+              selectedDatabaseType: addInstanceController.selectedDatabaseType,
+              onDatabaseTypeChange: (type) {
+                addInstanceController.onDatabaseTypeChange(type);
               },
-              onGroupChange: (group) {
-                addInstanceController.onGroupChange(group);
-              },
-              codeController: addInstanceController.code,
+              selectedColor: selectedColor(addInstanceController),
             ),
-          )
-        ]),
+            const SizedBox(height: kSpacingMedium),
+            Expanded(
+              child: AddInstanceForm(
+                infos: addInstanceController.dbInfos,
+                selectedGroup: addInstanceController.selectedGroup,
+                onValid: (info, isValid) {
+                  addInstanceController.updateValidState(info, isValid);
+                },
+                onGroupChange: (group) {
+                  addInstanceController.onGroupChange(group);
+                },
+                codeController: addInstanceController.code,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -192,7 +200,9 @@ class DatabaseTypeCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
         color: selected
-            ? Theme.of(context).colorScheme.surfaceContainer // db type card selected color
+            ? Theme.of(context)
+                  .colorScheme
+                  .primaryContainer // db type card selected color
             : null,
       ),
       child: InkWell(
@@ -205,23 +215,13 @@ class DatabaseTypeCard extends StatelessWidget {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: kSpacingTiny),
+              padding: const EdgeInsets.only(top: kSpacingSmall),
               child: Image.asset(logoPath),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(0, kSpacingTiny, 0, kSpacingTiny),
-              child: Text(name, style: Theme.of(context).textTheme.bodyMedium),
+              padding: const EdgeInsets.fromLTRB(0, kSpacingTiny, 0, kSpacingSmall),
+              child: Text(name),
             ),
-            if (selected)
-              Container(
-                padding: const EdgeInsets.only(bottom: kSpacingTiny),
-                width: 5,
-                height: 5,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: selectedColor, // Green when selected, grey when not
-                ),
-              ),
           ],
         ),
       ),
@@ -264,7 +264,7 @@ class DatabaseTypeCardList extends StatelessWidget {
                     onTap: (type) => onDatabaseTypeChange?.call(type),
                   ),
                   const SizedBox(width: kSpacingTiny),
-                ]
+                ],
               ],
             ),
           ),
@@ -309,9 +309,10 @@ class _CommonFormFieldState extends State<CommonFormField> {
         controller: widget.controller,
         validator: widget.validator,
         decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(5)),
-            labelText: widget.label,
-            contentPadding: const EdgeInsets.all(10)),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(5)),
+          labelText: widget.label,
+          contentPadding: const EdgeInsets.all(10),
+        ),
       ),
     );
   }
@@ -337,9 +338,10 @@ class DescFormField extends StatelessWidget {
         maxLength: 50,
         maxLines: 4,
         decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(5)),
-            labelText: AppLocalizations.of(context)!.db_instance_desc,
-            contentPadding: const EdgeInsets.all(10)),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(5)),
+          labelText: AppLocalizations.of(context)!.db_instance_desc,
+          contentPadding: const EdgeInsets.all(10),
+        ),
       ),
     );
   }
@@ -415,8 +417,11 @@ class AddInstanceForm extends StatelessWidget {
   }
 
   List<String> get groups {
-    final groups =
-        infos.values.groupListsBy((info) => info.meta.group).keys.whereNot((e) => e == settingMetaGroupBase).toList();
+    final groups = infos.values
+        .groupListsBy((info) => info.meta.group)
+        .keys
+        .whereNot((e) => e == settingMetaGroupBase)
+        .toList();
     groups.add("initize");
     return groups;
   }
@@ -473,7 +478,7 @@ class AddInstanceForm extends StatelessWidget {
               state: port.state,
               validator: validatorFn(context, port, validatorValueRequired(context)),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -500,7 +505,7 @@ class AddInstanceForm extends StatelessWidget {
             child: RectangleIconButton.medium(
               icon: Icons.folder_open,
               tooltip: AppLocalizations.of(context)!.tooltip_select_directory,
-              iconColor: Theme.of(context).colorScheme.primary,
+              iconColor: Theme.of(context).colorScheme.primary, // file 按钮颜色
               onPressed: () => selectDBFile(context, dbFile),
             ),
           ),
@@ -547,44 +552,45 @@ class AddInstanceForm extends StatelessWidget {
   Widget buildCustomField(BuildContext context, String group) {
     if (group == "initize") {
       return Container(
-          constraints: const BoxConstraints(maxHeight: 430),
-          child: CodeEditor(
-            borderRadius: BorderRadius.circular(10),
-            style: CodeEditorStyle(
-              backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow, // SQL 编辑器背景色
-              textStyle: GoogleFonts.robotoMono(
-                textStyle: Theme.of(context).textTheme.bodyMedium,
-                color: Theme.of(context).colorScheme.onSurface,
-              ), // SQL 编辑器文字颜色
+        constraints: const BoxConstraints(maxHeight: 430),
+        child: CodeEditor(
+          borderRadius: BorderRadius.circular(10),
+          style: CodeEditorStyle(
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow, // SQL 编辑器背景色
+            textStyle: GoogleFonts.robotoMono(
+              color: Theme.of(context).colorScheme.onSurface, // SQL 编辑器文字颜色
             ),
-            indicatorBuilder: (context, editingController, chunkController, notifier) {
-              return Row(
-                children: [
-                  DefaultCodeLineNumber(
-                    controller: editingController,
-                    notifier: notifier,
-                  ),
-                  DefaultCodeChunkIndicator(width: 20, controller: chunkController, notifier: notifier),
-                ],
-              );
-            },
-            controller: codeController,
-            wordWrap: false,
-          ));
+          ),
+          indicatorBuilder: (context, editingController, chunkController, notifier) {
+            return Row(
+              children: [
+                DefaultCodeLineNumber(
+                  controller: editingController,
+                  notifier: notifier,
+                ),
+                DefaultCodeChunkIndicator(width: 20, controller: chunkController, notifier: notifier),
+              ],
+            );
+          },
+          controller: codeController,
+          wordWrap: false,
+        ),
+      );
     }
     return ListView(
       children: [
         for (final info in infos.values)
           if (info.meta.group == group && info.meta is CustomMeta)
             CommonFormField(
-                state: info.state,
-                label: info.meta.name,
-                controller: info.ctrl,
-                validator: validatorFn(
-                  context,
-                  info,
-                  validatorValueRequired(context),
-                )),
+              state: info.state,
+              label: info.meta.name,
+              controller: info.ctrl,
+              validator: validatorFn(
+                context,
+                info,
+                validatorValueRequired(context),
+              ),
+            ),
       ],
     );
   }
@@ -629,7 +635,7 @@ class AddInstanceForm extends StatelessWidget {
                     if (hasField(settingMetaNameDesc)) buildDescField(context),
                   ],
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -637,45 +643,47 @@ class AddInstanceForm extends StatelessWidget {
           width: kSpacingLarge,
         ),
         Expanded(
-            child: Container(
-          constraints: const BoxConstraints(maxWidth: 500),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  for (var group in groups)
-                    TextButton(
-                      onPressed: () {
-                        onGroupChange?.call(group);
-                      },
-                      style: TextButton.styleFrom(
-                        backgroundColor: group == selectedGroup
-                            ? Theme.of(context).colorScheme.surfaceContainerHigh // custom config tab selected color
-                            : null,
-                      ),
-                      child: Text(
-                        group,
-                        textAlign: TextAlign.left,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium!
-                            .merge(TextStyle(color: !isGroupValid(group) ? Colors.red : null)),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: kSpacingSmall),
-              Expanded(
-                child: IndexedStack(
-                  index: selectedGroupIndex,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: Column(
+              children: [
+                Row(
                   children: [
-                    for (final group in groups) buildCustomField(context, group),
+                    for (var group in groups)
+                      TextButton(
+                        onPressed: () {
+                          onGroupChange?.call(group);
+                        },
+                        style: TextButton.styleFrom(
+                          backgroundColor: group == selectedGroup
+                              ? Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer // custom config tab selected color
+                              : null,
+                        ),
+                        child: Text(
+                          group,
+                          textAlign: TextAlign.left,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleMedium!.merge(TextStyle(color: !isGroupValid(group) ? Colors.red : null)),
+                        ),
+                      ),
                   ],
                 ),
-              )
-            ],
+                const SizedBox(height: kSpacingSmall),
+                Expanded(
+                  child: IndexedStack(
+                    index: selectedGroupIndex,
+                    children: [
+                      for (final group in groups) buildCustomField(context, group),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ))
+        ),
       ],
     );
   }
@@ -727,7 +735,7 @@ class AddInstanceBottomBar extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(kSpacingSmall, 0, kSpacingSmall, 0),
           child: status,
         ),
-        Expanded(child: msg)
+        Expanded(child: msg),
       ],
     );
   }
@@ -746,10 +754,11 @@ class FormInfo {
 class AddInstanceController extends ChangeNotifier {
   final Map<DatabaseType, Map<String, FormInfo>> infos = {};
 
-  final CodeLineEditingController code =
-      CodeLineEditingController(spanBuilder: ({required codeLines, required context, required style}) {
-    return getSQLHighlightTextSpan(codeLines.asString(TextLineBreak.lf), defalutStyle: style);
-  });
+  final CodeLineEditingController code = CodeLineEditingController(
+    spanBuilder: ({required codeLines, required context, required style}) {
+      return getSQLHighlightTextSpan(codeLines.asString(TextLineBreak.lf), defalutStyle: style);
+    },
+  );
 
   DatabaseType selectedDatabaseType = DatabaseType.mysql;
   String? _selectedGroup;
@@ -939,8 +948,10 @@ class AddInstanceController extends ChangeNotifier {
           custom[(info.meta as CustomMeta).name] = info.ctrl.text;
       }
     }
-    List<String> querys =
-        Splitter(code.text.trim(), ";").split().map((e) => e.content.trim()).whereNot((e) => e.trim() == "").toList();
+    List<String> querys = Splitter(
+      code.text.trim(),
+      ";",
+    ).split().map((e) => e.content.trim()).whereNot((e) => e.trim() == "").toList();
     final target = dbFile.isNotEmpty
         ? ConnectTarget.dbFile(dbFile: dbFile)
         : ConnectTarget.network(host: addr, port: port ?? 0);

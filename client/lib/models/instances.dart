@@ -91,4 +91,19 @@ abstract class InstanceMetadataModel with _$InstanceMetadataModel {
     required List<MetaDataNode> metadata,
     required String? version,
   }) = _InstanceMetadataModel;
+
+  const InstanceMetadataModel._();
+
+  List<String> get schemas {
+    final schemas = List<String>.empty(growable: true);
+    for (final meta in metadata) {
+      meta.visitor((node, parent) {
+        if (node.type == MetaType.schema) {
+          schemas.add(node.value);
+        }
+        return true;
+      });
+    }
+    return schemas;
+  }
 }

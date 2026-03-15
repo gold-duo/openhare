@@ -23,7 +23,7 @@ class SessionTabs extends ConsumerWidget {
         () {
           ref.read(sessionsServicesProvider.notifier).deleteSession(model.sessionId);
         },
-        icon: Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error),
+        icon: Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error), // 关闭会话对话框图标颜色
       );
     } else {
       ref.read(sessionsServicesProvider.notifier).deleteSession(model.sessionId);
@@ -41,10 +41,11 @@ class SessionTabs extends ConsumerWidget {
             child: CommonTabBar(
               tabStyle: CommonTabStyle(
                 minWidth: 90,
+                maxWidth: 160,
                 color: Theme.of(context).colorScheme.surfaceContainerLow, // session tab 背景色
-                selectedColor: Theme.of(context).colorScheme.surfaceContainerHigh, // session tab 选择的颜色
+                selectedColor: Theme.of(context).colorScheme.primaryContainer, // session tab 选择的颜色
                 hoverColor: Theme.of(context).colorScheme.surfaceContainer, // session tab 鼠标移入的颜色
-                borderRadius: const BorderRadius.all(Radius.circular(10)),
+                borderRadius: const BorderRadius.all(Radius.circular(8)),
               ),
               addTab: () {
                 ref.read(sessionsServicesProvider.notifier).newSession();
@@ -66,7 +67,8 @@ class SessionTabs extends ConsumerWidget {
                           selected: model.sessions[i].sessionId == model.selectedSession?.sessionId,
                         )
                       : CommonTabWrap(
-                          avatar: (model.sessions[i].sessionId != model.selectedSession?.sessionId &&
+                          avatar:
+                              (model.sessions[i].sessionId != model.selectedSession?.sessionId &&
                                   SQLConnectState.isBusy(model.sessions[i].connState))
                               ? const Loading.small()
                               : Image.asset(connectionMetaMap[model.sessions[i].dbType!]!.logoAssertPath),
@@ -87,7 +89,7 @@ class SessionTabs extends ConsumerWidget {
                             closeSessionDialog(context, ref, model.sessions[i]);
                           },
                           selected: model.sessions[i].sessionId == model.selectedSession?.sessionId,
-                        )
+                        ),
               ],
             ),
           ),

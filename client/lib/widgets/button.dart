@@ -39,9 +39,9 @@ class RectangleIconButton extends StatefulWidget {
     this.backgroundColor,
     this.hoverBackgroundColor,
     this.verticalOffset = 0,
-  })  : size = kIconButtonSizeMedium,
-        iconSize = kIconSizeMedium,
-        padding = 4;
+  }) : size = kIconButtonSizeMedium,
+       iconSize = kIconSizeMedium,
+       padding = 4;
 
   const RectangleIconButton.small({
     super.key,
@@ -52,9 +52,9 @@ class RectangleIconButton extends StatefulWidget {
     this.backgroundColor,
     this.hoverBackgroundColor,
     this.verticalOffset = 0,
-  })  : size = kIconButtonSizeSmall,
-        iconSize = kIconSizeSmall,
-        padding = 2;
+  }) : size = kIconButtonSizeSmall,
+       iconSize = kIconSizeSmall,
+       padding = 2;
 
   const RectangleIconButton.tiny({
     super.key,
@@ -65,9 +65,9 @@ class RectangleIconButton extends StatefulWidget {
     this.backgroundColor,
     this.hoverBackgroundColor,
     this.verticalOffset = 0,
-  })  : size = kIconButtonSizeTiny,
-        iconSize = kIconSizeTiny,
-        padding = 2;
+  }) : size = kIconButtonSizeTiny,
+       iconSize = kIconSizeTiny,
+       padding = 2;
 
   @override
   State<RectangleIconButton> createState() => _RectangleIconButtonState();
@@ -87,48 +87,51 @@ class _RectangleIconButtonState extends State<RectangleIconButton> {
   @override
   Widget build(BuildContext context) {
     final button = MouseRegion(
-        cursor: widget.onPressed != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
-        onEnter: (value) {
-          if (widget.onPressed != null && !_isHovering) {
-            setState(() {
-              _isHovering = true;
-            });
-          }
-        },
-        onExit: (value) {
-          if (widget.onPressed != null && _isHovering) {
-            setState(() {
-              _isHovering = false;
-            });
-          }
-        },
-        child: GestureDetector(
-          onTap: widget.onPressed != null ? _handleTap : null,
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: widget.padding,
-              right: widget.padding,
-              top: widget.padding + widget.verticalOffset,
-              bottom: widget.padding - widget.verticalOffset,
+      cursor: widget.onPressed != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      onEnter: (value) {
+        if (widget.onPressed != null && !_isHovering) {
+          setState(() {
+            _isHovering = true;
+          });
+        }
+      },
+      onExit: (value) {
+        if (widget.onPressed != null && _isHovering) {
+          setState(() {
+            _isHovering = false;
+          });
+        }
+      },
+      child: GestureDetector(
+        onTap: widget.onPressed != null ? _handleTap : null,
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: widget.padding,
+            right: widget.padding,
+            top: widget.padding + widget.verticalOffset,
+            bottom: widget.padding - widget.verticalOffset,
+          ),
+          child: Container(
+            width: widget.size - widget.padding * 2,
+            height: widget.size - widget.padding * 2,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(widget.size * 0.2),
+              color: _isHovering
+                  ? widget.hoverBackgroundColor ??
+                        Theme.of(context)
+                            .colorScheme
+                            .primaryContainer // icon button 鼠标悬浮的颜色
+                  : widget.backgroundColor, // icon button 背景色
             ),
-            child: Container(
-              width: widget.size - widget.padding * 2,
-              height: widget.size - widget.padding * 2,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(widget.size * 0.2),
-                color: _isHovering
-                    ? widget.hoverBackgroundColor ??
-                        Theme.of(context).colorScheme.primaryContainer // icon button 鼠标悬浮的颜色
-                    : widget.backgroundColor, // icon button 背景色
-              ),
-              child: Icon(
-                widget.icon,
-                color: widget.iconColor,
-                size: widget.iconSize,
-              ),
+            child: Icon(
+              widget.icon,
+              color: widget.iconColor,
+              size: widget.iconSize,
             ),
           ),
-        ));
+        ),
+      ),
+    );
 
     if (widget.tooltip != null) {
       return Tooltip(
@@ -163,8 +166,8 @@ class _LinkButtonState extends State<LinkButton> {
 
   @override
   Widget build(BuildContext context) {
-    final Color normalColor = Theme.of(context).colorScheme.primary;
-    final Color hoverColor = Theme.of(context).colorScheme.primary.withOpacity(0.7);
+    final Color normalColor = Theme.of(context).colorScheme.primary; // 链接按钮文字颜色
+    final Color hoverColor = Theme.of(context).colorScheme.inversePrimary; // 链接按钮鼠标悬浮颜色
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovering = true),

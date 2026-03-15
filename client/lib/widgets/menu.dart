@@ -64,18 +64,15 @@ class _OverlayMenuState extends State<OverlayMenu> {
 
   Widget _buildMenu(BuildContext context, double maxHeight) {
     return Container(
-      constraints: BoxConstraints(
-        maxWidth: widget.maxWidth,
-        maxHeight: maxHeight,
-      ),
+      constraints: BoxConstraints(maxWidth: widget.maxWidth, maxHeight: maxHeight),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        color: Theme.of(context).colorScheme.surfaceContainerLowest, // 菜单库默认背景色
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            color: Theme.of(context).colorScheme.outline, // 菜单阴影颜色
             blurRadius: 10,
-            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -102,7 +99,7 @@ class _OverlayMenuState extends State<OverlayMenu> {
                           },
                           child: widget.tabs[i],
                         )
-                      : widget.tabs[i]
+                      : widget.tabs[i],
               ],
             ),
           ),
@@ -119,10 +116,7 @@ class _OverlayMenuState extends State<OverlayMenu> {
       child: Stack(
         children: [
           Builder(
-            builder: (iconContext) => GestureDetector(
-              onTap: () => _toggleMenu(iconContext),
-              child: widget.child,
-            ),
+            builder: (iconContext) => GestureDetector(onTap: () => _toggleMenu(iconContext), child: widget.child),
           ),
           OverlayPortal(
             controller: _portalController,
@@ -179,10 +173,7 @@ class _OverlayMenuState extends State<OverlayMenu> {
                   Positioned(
                     left: left,
                     top: top,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: _buildMenu(context, menuHeight),
-                    ),
+                    child: Material(color: Colors.transparent, child: _buildMenu(context, menuHeight)),
                   ),
                 ],
               );
@@ -198,15 +189,8 @@ class OverlayMenuItem extends StatefulWidget {
   final double height;
   final Widget child;
   final void Function()? onTabSelected;
-  final Color? hoverColor;
 
-  const OverlayMenuItem({
-    super.key,
-    required this.height,
-    required this.child,
-    this.onTabSelected,
-    this.hoverColor,
-  });
+  const OverlayMenuItem({super.key, required this.height, required this.child, this.onTabSelected});
 
   @override
   State<OverlayMenuItem> createState() => _OverlayMenuItemState();
@@ -217,17 +201,14 @@ class _OverlayMenuItemState extends State<OverlayMenuItem> {
 
   @override
   Widget build(BuildContext context) {
-    final hoverColor = widget.hoverColor ?? Theme.of(context).colorScheme.surfaceContainer;
+    final hoverColor = Theme.of(context).colorScheme.surfaceContainerLow; // 菜单列鼠标移入的颜色
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovering = true),
       onExit: (_) => setState(() => _hovering = false),
       child: SizedBox(
         height: widget.height,
-        child: Container(
-          color: _hovering ? hoverColor : null,
-          child: widget.child,
-        ),
+        child: Container(color: _hovering ? hoverColor : null, child: widget.child),
       ),
     );
   }
@@ -237,18 +218,11 @@ class OverlayMenuHeader extends StatelessWidget {
   final double height;
   final Widget child;
 
-  const OverlayMenuHeader({
-    super.key,
-    required this.height,
-    required this.child,
-  });
+  const OverlayMenuHeader({super.key, required this.height, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: height,
-      child: child,
-    );
+    return SizedBox(height: height, child: child);
   }
 }
 
@@ -256,15 +230,8 @@ class OverlayMenuFooter extends StatefulWidget {
   final double height;
   final Widget child;
   final VoidCallback? onTap;
-  final Color? hoverColor;
 
-  const OverlayMenuFooter({
-    super.key,
-    required this.height,
-    required this.child,
-    this.onTap,
-    this.hoverColor,
-  });
+  const OverlayMenuFooter({super.key, required this.height, required this.child, this.onTap});
 
   @override
   State<OverlayMenuFooter> createState() => _OverlayMenuFooterState();
@@ -275,17 +242,10 @@ class _OverlayMenuFooterState extends State<OverlayMenuFooter> {
 
   @override
   Widget build(BuildContext context) {
-    final base = SizedBox(
-      height: widget.height,
-      child: widget.child,
-    );
+    final base = SizedBox(height: widget.height, child: widget.child);
 
-    final colorScheme = Theme.of(context).colorScheme;
-    const radius = BorderRadius.only(
-      bottomLeft: Radius.circular(12),
-      bottomRight: Radius.circular(12),
-    );
-    final hoverColor = widget.hoverColor ?? colorScheme.surfaceContainerLow;
+    const radius = BorderRadius.only(bottomLeft: Radius.circular(12), bottomRight: Radius.circular(12));
+    final hoverColor = Theme.of(context).colorScheme.surfaceContainerLow; // 菜单footer鼠标移入的颜色
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovering = true),
@@ -293,10 +253,7 @@ class _OverlayMenuFooterState extends State<OverlayMenuFooter> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: Container(
-          decoration: BoxDecoration(
-            color: _hovering ? hoverColor : Colors.transparent,
-            borderRadius: radius,
-          ),
+          decoration: BoxDecoration(color: _hovering ? hoverColor : null, borderRadius: radius),
           child: base,
         ),
       ),

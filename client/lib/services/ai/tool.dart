@@ -31,14 +31,13 @@ The result will include at most the first 100 rows.
 
   @override
   Map<String, dynamic> get inputJsonSchema => {
-        'type': 'object',
-        'properties': {
-          'query': {
-            'type': 'string',
-            'description': 'The SQL query string to execute, for example: SELECT * FROM users LIMIT 10',
-          },
-        },
-        'required': ['query'],
-      };
-
+    'type': 'object',
+    'properties': {
+      'query': {
+        'type': 'string',
+        'description': 'The SQL query string to execute, for example: SELECT * FROM users LIMIT 10',
+      },
+    },
+    'required': ['query'],
+  };
 }

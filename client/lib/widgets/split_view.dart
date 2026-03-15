@@ -21,8 +21,9 @@ class SplitViewController extends ChangeNotifier {
   /// [size] 要设置的大小值
   /// [maxSize] 最大允许的大小（通常是 totalSize - dividerThickness - firstMinSize）
   void setSecondSize(double size, double? maxSize) {
-    final double clampedSize =
-        maxSize != null ? size.clamp(secondMinSize, maxSize) : size.clamp(secondMinSize, double.infinity);
+    final double clampedSize = maxSize != null
+        ? size.clamp(secondMinSize, maxSize)
+        : size.clamp(secondMinSize, double.infinity);
     if (_secondSize == clampedSize) return;
     _secondSize = clampedSize;
     notifyListeners();

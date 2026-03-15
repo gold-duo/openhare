@@ -254,7 +254,7 @@ class _DataGridState extends State<DataGrid> {
       name: '',
       resizable: false,
       dataAlignment: Alignment.center,
-      textColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+      textColor: Theme.of(context).colorScheme.onSurfaceVariant, // line number 字体颜色
       cells: <DataGridCell>[
         for (int i = 0; i < widget.controller.columns[0].cells.length; i++) DataGridCell(data: '${i + 1}'),
       ],
@@ -617,7 +617,7 @@ class DataGridCellWidget extends StatelessWidget {
     return RepaintBoundary(
       child: CustomPaint(
         painter: _DataGridCellPainter(
-          borderColor: borderColor ?? Theme.of(context).colorScheme.surfaceContainerHigh,
+          borderColor: borderColor ?? Theme.of(context).colorScheme.outlineVariant, // 表格网格颜色
         ),
         child: child,
       ),
@@ -668,8 +668,8 @@ class _SelectionLayerPainter extends CustomPainter {
     required this.rowHeight,
     required this.colorScheme,
   }) : super(
-          repaint: controller,
-        );
+         repaint: controller,
+       );
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -687,7 +687,7 @@ class _SelectionLayerPainter extends CustomPainter {
 
     // 绘制选中行的背景色（覆盖所有列）
     final rowBackgroundPaint = Paint()
-      ..color = colorScheme.surfaceContainerLow
+      ..color = colorScheme.surfaceContainerLow // 选中行背景色
       ..style = PaintingStyle.fill
       ..isAntiAlias = false;
 
@@ -705,7 +705,7 @@ class _SelectionLayerPainter extends CustomPainter {
 
     // 绘制选中单元格的内边框
     final selectedBorderPaint = Paint()
-      ..color = colorScheme.primary
+      ..color = colorScheme.primary // 选中单元格内边框颜色
       ..strokeWidth = borderWidth
       ..style = PaintingStyle.stroke
       ..isAntiAlias = false;

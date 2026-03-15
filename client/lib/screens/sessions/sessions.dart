@@ -24,7 +24,6 @@ class SessionsPage extends ConsumerWidget {
     } else {
       return PageSkeleton(
         key: const Key("sessions"),
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
         topBar: const SessionTabs(),
         bottomBar: const SessionStatusTab(),
         child: const SessionBodyPage(),

@@ -12,14 +12,14 @@ const String _marker = '\uE000';
 
 sealed class Segment {
   int get driverLength => switch (this) {
-        TextSegment(:final value) => value.length,
-        MentionSegment() => 1,
-      };
+    TextSegment(:final value) => value.length,
+    MentionSegment() => 1,
+  };
 
   String toDriverString(String placeholder) => switch (this) {
-        TextSegment(:final value) => value,
-        MentionSegment() => placeholder,
-      };
+    TextSegment(:final value) => value,
+    MentionSegment() => placeholder,
+  };
 }
 
 class TextSegment extends Segment {
@@ -41,19 +41,22 @@ class MentionCandidate {
 
 typedef MentionCandidatesBuilder = FutureOr<List<MentionCandidate>> Function(String query);
 
-typedef MentionItemBuilder = Widget Function(
-  BuildContext context,
-  MentionCandidate candidate,
-  String query,
-);
+typedef MentionItemBuilder =
+    Widget Function(
+      BuildContext context,
+      MentionCandidate candidate,
+      String query,
+    );
 
 class MentionSegmentSerializer {
   static String encode(List<Segment> segments) {
     return segments
-        .map((s) => switch (s) {
-              TextSegment(:final value) => value,
-              MentionSegment(:final label) => '@$label$_marker',
-            })
+        .map(
+          (s) => switch (s) {
+            TextSegment(:final value) => value,
+            MentionSegment(:final label) => '@$label$_marker',
+          },
+        )
         .join();
   }
 
@@ -115,8 +118,8 @@ class MentionTextController extends TextEditingController {
   final ValueNotifier<MentionState?> mentionState = ValueNotifier(null);
 
   MentionTextController({String? text})
-      : _segments = text != null ? MentionSegmentSerializer.decode(text) : <Segment>[],
-        super(text: '') {
+    : _segments = text != null ? MentionSegmentSerializer.decode(text) : <Segment>[],
+      super(text: '') {
     final initialDriver = _segmentsToDriverString();
     super.value = TextEditingValue(
       text: initialDriver,
@@ -331,10 +334,12 @@ class MentionTextController extends TextEditingController {
             spans.add(TextSpan(text: value.substring(0, beforeLen), style: baseStyle));
           }
           if (composingLen > 0) {
-            spans.add(TextSpan(
-              text: value.substring(beforeLen, beforeLen + composingLen),
-              style: composingStyle,
-            ));
+            spans.add(
+              TextSpan(
+                text: value.substring(beforeLen, beforeLen + composingLen),
+                style: composingStyle,
+              ),
+            );
           }
           if (afterStart < value.length) {
             spans.add(TextSpan(text: value.substring(afterStart), style: baseStyle));
@@ -346,13 +351,15 @@ class MentionTextController extends TextEditingController {
             baseStyle: baseStyle.copyWith(fontWeight: FontWeight.w500),
             fallbackLabel: label,
           );
-          spans.add(WidgetSpan(
-            alignment: PlaceholderAlignment.middle,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: mentionWidget,
+          spans.add(
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: mentionWidget,
+              ),
             ),
-          ));
+          );
           driverOffset += 1;
       }
     }
@@ -703,45 +710,42 @@ class _MentionTextFieldState extends State<MentionTextField> {
   Widget build(BuildContext context) {
     final useOverlay = widget.mentionCandidatesBuilder != null;
 
-    Widget textField = Actions(
-      actions: <Type, Action<Intent>>{
-        CopySelectionTextIntent: CallbackAction<CopySelectionTextIntent>(
-          onInvoke: (intent) {
-            widget.controller.copySelectionToClipboard();
-            return null;
-          },
+    final textField = TextSelectionTheme(
+      data: TextSelectionTheme.of(context).copyWith(
+        selectionColor: widget.selectionColor ?? Theme.of(context).colorScheme.primaryContainer, // 文字选择背景色
+      ),
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          CopySelectionTextIntent: CallbackAction<CopySelectionTextIntent>(
+            onInvoke: (intent) {
+              widget.controller.copySelectionToClipboard();
+              return null;
+            },
+          ),
+          PasteTextIntent: CallbackAction<PasteTextIntent>(
+            onInvoke: (intent) {
+              widget.controller.pasteFromClipboard();
+              return null;
+            },
+          ),
+        },
+        child: TextField(
+          key: _inputKey,
+          controller: widget.controller,
+          focusNode: _effectiveFocusNode,
+          decoration: widget.decoration,
+          style: widget.style,
+          strutStyle: widget.strutStyle,
+          textAlignVertical: widget.textAlignVertical,
+          minLines: widget.minLines,
+          maxLines: widget.maxLines,
+          enabled: widget.enabled ?? true,
+          readOnly: widget.readOnly,
+          textInputAction: widget.textInputAction,
+          onSubmitted: widget.onSubmitted == null ? null : (_) => widget.onSubmitted!(widget.controller.displayText),
         ),
-        PasteTextIntent: CallbackAction<PasteTextIntent>(
-          onInvoke: (intent) {
-            widget.controller.pasteFromClipboard();
-            return null;
-          },
-        ),
-      },
-      child: TextField(
-        key: _inputKey,
-        controller: widget.controller,
-        focusNode: _effectiveFocusNode,
-        decoration: widget.decoration,
-        style: widget.style,
-        strutStyle: widget.strutStyle,
-        textAlignVertical: widget.textAlignVertical,
-        minLines: widget.minLines,
-        maxLines: widget.maxLines,
-        enabled: widget.enabled ?? true,
-        readOnly: widget.readOnly,
-        textInputAction: widget.textInputAction,
-        onSubmitted: widget.onSubmitted == null ? null : (_) => widget.onSubmitted!(widget.controller.displayText),
       ),
     );
-
-    if (widget.selectionColor != null) {
-      final theme = TextSelectionTheme.of(context);
-      textField = TextSelectionTheme(
-        data: theme.copyWith(selectionColor: widget.selectionColor),
-        child: textField,
-      );
-    }
 
     final shortcuts = <LogicalKeySet, Intent>{
       // 剪切：桌面端 Ctrl/⌘ + X
@@ -836,15 +840,14 @@ class _MentionTextFieldState extends State<MentionTextField> {
           left: left,
           top: top,
           child: Material(
-            color: Colors.transparent,
             child: Container(
               constraints: const BoxConstraints(maxWidth: menuWidth, maxHeight: maxHeight),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerLowest,
+                color: theme.colorScheme.surfaceContainerLowest, // mention text 提示窗口默认背景色
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: theme.colorScheme.shadow.withValues(alpha: 0.12),
+                    color: theme.colorScheme.shadow.withValues(alpha: 0.12), // mention text 提示窗口阴影颜色
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -853,7 +856,7 @@ class _MentionTextFieldState extends State<MentionTextField> {
               child: ValueListenableBuilder<int>(
                 valueListenable: _selectedIndex,
                 builder: (context, selected, _) {
-                  final surface = theme.colorScheme.surfaceContainer;
+                  final surface = theme.colorScheme.surfaceContainer; // mention text 提示窗口选中项背景色
                   return ListView(
                     padding: EdgeInsets.zero,
                     shrinkWrap: true,
@@ -1028,19 +1031,16 @@ class _MentionTokenState extends State<_MentionToken> {
     bool hovering,
     VoidCallback onDelete,
   ) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final cardBg = colorScheme.primaryContainer;
-    final cardFg = colorScheme.onSurface;
     final fontSize = baseStyle.fontSize ?? 14;
     // 让 token 的高度尽量贴近 TextField 的行高（selection 背景高度也会更一致）。
     final heightFactor = baseStyle.height ?? 1.0;
     final tokenHeight = fontSize * heightFactor;
-    final labelStyle = baseStyle.copyWith(color: cardFg, height: heightFactor);
+    final labelStyle = baseStyle.copyWith(color: Theme.of(context).colorScheme.onSurface, height: heightFactor);
     return Container(
       key: ValueKey('table_mention_${segment.label}'),
       padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
-        color: cardBg,
+        color: Theme.of(context).colorScheme.primaryContainer, // mention text 提示窗口选中项背景色
         borderRadius: BorderRadius.circular(5),
       ),
       child: SizedBox(
@@ -1056,14 +1056,14 @@ class _MentionTokenState extends State<_MentionToken> {
                 child: Icon(
                   Icons.close_rounded,
                   size: fontSize,
-                  color: cardFg,
+                  color: Theme.of(context).colorScheme.onSurface, // mention text 里的删除icon颜色
                 ),
               )
             else
               HugeIcon(
                 icon: HugeIcons.strokeRoundedTable,
                 size: fontSize,
-                color: cardFg,
+                color: Theme.of(context).colorScheme.onSurface, // mention text 里的表格icon颜色
               ),
             const SizedBox(width: 4),
             Center(

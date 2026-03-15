@@ -1,5 +1,6 @@
 import 'package:client/models/tasks.dart';
-import 'package:objectbox/objectbox.dart';
+// ignore: unnecessary_import
+import 'package:objectbox/objectbox.dart'; // 必须引入, 不然objectbox不能正常使用
 import 'package:client/repositories/objectbox.g.dart';
 import 'package:client/repositories/repo.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -51,31 +52,31 @@ class TaskStorage {
     this.errorMessage,
     this.parameters,
     this.desc,
-  })  : taskType = TaskType.values[stTaskType],
-        status = TaskStatus.values[stStatus];
+  }) : taskType = TaskType.values[stTaskType],
+       status = TaskStatus.values[stStatus];
 
   TaskStorage.fromModel(TaskModel model)
-      : id = model.id.value,
-        taskType = model.type,
-        status = model.status,
-        progressMessage = model.progressMessage,
-        createdAt = model.createdAt,
-        completedAt = model.completedAt,
-        errorMessage = model.errorMessage,
-        parameters = model.parameters,
-        desc = model.desc;
+    : id = model.id.value,
+      taskType = model.type,
+      status = model.status,
+      progressMessage = model.progressMessage,
+      createdAt = model.createdAt,
+      completedAt = model.completedAt,
+      errorMessage = model.errorMessage,
+      parameters = model.parameters,
+      desc = model.desc;
 
   TaskModel toModel() => TaskModel(
-        id: TaskId(value: id),
-        type: taskType,
-        status: status,
-        progressMessage: progressMessage,
-        createdAt: createdAt,
-        completedAt: completedAt,
-        errorMessage: errorMessage,
-        parameters: parameters,
-        desc: desc,
-      );
+    id: TaskId(value: id),
+    type: taskType,
+    status: status,
+    progressMessage: progressMessage,
+    createdAt: createdAt,
+    completedAt: completedAt,
+    errorMessage: errorMessage,
+    parameters: parameters,
+    desc: desc,
+  );
 }
 
 class TaskRepoImpl implements TaskRepo {
@@ -144,8 +145,9 @@ class TaskRepoImpl implements TaskRepo {
       // 对于可空的 completedAt 字段，需要同时检查不为 null 且大于等于起始时间
       // ObjectBox 使用纳秒时间戳，需要将 DateTime 转换为纳秒
       final startNanos = completedAtStart.microsecondsSinceEpoch * 1000;
-      final startCondition =
-          TaskStorage_.completedAt.notNull().and(TaskStorage_.completedAt.greaterOrEqual(startNanos));
+      final startCondition = TaskStorage_.completedAt.notNull().and(
+        TaskStorage_.completedAt.greaterOrEqual(startNanos),
+      );
       condition = condition == null ? startCondition : condition.and(startCondition);
     }
 
@@ -200,8 +202,10 @@ class TaskRepoImpl implements TaskRepo {
 
     // 获取最近的任务 top5，按创建时间倒序（排除正在运行的任务）
     final recentStatusCondition = TaskStorage_.stStatus.notEquals(TaskStatus.running.index);
-    final recentQuery =
-        _taskBox.query(recentStatusCondition).order(TaskStorage_.createdAt, flags: Order.descending).build();
+    final recentQuery = _taskBox
+        .query(recentStatusCondition)
+        .order(TaskStorage_.createdAt, flags: Order.descending)
+        .build();
     recentQuery.limit = 5;
     final recentTasks = recentQuery.find().map((e) => e.toModel()).toList();
     recentQuery.close();

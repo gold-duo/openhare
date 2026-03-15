@@ -67,7 +67,9 @@ class LLMAgentService extends _$LLMAgentService {
             : const LLMAgentStatusModel(state: LLMAgentState.unavailable, error: "api has return 0 tokens"),
       );
     } catch (e) {
-      ref.read(lLMAgentRepoProvider).updateStatus(
+      ref
+          .read(lLMAgentRepoProvider)
+          .updateStatus(
             id,
             LLMAgentStatusModel(
               state: LLMAgentState.unavailable,

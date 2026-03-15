@@ -241,10 +241,12 @@ abstract class AIChatMessageToolCallsModel with _$AIChatMessageToolCallsModel {
         'success': true,
         'affectedRows': result.affectedRows.toString(),
         'columns': result.columns
-            .map((c) => {
-                  'name': c.name,
-                  'type': c.dataType().name,
-                })
+            .map(
+              (c) => {
+                'name': c.name,
+                'type': c.dataType().name,
+              },
+            )
             .toList(),
         'rows': result.rows.map((row) {
           final rowMap = <String, dynamic>{};

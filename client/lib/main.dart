@@ -25,10 +25,12 @@ void main(List<String> args) async {
 
   await windowManager.ensureInitialized();
 
-  runApp(ProviderScope(
-    retry: (retryCount, error) => null,
-    child: App(),
-  ));
+  runApp(
+    ProviderScope(
+      retry: (retryCount, error) => null,
+      child: App(),
+    ),
+  );
 
   doWhenWindowReady(() {
     const initialSize = Size(1400, 1000);

@@ -64,7 +64,7 @@ class SQLEditor extends ConsumerWidget {
 
     final textStyle = GoogleFonts.robotoMono(
       textStyle: Theme.of(context).textTheme.bodyMedium,
-      color: Theme.of(context).colorScheme.onSurface,
+      color: Theme.of(context).colorScheme.onSurface, // SQL 编辑器文字颜色
     );
 
     return LayoutBuilder(
@@ -82,28 +82,30 @@ class SQLEditor extends ConsumerWidget {
                 promptsBuilder: SQLEditorAutocompletePromptsBuilder(
                   keywordPrompts: keywordPrompt,
                   directPrompts: [],
-                  relatedPrompts:
-                      (model.metadata != null) ? buildRelatePrompts(model.metadata!, model.currentSchema) : const {},
+                  relatedPrompts: (model.metadata != null)
+                      ? buildRelatePrompts(model.metadata!, model.currentSchema)
+                      : const {},
                 ),
                 child: CodeEditor(
                   wordWrap: false,
                   scrollController: scrollController,
                   style: CodeEditorStyle(
-                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest, // SQL 编辑器背景色
                     textStyle: textStyle, // SQL 编辑器文字颜色
                   ),
                   controller: codeController,
                   indicatorBuilder: (context, editingController, chunkController, notifier) {
-                    return Row(children: [
-                      const SizedBox(width: kSpacingTiny),
-                      CodeLineNumber(
-                        textStyle: textStyle,
-                        totalHeight: constraints.maxHeight,
-                        notifier: notifier,
-                        codeController: codeController,
-                      ),
-                      const PixelVerticalDivider(),
-                    ]);
+                    return Row(
+                      children: [
+                        const SizedBox(width: kSpacingTiny),
+                        CodeLineNumber(
+                          textStyle: textStyle,
+                          totalHeight: constraints.maxHeight,
+                          notifier: notifier,
+                          codeController: codeController,
+                        ),
+                        const PixelVerticalDivider(),
+                      ],
+                    );
                   },
                 ),
               ),
@@ -215,11 +217,12 @@ class _CodeLineNumberState extends State<CodeLineNumber> {
           for (int i = 0; i < ps.length; i++)
             SizedBox(
               height: max(
-                  0,
-                  min(
-                    ps[i].preferredLineHeight,
-                    widget.totalHeight - paddingSize - i * ps[i].preferredLineHeight - 1,
-                  )), // 减去1是为了让文字和下划线对齐
+                0,
+                min(
+                  ps[i].preferredLineHeight,
+                  widget.totalHeight - paddingSize - i * ps[i].preferredLineHeight - 1,
+                ),
+              ), // 减去1是为了让文字和下划线对齐
               child: Row(
                 children: [
                   Expanded(
@@ -230,7 +233,7 @@ class _CodeLineNumberState extends State<CodeLineNumber> {
                         softWrap: false,
                         textAlign: TextAlign.right,
                         style: widget.textStyle.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant, // SQL 编辑器行号文字颜色
                         ),
                       ),
                     ),

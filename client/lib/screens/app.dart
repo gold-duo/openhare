@@ -133,7 +133,7 @@ class _ScaffoldWithNavRailState extends State<ScaffoldWithNavRail> {
         MoveWindows(
           child: NavigationRail(
             minWidth: navigationRailWidth,
-            backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow, // navigation color
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest, // navigation color
             useIndicator: true,
             selectedIndex: _calculateSelectedIndex(context),
             onDestinationSelected: (value) {
@@ -174,7 +174,7 @@ class _ScaffoldWithNavRailState extends State<ScaffoldWithNavRail> {
               NavigationRailDestination(
                 icon: HugeIcon(
                   icon: HugeIcons.strokeRoundedDatabase,
-                  color: Theme.of(context).iconTheme.color ?? Colors.black87,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant, // navigation rail 默认icon颜色
                 ),
                 label: Center(
                   child: Text(
@@ -205,7 +205,7 @@ class _ScaffoldWithNavRailState extends State<ScaffoldWithNavRail> {
             ],
           ),
         ),
-        Expanded(child: widget.child)
+        Expanded(child: widget.child),
       ],
     );
   }

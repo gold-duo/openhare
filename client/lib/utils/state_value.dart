@@ -9,18 +9,11 @@ class StateValue<T> {
   final State state;
   final String? error;
 
-  const StateValue.error(String this.error)
-      : state = State.failing,
-        value = null;
+  const StateValue.error(String this.error) : state = State.failing, value = null;
 
-  const StateValue.done(T this.value)
-      : state = State.done,
-        error = null;
+  const StateValue.done(T this.value) : state = State.done, error = null;
 
-  const StateValue.running()
-      : state = State.running,
-        error = null,
-        value = null;
+  const StateValue.running() : state = State.running, error = null, value = null;
 
   E match<E>(
     E Function(T) onDone,

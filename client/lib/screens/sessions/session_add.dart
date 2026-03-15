@@ -24,13 +24,14 @@ class AddSession extends HookConsumerWidget {
 
     if (model.instances.count == 0) {
       return EmptyPage(
-        color: Theme.of(context).colorScheme.surfaceContainerLowest,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               AppLocalizations.of(context)!.display_no_instance_and_add_instance,
-              style: Theme.of(context).textTheme.bodySmall,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant), // 没有实例时显示的文字颜色
             ),
             const SizedBox(height: kSpacingSmall),
             LinkButton(
@@ -50,7 +51,7 @@ class AddSession extends HookConsumerWidget {
           Text(
             AppLocalizations.of(context)!.recently_used_db_instance,
             style: Theme.of(context).textTheme.titleLarge,
-          )
+          ),
         ],
       ),
       child: Column(
@@ -59,8 +60,9 @@ class AddSession extends HookConsumerWidget {
             children: [
               SizedBox(width: 200, child: Text(AppLocalizations.of(context)!.db_instance_name)),
               Container(
-                  padding: EdgeInsets.only(left: paddingButtonLeftSize),
-                  child: Text(AppLocalizations.of(context)!.recently_used_schema))
+                padding: EdgeInsets.only(left: paddingButtonLeftSize),
+                child: Text(AppLocalizations.of(context)!.recently_used_schema),
+              ),
             ],
           ),
           const SizedBox(height: kSpacingSmall),
@@ -84,10 +86,11 @@ class AddSession extends HookConsumerWidget {
                             height: 24,
                           ),
                           LinkButton(
-                              onPressed: () {
-                                ref.read(sessionsServicesProvider.notifier).addSession(inst);
-                              },
-                              text: inst.connectValue.name),
+                            onPressed: () {
+                              ref.read(sessionsServicesProvider.notifier).addSession(inst);
+                            },
+                            text: inst.connectValue.name,
+                          ),
                         ],
                       ),
                     ),
@@ -118,24 +121,26 @@ class AddSession extends HookConsumerWidget {
                     children: [
                       SearchBarTheme(
                         data: const SearchBarThemeData(
-                            elevation: WidgetStatePropertyAll(0),
-                            constraints: BoxConstraints(
-                              minHeight: kIconSizeLarge,
-                              maxWidth: 200,
-                            )),
+                          elevation: WidgetStatePropertyAll(0),
+                          constraints: BoxConstraints(
+                            minHeight: kIconSizeLarge,
+                            maxWidth: 200,
+                          ),
+                        ),
                         child: SearchBar(
                           controller: instanceSearchTextController,
                           backgroundColor: WidgetStatePropertyAll(
-                            Theme.of(context).colorScheme.surfaceContainerLow,
+                            Theme.of(context).colorScheme.surfaceContainerLow, // session 页面搜索框背景色
                           ),
                           side: WidgetStatePropertyAll(
                             BorderSide(
-                              color: Theme.of(context).colorScheme.surfaceContainerHigh,
-                              width: 0.5,
+                              color: Theme.of(context).colorScheme.outlineVariant, // session 页面搜索框边框颜色
                             ),
                           ),
                           onChanged: (value) {
-                            ref.read(instancesProvider.notifier).changePage(
+                            ref
+                                .read(instancesProvider.notifier)
+                                .changePage(
                                   value,
                                   pageNumber: model.currentPage,
                                   pageSize: model.pageSize,
@@ -229,7 +234,9 @@ class AddSession extends HookConsumerWidget {
             pageSize: model.pageSize,
             pageNumber: model.currentPage,
             onChange: (pageNumber) {
-              ref.read(instancesProvider.notifier).changePage(
+              ref
+                  .read(instancesProvider.notifier)
+                  .changePage(
                     instanceSearchTextController.text,
                     pageNumber: pageNumber,
                     pageSize: model.pageSize,

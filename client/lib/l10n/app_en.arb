@@ -131,6 +131,10 @@
   "@display_msg_no_data": {
     "description": "No data"
   },
+  "display_msg_execution_success": "Execution successful",
+  "@display_msg_execution_success": {
+    "description": "SQL execution success message"
+  },
   "effect_rows": "Effect rows",
   "@effect_rows": {
     "description": "Effect rows"
@@ -314,6 +318,10 @@
   "button_tooltip_sql_result_download": "Download SQL result",
   "@button_tooltip_sql_result_download": {
     "description": "Button tooltip download SQL result"
+  },
+  "button_tooltip_refresh_metadata": "Refresh Database metadata",
+  "@button_tooltip_refresh_metadata": {
+    "description": "Button tooltip refresh metadata"
   },
   "button_tooltip_ai_test": "Test LLM API",
   "@button_tooltip_ai_test": {

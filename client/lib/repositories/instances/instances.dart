@@ -1,6 +1,7 @@
 import 'package:client/models/instances.dart';
 import 'package:client/repositories/instances/session_conn.dart';
-import 'package:objectbox/objectbox.dart';
+// ignore: unnecessary_import
+import 'package:objectbox/objectbox.dart'; // 必须引入, 不然objectbox不能正常使用
 import 'package:client/repositories/objectbox.g.dart';
 import 'package:client/repositories/repo.dart';
 import 'package:client/utils/active_set.dart';
@@ -28,9 +29,10 @@ class InstanceStorage {
 
   /// 目的地址：目前支持 host:port 和 dbFile 两种类型
   String targetJson;
-  
+
   /// 弃用，现在都存在 target 中
   String host;
+
   /// 弃用，现在都存在 target 中
   int? port;
 
@@ -41,7 +43,7 @@ class InstanceStorage {
   /// 使用字符串类型存储 custom 的 json 字符串， 使用时进行 json 解析。 原因：ObjectBox 不支持 json 类型。
   /// 本来使用的 @Transient 注解加自定义类型，但是更新后好像失效，弃用了。
   String customJson;
-  
+
   @Transient()
   Map<String, String> get custom {
     if (customJson.isEmpty) {
@@ -71,7 +73,7 @@ class InstanceStorage {
     required int stDbType,
     required this.name,
     required this.targetJson,
-    required this.host, 
+    required this.host,
     this.port,
     required this.user,
     required this.password,
@@ -81,31 +83,30 @@ class InstanceStorage {
     ActiveSet<String>? activeSchemas,
     DateTime? createdAt,
     DateTime? latestOpenAt,
-  })  : activeSchemas = activeSchemas ?? ActiveSet<String>(List.empty()),
-        dbType = DatabaseType.values[stDbType],
-        createdAt = createdAt ?? DateTime.now(),
-        latestOpenAt = latestOpenAt ?? DateTime(1970, 1, 1); //latestOpenAt 默认值未很早之前的时间
+  }) : activeSchemas = activeSchemas ?? ActiveSet<String>(List.empty()),
+       dbType = DatabaseType.values[stDbType],
+       createdAt = createdAt ?? DateTime.now(),
+       latestOpenAt = latestOpenAt ?? DateTime(1970, 1, 1); //latestOpenAt 默认值未很早之前的时间
 
   InstanceStorage.fromModel(InstanceModel model)
-      : id = model.id.value,
-        dbType = model.dbType,
-        name = model.name,
-        targetJson = jsonEncode(model.connectValue.target.toJson()),
-        host = "deprecated",
-        user = model.user,
-        password = model.password,
-        desc = model.desc,
-        customJson = jsonEncode(model.custom),
-        initQuerys = model.initQuerys,
-        activeSchemas = ActiveSet<String>(model.activeSchemas),
-        createdAt = model.createdAt,
-        latestOpenAt = model.latestOpenAt; 
+    : id = model.id.value,
+      dbType = model.dbType,
+      name = model.name,
+      targetJson = jsonEncode(model.connectValue.target.toJson()),
+      host = "deprecated",
+      user = model.user,
+      password = model.password,
+      desc = model.desc,
+      customJson = jsonEncode(model.custom),
+      initQuerys = model.initQuerys,
+      activeSchemas = ActiveSet<String>(model.activeSchemas),
+      createdAt = model.createdAt,
+      latestOpenAt = model.latestOpenAt;
 
   ConnectTarget _parseTarget() {
     if (targetJson.trim().isNotEmpty) {
       try {
-        return ConnectTarget.fromJson(
-            Map<String, dynamic>.from(jsonDecode(targetJson)));
+        return ConnectTarget.fromJson(Map<String, dynamic>.from(jsonDecode(targetJson)));
       } catch (_) {
         return ConnectTarget.network(host: "", port: port ?? 0);
       }
@@ -162,21 +163,21 @@ class InstanceRepoImpl extends InstanceRepo {
   }
 
   @override
-// todo: aync
+  // todo: aync
   bool isInstanceExist(String name) {
     final instance = getInstanceByName(name);
     return instance != null;
   }
 
   @override
-// todo: aync
+  // todo: aync
   InstanceModel? getInstanceByName(String name) {
     final build = _instanceBox.query(InstanceStorage_.name.equals(name)).build();
     return build.findFirst()?.toModel();
   }
 
   @override
-// todo: 替换 getInstance
+  // todo: 替换 getInstance
   InstanceModel? getInstanceById(InstanceId id) {
     return _instanceBox.get(id.value)?.toModel();
   }

@@ -67,6 +67,14 @@ class InstancesServices extends _$InstancesServices {
     final repo = ref.read(instanceRepoProvider);
     return await repo.getSchemas(instanceId);
   }
+
+  Future<InstanceMetadataModel> getMetadata(InstanceId instanceId) async {
+    return await ref.read(instanceRepoProvider).getMetadata(instanceId);
+  }
+
+  Future<void> refreshMetadata(InstanceId instanceId) async {
+    await ref.read(instanceRepoProvider).refreshMetadata(instanceId);
+  }
 }
 
 @Riverpod(keepAlive: true)
@@ -78,7 +86,9 @@ class InstancesNotifier extends _$InstancesNotifier {
   }
 
   PaginationInstanceListModel instances(String key, {int pageNumber = 1, int pageSize = 10}) {
-    final instances = ref.read(instancesServicesProvider.notifier).instances(
+    final instances = ref
+        .read(instancesServicesProvider.notifier)
+        .instances(
           key,
           pageNumber: pageNumber,
           pageSize: pageSize,

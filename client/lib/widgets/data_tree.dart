@@ -31,7 +31,7 @@ DataNode buildDataValueNode(MetaDataNode node) {
     MetaType.database => SchemaValueNode(node.value),
     MetaType.table => TableValueNode(node.value),
     MetaType.column => ColumnValueNode(node.value, node.getProp(MetaDataPropType.dataType)),
-    _ => SchemaValueNode(node.value)
+    _ => SchemaValueNode(node.value),
   };
 }
 
@@ -70,7 +70,7 @@ class RootNode implements DataNode {
     return HugeIcon(
       size: kIconSizeSmall,
       icon: HugeIcons.strokeRoundedFolder02,
-      color: Theme.of(context).colorScheme.tertiary,
+      color: Theme.of(context).colorScheme.tertiary, // todo: 需要描述为什么用这个颜色
     );
   }
 
@@ -126,8 +126,8 @@ class FolderNode extends RootNode {
     return TooltipText(
       text: children.isNotEmpty ? "$name  [${_children.length}]" : name,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
     );
   }
 }
@@ -200,8 +200,8 @@ class DataValueNode extends RootNode {
     return TooltipText(
       text: name,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: isOpen ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurface,
-          ),
+        color: isOpen ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurface,
+      ),
     );
   }
 }
@@ -334,7 +334,9 @@ class _MyTreeTileState extends State<MyTreeTile> {
         onTap: widget.onTap,
         child: Container(
           color: isEnter
-              ? Theme.of(context).colorScheme.surfaceContainer // meta data detail 鼠标移入的颜色.
+              ? Theme.of(context)
+                    .colorScheme
+                    .surfaceContainer // meta data detail 鼠标移入的颜色.
               : null,
           child: TreeIndentation(
             entry: widget.entry,
@@ -349,8 +351,8 @@ class _MyTreeTileState extends State<MyTreeTile> {
                 children: [
                   (widget.entry.hasChildren)
                       ? (widget.entry.isExpanded)
-                          ? const Icon(Icons.expand_more, size: kIconSizeSmall)
-                          : const Icon(Icons.chevron_right, size: kIconSizeSmall)
+                            ? const Icon(Icons.expand_more, size: kIconSizeSmall)
+                            : const Icon(Icons.chevron_right, size: kIconSizeSmall)
                       : const SizedBox(width: kIconSizeSmall),
                   (isOpen) ? widget.entry.node.openIcons(context) : widget.entry.node.closeIcons(context),
                   const SizedBox(width: kSpacingTiny),

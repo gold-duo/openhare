@@ -76,9 +76,9 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
   }
 
   Widget _buildBudgetIndicator(BuildContext context, AIChatProgressModel b) {
-    final scheme = Theme.of(context).colorScheme;
-    final bg = scheme.surfaceContainerHighest;
-    final contextColor = b.contextHardStopped ? scheme.error : scheme.primary;
+    final contextColor = b.contextHardStopped
+        ? Theme.of(context).colorScheme.error
+        : Theme.of(context).colorScheme.primary; // 上下文进度条颜色
 
     return Tooltip(
       message: _buildBudgetTooltip(context, b),
@@ -89,7 +89,7 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
         child: CircularProgressIndicator(
           value: b.contextProgress,
           strokeWidth: 3,
-          backgroundColor: bg,
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest, // 上下文进度条背景色
           valueColor: AlwaysStoppedAnimation(contextColor),
         ),
       ),
@@ -143,7 +143,9 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
     final refText = _buildTableRef(chatModel, mentionedTables);
 
     // 调用AIChatService的chat方法
-    await ref.read(aIChatServiceProvider.notifier).chat(
+    await ref
+        .read(aIChatServiceProvider.notifier)
+        .chat(
           chatId,
           chatModel.llmAgents.lastUsedLLMAgent!.id,
           genChatSystemPrompt(chatModel),
@@ -177,11 +179,10 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
         padding: const EdgeInsets.fromLTRB(kSpacingSmall, kSpacingSmall, kSpacingSmall, kSpacingTiny),
         // 设置一个圆角
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainer,
+          color: Theme.of(context).colorScheme.surfaceContainerLow, // 输入框背景色
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            width: 0.5,
+            color: Theme.of(context).colorScheme.outlineVariant, // 输入框边框颜色
           ),
         ),
         child: Column(
@@ -212,8 +213,9 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
                 RectangleIconButton.small(
                   tooltip: AppLocalizations.of(context)!.button_tooltip_clear_chat,
                   icon: Icons.cleaning_services,
-                  onPressed:
-                      widget.model.canClearMessage() ? () => services.cleanMessages(widget.model.chatModel.id) : null,
+                  onPressed: widget.model.canClearMessage()
+                      ? () => services.cleanMessages(widget.model.chatModel.id)
+                      : null,
                 ),
 
                 // 发送消息 / 中止生成
@@ -272,8 +274,9 @@ class _ModelSelectorWidgetState extends ConsumerState<ModelSelectorWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final modelSearchTextController =
-        SessionController.sessionController(widget.model.sessionId).aiChatModelSearchTextController;
+    final modelSearchTextController = SessionController.sessionController(
+      widget.model.sessionId,
+    ).aiChatModelSearchTextController;
 
     // 模型选择工具栏
     final modelToolWidget = Container(
@@ -282,11 +285,10 @@ class _ModelSelectorWidgetState extends ConsumerState<ModelSelectorWidget> {
       ),
       padding: const EdgeInsets.fromLTRB(kSpacingSmall, kSpacingTiny, kSpacingSmall, kSpacingTiny),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        color: Theme.of(context).colorScheme.surfaceContainerLowest, // 模型选择工具栏背景色, 父组件背景色是 surfaceContainer
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          width: 1,
-          color: Theme.of(context).colorScheme.surfaceContainerHigh,
+          color: Theme.of(context).colorScheme.outlineVariant, // 模型选择工具栏边框颜色
         ),
       ),
       child: Text(
@@ -340,23 +342,28 @@ class _ModelSelectorWidgetState extends ConsumerState<ModelSelectorWidget> {
           padding: const EdgeInsets.fromLTRB(kSpacingSmall, kSpacingTiny, kSpacingSmall, kSpacingTiny),
           child: SearchBarTheme(
             data: SearchBarThemeData(
-                textStyle: WidgetStatePropertyAll(Theme.of(context).textTheme.bodySmall),
-                backgroundColor: WidgetStatePropertyAll(Theme.of(context).colorScheme.surfaceContainer),
-                elevation: const WidgetStatePropertyAll(0),
-                constraints: const BoxConstraints(
-                  minHeight: 24,
-                )),
+              textStyle: WidgetStatePropertyAll(Theme.of(context).textTheme.bodySmall),
+              backgroundColor: WidgetStatePropertyAll(Theme.of(context).colorScheme.surfaceContainerLowest), // 模型选择工具栏搜索框背景色
+              elevation: const WidgetStatePropertyAll(0),
+              constraints: const BoxConstraints(minHeight: 24),
+            ),
             child: SearchBar(
-                controller: modelSearchTextController,
-                onChanged: (value) {
-                  _onModelSearchChanged();
-                },
-                trailing: const [
-                  Icon(
-                    Icons.search,
-                    size: kIconSizeSmall,
-                  ),
-                ]),
+              side: WidgetStatePropertyAll(
+                BorderSide(
+                  color: Theme.of(context).colorScheme.outlineVariant, // 模型选择工具栏搜索框边框颜色
+                ),
+              ),
+              controller: modelSearchTextController,
+              onChanged: (value) {
+                _onModelSearchChanged();
+              },
+              trailing: const [
+                Icon(
+                  Icons.search,
+                  size: kIconSizeSmall,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -417,9 +424,9 @@ class _ChatInputFieldWidgetState extends ConsumerState<ChatInputFieldWidget> {
   }
 
   static TextStyle _tableTextBaseStyle(BuildContext context) => GoogleFonts.robotoMono(
-        textStyle: Theme.of(context).textTheme.bodySmall,
-        color: Theme.of(context).colorScheme.onSurface,
-      );
+    textStyle: Theme.of(context).textTheme.bodySmall,
+    color: Theme.of(context).colorScheme.onSurface,
+  );
 
   Widget _buildTableText(BuildContext context, String table, String query) {
     final baseStyle = _tableTextBaseStyle(context);
@@ -483,7 +490,7 @@ class _ChatInputFieldWidgetState extends ConsumerState<ChatInputFieldWidget> {
   @override
   Widget build(BuildContext context) {
     final controller = SessionController.sessionController(widget.model.sessionId).chatInputController;
-    final tokenBg = Theme.of(context).colorScheme.primaryContainer;
+
     return MentionTextField(
       controller: controller,
       style: Theme.of(context).textTheme.bodyMedium,
@@ -492,7 +499,6 @@ class _ChatInputFieldWidgetState extends ConsumerState<ChatInputFieldWidget> {
       maxLines: 5,
       enabled: widget.enabled && widget.model.chatModel.state != AIChatState.waiting,
       textInputAction: TextInputAction.done,
-      selectionColor: tokenBg,
       decoration: InputDecoration(
         hintText: AppLocalizations.of(context)!.ai_chat_input_tip,
         border: InputBorder.none,

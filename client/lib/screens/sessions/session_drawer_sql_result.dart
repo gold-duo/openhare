@@ -19,10 +19,11 @@ class SessionDrawerSqlResult extends ConsumerWidget {
     BaseQueryValue? result = sessionDrawer.sqlResult;
     if (result == null) {
       return EmptyPage(
-        color: Theme.of(context).colorScheme.surfaceContainerLowest,
         child: Text(
           AppLocalizations.of(context)!.display_msg_no_result,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.surfaceDim),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant), // 没有结果时显示的文字颜色
         ),
       );
     }
@@ -35,17 +36,11 @@ class SessionDrawerSqlResult extends ConsumerWidget {
       List<int> bytes = result.getBytes();
       FileType fileType = getFileType(bytes);
       if (fileType == FileType.gif || fileType == FileType.png || fileType == FileType.jpeg) {
-        return Align(
-          alignment: Alignment.topLeft,
-          child: Image.memory(Uint8List.fromList(bytes)),
-        );
+        return Align(alignment: Alignment.topLeft, child: Image.memory(Uint8List.fromList(bytes)));
       }
     }
     if (dataType == DataType.json) {
-      return ValueDisplayField(
-        data: formatJson(result.getString() ?? "{}"),
-        language: "json",
-      );
+      return ValueDisplayField(data: formatJson(result.getString() ?? "{}"), language: "json");
     } else {
       return ValueDisplayField(data: result.getString() ?? "");
     }
@@ -57,11 +52,7 @@ class SessionDrawerSqlResult extends ConsumerWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: buildDisplayField(context, sessionDrawer),
-        ),
-      ],
+      children: [Expanded(child: buildDisplayField(context, sessionDrawer))],
     );
   }
 }
@@ -72,9 +63,7 @@ class ValueDisplayField extends StatelessWidget {
 
   const ValueDisplayField({super.key, required this.data, this.language});
 
-  static Map<String, CodeHighlightThemeMode> languages = {
-    'json': CodeHighlightThemeMode(mode: langJson),
-  };
+  static Map<String, CodeHighlightThemeMode> languages = {'json': CodeHighlightThemeMode(mode: langJson)};
 
   @override
   Widget build(BuildContext context) {

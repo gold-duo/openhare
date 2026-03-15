@@ -126,13 +126,16 @@ class SessionsServices extends _$SessionsServices {
     }
 
     // connect conn
-    await connsServices.connect(connId, onSchemaChangedCallback: (schema) async {
-      ref.read(sessionRepoProvider).updateSession(sessionId, currentSchema: schema);
+    await connsServices.connect(
+      connId,
+      onSchemaChangedCallback: (schema) async {
+        ref.read(sessionRepoProvider).updateSession(sessionId, currentSchema: schema);
 
-      ref.read(instancesServicesProvider.notifier).addActiveInstance(session.instanceId!, schema: schema);
+        ref.read(instancesServicesProvider.notifier).addActiveInstance(session.instanceId!, schema: schema);
 
-      _invalidateSelf();
-    });
+        _invalidateSelf();
+      },
+    );
 
     _invalidateSelf();
   }
@@ -178,8 +181,9 @@ class SelectedSessionDetailNotifier extends _$SelectedSessionDetailNotifier {
     if (session == null) {
       return null;
     }
-    InstanceModel? selectedInstance =
-        session.instanceId == null ? null : instanceServices.getInstanceById(session.instanceId!);
+    InstanceModel? selectedInstance = session.instanceId == null
+        ? null
+        : instanceServices.getInstanceById(session.instanceId!);
     return SessionDetailModel(
       sessionId: session.sessionId,
       instanceId: session.instanceId,
@@ -208,8 +212,9 @@ class SessionTabNotifier extends _$SessionTabNotifier {
 
     return SessionDetailListModel(
       sessions: sessions.sessions.map((session) {
-        InstanceModel? instance =
-            session.instanceId == null ? null : instanceServices.getInstanceById(session.instanceId!);
+        InstanceModel? instance = session.instanceId == null
+            ? null
+            : instanceServices.getInstanceById(session.instanceId!);
         return SessionDetailModel(
           sessionId: session.sessionId,
           instanceId: session.instanceId,
