@@ -1,4 +1,5 @@
 import 'package:test/test.dart';
+import 'package:sql_parser/src/parser/parser.dart';
 import 'package:sql_parser/parser.dart';
 
 void main() {

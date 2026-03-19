@@ -201,15 +201,14 @@ class EOFTokenBuilder implements TokenBuilder {
 class CommentBuilder implements TokenBuilder {
   CommentBuilder();
 
-  (bool, TokenType?) matchNewLine(LexerContext ctx) {
+  (bool, TokenType?) _matchUntilNewLine(LexerContext ctx) {
     while (ctx.scanner.hasNext() && ctx.scanner.next()) {
       // \n
       if (ctx.scanner.curChar() == Char.$n) {
         return (true, TokenType.comment);
       }
-      // \r 或者 \r\n
+      // \r 或 \r\n
       if (ctx.scanner.curChar() == Char.$r) {
-        // \r\n
         if (ctx.scanner.hasNext() && ctx.scanner.nextChar() == Char.$n) {
           ctx.scanner.next();
         }
@@ -219,9 +218,8 @@ class CommentBuilder implements TokenBuilder {
     return (false, null);
   }
 
-  (bool, TokenType?) matchRightComment(LexerContext ctx) {
+  (bool, TokenType?) _matchUntilRightComment(LexerContext ctx) {
     while (ctx.scanner.hasNext() && ctx.scanner.next()) {
-      // */
       if (ctx.scanner.curChar() == Char.star &&
           ctx.scanner.hasNext() &&
           ctx.scanner.nextChar() == Char.slash) {
@@ -234,15 +232,38 @@ class CommentBuilder implements TokenBuilder {
 
   @override
   (bool, TokenType?) matchToken(LexerContext ctx) {
-    // find newline
-    if (ctx.scanner.startWith("-- ") || ctx.scanner.startWith("# ")) {
-      ctx.scanner.nextN(3);
-      return matchNewLine(ctx);
+    if (ctx.scanner.startWith("--")) {
+      ctx.scanner.nextN(2);
+      return _matchUntilNewLine(ctx);
     }
-    // find */
     if (ctx.scanner.startWith("/*")) {
       ctx.scanner.nextN(2);
-      return matchRightComment(ctx);
+      return _matchUntilRightComment(ctx);
+    }
+    return (false, null);
+  }
+}
+
+class BracketValueTokenBuilder implements TokenBuilder {
+  static final int _leftBracket = "[".codeUnitAt(0);
+  static final int _rightBracket = "]".codeUnitAt(0);
+
+  BracketValueTokenBuilder();
+
+  @override
+  (bool, TokenType?) matchToken(LexerContext ctx) {
+    if (ctx.scanner.curChar() != _leftBracket) {
+      return (false, null);
+    }
+
+    while (ctx.scanner.hasNext() && ctx.scanner.next()) {
+      if (ctx.scanner.curChar() == _rightBracket) {
+        if (ctx.scanner.hasNext() && ctx.scanner.nextChar() == _rightBracket) {
+          ctx.scanner.next();
+          continue;
+        }
+        return (true, TokenType.bracketValue);
+      }
     }
     return (false, null);
   }

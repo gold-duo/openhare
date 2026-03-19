@@ -1,4 +1,6 @@
-import 'package:sql_parser/parser.dart';
+import 'package:sql_parser/src/parser/parser.dart';
+import 'package:sql_parser/src/parser/match.dart';
+import 'package:sql_parser/src/lexer/token.dart';
 
 import 'lexer.dart';
 

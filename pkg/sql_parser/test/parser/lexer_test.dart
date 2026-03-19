@@ -1,4 +1,5 @@
 import 'package:sql_parser/parser.dart';
+import 'package:sql_parser/src/lexer/token.dart';
 import 'package:test/test.dart';
 
 void main() {

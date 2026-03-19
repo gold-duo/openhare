@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:sql_parser/parser.dart';
+import 'package:sql_parser/src/lexer/scanner.dart';
 
 void main() {
   test('test next', () {

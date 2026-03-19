@@ -11,6 +11,7 @@ enum TokenType {
   doubleQValue, // 双引号字符串, "hello".
   singleQValue, // 单引号字符串, 'hello'.
   backQValue, // 反引号字符串, `hello`.
+  bracketValue, // 方括号字符串, [hello].
   comment,
 }
 
