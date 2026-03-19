@@ -20,7 +20,8 @@ class MssqlQueryValue extends BaseQueryValue {
   String? getString() {
     return switch (_value) {
       QueryValue_NULL() => null,
-      QueryValue_Bytes(:final field0) => utf8.decode(field0, allowMalformed: true),
+      QueryValue_Bytes(:final field0) =>
+        utf8.decode(field0, allowMalformed: true),
       QueryValue_Int(:final field0) => field0.toString(),
       QueryValue_UInt(:final field0) => field0.toString(),
       QueryValue_Float(:final field0) => field0.toString(),
@@ -87,10 +88,12 @@ class MssqlQueryColumn extends BaseQueryColumn {
   DataType dataType() {
     return switch (_column.columnType) {
       TYPE_XML => DataType.json,
-
-      TYPE_BIGVARBIN || TYPE_BIGBINARY || TYPE_IMAGE || TYPE_UDT || TYPE_SSVARIANT =>
+      TYPE_BIGVARBIN ||
+      TYPE_BIGBINARY ||
+      TYPE_IMAGE ||
+      TYPE_UDT ||
+      TYPE_SSVARIANT =>
         DataType.blob,
-
       TYPE_BIGVARCHAR ||
       TYPE_BIGCHAR ||
       TYPE_NVARCHAR ||
@@ -99,7 +102,6 @@ class MssqlQueryColumn extends BaseQueryColumn {
       TYPE_NTEXT ||
       TYPE_GUID =>
         DataType.char,
-
       TYPE_DATETIME4 ||
       TYPE_DATETIME ||
       TYPE_DATETIMEN ||
@@ -108,9 +110,7 @@ class MssqlQueryColumn extends BaseQueryColumn {
       TYPE_DATETIME2 ||
       TYPE_DATETIMEOFFSETN =>
         DataType.time,
-
       TYPE_BIT || TYPE_BITN => DataType.dataSet,
-
       TYPE_INT1 ||
       TYPE_INT2 ||
       TYPE_INT4 ||
@@ -124,7 +124,6 @@ class MssqlQueryColumn extends BaseQueryColumn {
       TYPE_DECIMALN ||
       TYPE_NUMERICN =>
         DataType.number,
-
       _ => DataType.char,
     };
   }
@@ -143,7 +142,8 @@ class MSSQLConnection extends BaseConnection {
         ? schema
         : meta.getValue("database", "master");
     final encrypt = meta.getValue("encrypt", "true");
-    final trustServerCertificate = meta.getValue("trustServerCertificate", "true");
+    final trustServerCertificate =
+        meta.getValue("trustServerCertificate", "true");
 
     final dsn = Uri(
       scheme: "mssql",
@@ -218,12 +218,6 @@ class MSSQLConnection extends BaseConnection {
     return BaseQueryResult(queryId, resultColumns, rows, resultAffectedRows);
   }
 
-  String _wrapLimit(String sql, int limit) {
-    sql = sql.trimRight();
-    if (sql.endsWith(";")) sql = sql.substring(0, sql.length - 1);
-    return "SELECT TOP ($limit) * FROM ($sql) AS dt_1;";
-  }
-
   String _escapeIdent(String ident) {
     final escaped = ident.replaceAll(']', ']]');
     return '[$escaped]';
@@ -231,11 +225,9 @@ class MSSQLConnection extends BaseConnection {
 
   @override
   Stream<BaseQueryStreamItem> queryStream(String sql, {int? limit}) async* {
-    final firstTok = Lexer(sql).firstTrim();
-    if (limit != null &&
-        firstTok != null &&
-        firstTok.content.toLowerCase() == "select") {
-      sql = _wrapLimit(sql, limit);
+    final sd = parser(DialectType.mssql, sql);
+    if (limit != null && sd.canLimit) {
+      sql = sd.wrapLimit(limit: limit);
     }
 
     final queryId = Uuid().v4();
@@ -268,7 +260,7 @@ class MSSQLConnection extends BaseConnection {
       }
     }
 
-    if (firstTok != null && firstTok.content.toLowerCase() == "use") {
+    if (sd.changeSchema) {
       final currentSchema = await getCurrentSchema();
       onSchemaChanged(currentSchema ?? "");
     }
@@ -321,10 +313,10 @@ ORDER BY
 
         final columnRows = tableRows[table]!;
         final columnNodes = columnRows
-            .map((result) => MetaDataNode(
-                    MetaType.column, result.getString("COLUMN_NAME")!)
-                ..withProp(MetaDataPropType.dataType,
-                    _getDataType(result.getString("DATA_TYPE")!)))
+            .map((result) =>
+                MetaDataNode(MetaType.column, result.getString("COLUMN_NAME")!)
+                  ..withProp(MetaDataPropType.dataType,
+                      _getDataType(result.getString("DATA_TYPE")!)))
             .toList();
         tableNode.items = columnNodes;
       }
@@ -364,10 +356,7 @@ ORDER BY
       "datetime2" ||
       "datetimeoffset" =>
         DataType.time,
-      "binary" ||
-      "varbinary" ||
-      "image" =>
-        DataType.blob,
+      "binary" || "varbinary" || "image" => DataType.blob,
       "xml" => DataType.json,
       "bit" => DataType.dataSet,
       _ => DataType.char,
@@ -376,8 +365,8 @@ ORDER BY
 
   @override
   Future<List<String>> schemas() async {
-    final results =
-        await query("SELECT name AS SCHEMA_NAME FROM sys.databases ORDER BY name;");
+    final results = await query(
+        "SELECT name AS SCHEMA_NAME FROM sys.databases ORDER BY name;");
     return results.rows
         .map((r) => r.getString("SCHEMA_NAME") ?? "")
         .where((s) => s.isNotEmpty)
@@ -397,4 +386,3 @@ ORDER BY
     return results.rows.first.getString("CURRENT_SCHEMA");
   }
 }
-

@@ -106,20 +106,11 @@ class SQLiteConnection extends BaseConnection {
     return BaseQueryResult(queryId, resultColumns, rows, resultAffectedRows);
   }
 
-  String _wrapLimit(String sql, int limit) {
-    return "SELECT * FROM ($sql) AS dt_1 LIMIT $limit;";
-  }
-
   @override
   Stream<BaseQueryStreamItem> queryStream(String sql, {int? limit}) async* {
-    sql = sql.trimRight();
-    if (sql.endsWith(";")) sql = sql.substring(0, sql.length - 1);
-
-    final firstTok = Lexer(sql).firstTrim();
-    if (limit != null &&
-        firstTok != null &&
-        firstTok.content.toLowerCase() == "select") {
-      sql = _wrapLimit(sql, limit);
+    final sd = parser(DialectType.sqlite, sql);
+    if (limit != null && sd.canLimit) {
+      sql = sd.wrapLimit(limit: limit);
     }
 
     final queryId = Uuid().v4();
@@ -150,6 +141,10 @@ class SQLiteConnection extends BaseConnection {
         case QueryStreamItem_Error(:final field0):
           throw Exception(field0);
       }
+    }
+    if (sd.changeSchema) {
+      final currentSchema = await getCurrentSchema();
+      onSchemaChanged(currentSchema ?? "");
     }
   }
 

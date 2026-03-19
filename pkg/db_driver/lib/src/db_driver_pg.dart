@@ -156,7 +156,7 @@ class PGConnection extends BaseConnection {
     List<BaseQueryColumn>? resultColumns;
     BigInt? resultAffectedRows;
     List<QueryResultRow> rows = [];
-    
+
     await for (final item in queryStream(sql, limit: limit)) {
       switch (item) {
         case QueryStreamItemHeader(:final columns, :final affectedRows):
@@ -166,28 +166,24 @@ class PGConnection extends BaseConnection {
           rows.add(row);
       }
     }
-    
+
     if (resultColumns == null || resultAffectedRows == null) {
       throw StateError('No metadata received');
     }
-    
-    return BaseQueryResult(queryId, resultColumns, rows, resultAffectedRows);
-  }
 
-  String _wrapLimit(String sql, int limit) {
-    sql = sql.trimRight();
-    if (sql.endsWith(";")) sql = sql.substring(0, sql.length - 1);
-    return "SELECT * FROM ($sql) AS dt_1 LIMIT $limit;";
+    return BaseQueryResult(queryId, resultColumns, rows, resultAffectedRows);
   }
 
   @override
   Stream<BaseQueryStreamItem> queryStream(String sql, {int? limit}) async* {
-    final firstTok = Lexer(sql).firstTrim();
-    if (limit != null &&
-        firstTok != null &&
-        firstTok.content.toLowerCase() == "select") {
-      sql = _wrapLimit(sql, limit);
+    final sd = parser(DialectType.pg, sql);
+    if (limit != null && sd.canLimit) {
+      sql = sd.wrapLimit(limit: limit);
     }
+
+    final queryId = Uuid().v4();
+    sql = "/* call by openhare, uuid: $queryId */ $sql";
+
     List<BaseQueryColumn>? columns;
     await for (final item in _conn.queryStream(query: sql)) {
       switch (item) {
@@ -209,6 +205,10 @@ class PGConnection extends BaseConnection {
         case ResultRow():
           throw StateError('Received row before header');
       }
+    }
+    if (sd.changeSchema) {
+      final currentSchema = await getCurrentSchema();
+      onSchemaChanged(currentSchema ?? "");
     }
   }
 
@@ -259,10 +259,10 @@ ORDER BY
         // handler columns
         final columnRows = tableRows[table]!;
         final columnNodes = columnRows
-            .map((result) => MetaDataNode(MetaType.column,
-                    result.getString("column_name")!)
-                ..withProp(MetaDataPropType.dataType,
-                    _getDataType(result.getString("data_type")!)))
+            .map((result) =>
+                MetaDataNode(MetaType.column, result.getString("column_name")!)
+                  ..withProp(MetaDataPropType.dataType,
+                      _getDataType(result.getString("data_type")!)))
             .toList();
         tableNode.items = columnNodes;
       }
@@ -284,7 +284,11 @@ ORDER BY
       "real" ||
       "double precision" =>
         DataType.number,
-      "character varying" || "varchar" || "character" || "char" || "text" =>
+      "character varying" ||
+      "varchar" ||
+      "character" ||
+      "char" ||
+      "text" =>
         DataType.char,
       "timestamp without time zone" ||
       "timestamp with time zone" ||

@@ -202,9 +202,9 @@ class MySQLConnection extends BaseConnection {
 
   @override
   Stream<BaseQueryStreamItem> queryStream(String sql, {int? limit}) async* {
-    final SQLDefiner sd = parser(DialectType.mysql, sql);
-    if (sd.canLimit) {
-      sql = sd.wrapLimit(limit: limit ?? 100);
+    final sd = parser(DialectType.mysql, sql);
+    if (limit != null && sd.canLimit) {
+      sql = sd.wrapLimit(limit: limit);
     }
 
     final queryId = Uuid().v4(); // todo: 统一处理

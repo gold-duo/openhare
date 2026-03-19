@@ -99,10 +99,6 @@ class OracleConnection extends BaseConnection {
     return BaseQueryResult(queryId, resultColumns, rows, resultAffectedRows);
   }
 
-  String _wrapLimit(String sql, int limit) {
-    return "SELECT * FROM ($sql) WHERE ROWNUM <= $limit";
-  }
-
   int _resolveBatchSize(int? limit) {
     if (limit == null || limit <= 0) {
       return 256;
@@ -118,15 +114,9 @@ class OracleConnection extends BaseConnection {
 
   @override
   Stream<BaseQueryStreamItem> queryStream(String sql, {int? limit}) async* {
-    // 去除SQL语句末尾的分号, 原因：Oracle 查询语句不能以分号结尾, 否则会报错（ORA-00911: 无效字符）。
-    sql = sql.trimRight();
-    if (sql.endsWith(";")) sql = sql.substring(0, sql.length - 1);
-
-    final firstTok = Lexer(sql).firstTrim();
-    if (limit != null &&
-        firstTok != null &&
-        (firstTok.content.toLowerCase() == "select")) {
-      sql = _wrapLimit(sql, limit);
+    final sd = parser(DialectType.oracle, sql);
+    if (limit != null && sd.canLimit) {
+      sql = sd.wrapLimit(limit: limit);
     }
 
     final queryId = Uuid().v4();
@@ -159,9 +149,7 @@ class OracleConnection extends BaseConnection {
           );
       }
     }
-
-    // 如果执行了 ALTER SESSION 相关语句，尝试刷新 schema
-    if (firstTok != null && firstTok.content.toLowerCase() == "alter") {
+    if (sd.changeSchema) {
       final currentSchema = await getCurrentSchema();
       onSchemaChanged(currentSchema ?? "");
     }
