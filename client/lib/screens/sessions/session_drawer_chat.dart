@@ -1,5 +1,6 @@
 import 'package:client/models/sessions.dart';
 import 'package:client/models/settings.dart';
+import 'package:client/screens/sessions/session_operation_bar.dart';
 import 'package:client/services/sessions/session_chat.dart';
 import 'package:client/services/sessions/session_controller.dart';
 import 'package:client/services/sessions/session_sql_result.dart';
@@ -7,6 +8,7 @@ import 'package:client/services/settings/settings.dart';
 import 'package:client/widgets/button.dart';
 import 'package:client/widgets/const.dart';
 import 'package:client/widgets/empty.dart';
+import 'package:db_driver/db_driver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:client/models/ai.dart';
@@ -16,6 +18,7 @@ import 'package:client/screens/sessions/ai_chat/message_tool.dart';
 import 'package:client/screens/sessions/ai_chat/message_user.dart';
 import 'package:client/screens/sessions/ai_chat/message_ai.dart';
 import 'package:client/screens/sessions/ai_chat/input_user.dart';
+import 'package:sql_parser/parser.dart';
 
 class SessionDrawerChat extends ConsumerStatefulWidget {
   const SessionDrawerChat({super.key});
@@ -28,14 +31,25 @@ class _SessionDrawerChatState extends ConsumerState<SessionDrawerChat> {
   @override
   Widget build(BuildContext context) {
     SessionAIChatModel model = ref.watch(sessionAIChatProvider);
+    SessionController sessionController = ref.watch(selectedSessionControllerProvider);
     return Column(
       children: [
         // 聊天内容
         Expanded(
-          child: (model.llmAgents.agents.isEmpty) ? const SessionChatGuide() : SessionChatMessages(model: model),
+          child: (model.llmAgents.agents.isEmpty)
+              ? const SessionChatGuide()
+              : SessionChatMessages(
+                  model: model,
+                  sessionController: sessionController,
+                ),
         ),
         // 下方的输入框区域
-        SessionChatInputCard(model: model),
+        SessionChatInputCard(
+          model: model,
+          controller: sessionController.chatInputController,
+          scrollController: sessionController.aiChatScrollController,
+          modelSearchTextController: sessionController.aiChatModelSearchTextController,
+        ),
         const SizedBox(height: kSpacingMedium),
       ],
     );
@@ -44,7 +58,8 @@ class _SessionDrawerChatState extends ConsumerState<SessionDrawerChat> {
 
 class SessionChatMessages extends ConsumerStatefulWidget {
   final SessionAIChatModel model;
-  const SessionChatMessages({super.key, required this.model});
+  final SessionController sessionController;
+  const SessionChatMessages({super.key, required this.model, required this.sessionController});
 
   @override
   ConsumerState<SessionChatMessages> createState() => _SessionChatMessagesState();
@@ -55,7 +70,12 @@ class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
   DateTime? _lastScrollTime;
 
   void _runSQL(BuildContext context, WidgetRef ref, SessionAIChatModel model, String code) {
-    ref.read(sQLResultsServicesProvider.notifier).queryAddResult(model.sessionId, code);
+    final SQLDefiner sd = parser(model.dbType?.dialectType ?? DialectType.mysql, code);
+    if (sd.isDangerousSQL) {
+      queryDangerousSQLDialog(context, ref, model.sessionId, model.dbType?.dialectType ?? DialectType.mysql, code);
+    } else {
+      ref.read(sQLResultsServicesProvider.notifier).queryAddResult(model.sessionId, code);
+    }
   }
 
   Widget _buildMessage(
@@ -69,9 +89,11 @@ class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
       userMessage: (msg) => UserMessage(message: msg, sessionChatModel: model),
       assistantMessage: (msg) => AIMessage(
         message: msg,
+        dbType: model.dbType ?? DatabaseType.mysql,
         onRunSQL: SQLConnectState.isIdle(model.state) ? (code) => _runSQL(context, ref, model, code) : null,
       ),
       toolsResult: (msg) => ToolCallWidget(
+        dbType: model.dbType ?? DatabaseType.mysql,
         toolCall: msg.toolCall,
         onRun: SQLConnectState.isIdle(model.state) ? (query) => _runSQL(context, ref, model, query) : null,
       ),
@@ -79,7 +101,7 @@ class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
   }
 
   void _scrollToBottom({bool isWaiting = false}) {
-    final scrollController = SessionController.sessionController(widget.model.sessionId).aiChatScrollController;
+    final scrollController = widget.sessionController.aiChatScrollController;
     if (!scrollController.hasClients) return;
 
     final position = scrollController.position;
@@ -151,7 +173,7 @@ class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
     }
 
     return ListView.builder(
-      controller: SessionController.sessionController(widget.model.sessionId).aiChatScrollController,
+      controller: widget.sessionController.aiChatScrollController,
       itemCount: messages.length,
       padding: const EdgeInsets.fromLTRB(kSpacingSmall, kSpacingMedium, kSpacingSmall + kSpacingTiny, 0),
       itemBuilder: (context, index) {

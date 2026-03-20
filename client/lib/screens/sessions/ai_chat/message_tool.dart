@@ -20,9 +20,11 @@ import 'package:client/utils/time_format.dart';
 class ToolCallWidget extends ConsumerStatefulWidget {
   final AIChatMessageToolCallQueryModel toolCall;
   final Function(String)? onRun;
+  final DatabaseType dbType;
 
   const ToolCallWidget({
     super.key,
+    required this.dbType,
     required this.toolCall,
     this.onRun,
   });
@@ -256,6 +258,7 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
             scrollDirection: Axis.horizontal,
             child: RichText(
               text: getSQLHighlightTextSpan(
+                widget.dbType.dialectType,
                 _expanded ? widget.toolCall.query : _sqlToSingleLine(widget.toolCall.query),
                 defalutStyle: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface, // tool 查询文字颜色默认色

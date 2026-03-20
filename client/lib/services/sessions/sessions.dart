@@ -7,7 +7,6 @@ import 'package:client/services/ai/chat.dart';
 import 'package:client/services/instances/instances.dart';
 import 'package:client/services/sessions/session_conn.dart';
 import 'package:client/services/sessions/session_drawer.dart';
-import 'package:client/services/sessions/session_sql_editor.dart';
 import 'package:client/services/sessions/session_sql_result.dart';
 import 'package:client/services/sessions/session_controller.dart';
 import 'package:client/services/tasks/overview.dart';
@@ -100,7 +99,6 @@ class SessionsServices extends _$SessionsServices {
     ref.read(aIChatServiceProvider.notifier).delete(AIChatId(value: session.sessionId.value));
 
     // 5. delete provider status
-    ref.invalidate(sessionSQLEditorServiceProvider(session.sessionId));
     ref.invalidate(sessionDrawerServicesProvider(session.sessionId));
     SessionController.removeSessionController(session.sessionId);
   }
@@ -158,6 +156,15 @@ class SessionsServices extends _$SessionsServices {
     // set connId to null
     ref.read(sessionRepoProvider).unsetConnId(session.sessionId);
 
+    _invalidateSelf();
+  }
+
+  void saveCode(SessionId sessionId) {
+    final controller = SessionController.getSessionController(sessionId);
+    if (controller == null) {
+      return;
+    }
+    ref.read(sessionRepoProvider).saveCode(sessionId, controller.sqlEditorController.text);
     _invalidateSelf();
   }
 }
@@ -252,6 +259,7 @@ class SessionOpBarNotifier extends _$SessionOpBarNotifier {
     return SessionOpBarModel(
       sessionId: session.sessionId,
       instanceId: session.instanceId,
+      dbType: session.dbType,
       connId: session.connId,
       state: session.connState,
       currentSchema: session.currentSchema ?? "",

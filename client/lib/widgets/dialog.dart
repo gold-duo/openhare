@@ -110,7 +110,10 @@ class CustomDialog extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  if (titleIcon != null) titleIcon!,
+                  if (titleIcon != null) ...[
+                    titleIcon!,
+                    const SizedBox(width: kSpacingSmall),
+                  ],
                   Text(title, style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
                   if (titleTail != null)
                     Expanded(

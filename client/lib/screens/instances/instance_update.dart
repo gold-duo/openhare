@@ -146,7 +146,7 @@ class _UpdateInstanceState extends ConsumerState<UpdateInstance> {
                         onGroupChange: (group) {
                           updateInstanceController.onGroupChange(group);
                         },
-                        codeController: updateInstanceController.code,
+                        codeController: updateInstanceController.initQueryCodeController,
                       ),
                     ),
                   ],
@@ -228,7 +228,7 @@ class UpdateInstanceController extends AddInstanceController {
         }
       }
     }
-    code.text = connectValue.initQueryText();
+    initQueryCodeController.text = connectValue.initQueryText();
   }
 
   void tryUpdateInstance(InstanceModel instance) {

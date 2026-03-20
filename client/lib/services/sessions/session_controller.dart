@@ -1,12 +1,19 @@
 // 报存与session 有关的所有controller, 没想好怎么处理他们，感觉用riverpod 不太好。先自己处理吧
 
 import 'package:client/models/sessions.dart';
+import 'package:client/repositories/sessions/sessions.dart';
+import 'package:client/services/sessions/sessions.dart';
 import 'package:client/widgets/data_grid.dart';
 import 'package:client/widgets/split_view.dart';
+import 'package:client/widgets/sql_highlight.dart';
+import 'package:db_driver/db_driver.dart';
 import 'package:flutter/material.dart';
 import 'package:client/widgets/scroll.dart';
 import 'package:sql_editor/re_editor.dart';
 import 'package:client/widgets/mention_text.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+part 'session_controller.g.dart';
 
 class SessionController {
   // split
@@ -14,6 +21,7 @@ class SessionController {
   final SplitViewController metaDataSplitViewCtrl;
 
   // sql editor
+  final CodeLineEditingController sqlEditorController;
   final CodeScrollController sqlEditorScrollController;
 
   // ai chat
@@ -32,20 +40,29 @@ class SessionController {
     required this.aiChatModelSearchTextController,
     required this.chatInputController,
     required this.aiChatScrollController,
+    required this.sqlEditorController,
     required this.sqlEditorScrollController,
     required this.metadataTreeScrollController,
   });
 
   static Map<SessionId, SessionController> cache = {};
 
-  static SessionController sessionController(SessionId sessionId) {
+  static SessionController init(SessionId sessionId, DatabaseType dbType, String code) {
     if (cache.containsKey(sessionId)) {
       return cache[sessionId]!;
     }
+    final sqlEditorController = CodeLineEditingController(
+      spanBuilder: ({required codeLines, required context, required style}) {
+        return getSQLHighlightTextSpan(dbType.dialectType, codeLines.asString(TextLineBreak.lf), defalutStyle: style);
+      },
+    );
+    sqlEditorController.text = code;
+
     final controller = SessionController(
       multiSplitViewCtrl: SplitViewController(secondSize: 500, firstMinSize: 100, secondMinSize: 140),
       metaDataSplitViewCtrl: SplitViewController(secondSize: 400, firstMinSize: 140, secondMinSize: 360),
       // sql editor
+      sqlEditorController: sqlEditorController,
       sqlEditorScrollController: CodeScrollController(
         verticalScroller: KeepOffestScrollController(),
         horizontalScroller: KeepOffestScrollController(),
@@ -61,6 +78,10 @@ class SessionController {
     );
     cache[sessionId] = controller;
     return controller;
+  }
+
+  static SessionController? getSessionController(SessionId sessionId) {
+    return cache[sessionId];
   }
 
   static void removeSessionController(SessionId sessionId) {
@@ -117,5 +138,22 @@ class SQLResultController {
       cache[resultId]!.controller.dispose();
       cache.remove(resultId);
     }
+  }
+}
+
+@Riverpod(keepAlive: true)
+class SelectedSessionControllerNotifier extends _$SelectedSessionControllerNotifier {
+  @override
+  SessionController build() {
+    SessionDetailModel? sessionDetailModel = ref.watch(selectedSessionDetailProvider);
+    if (sessionDetailModel == null) {
+      return SessionController.init(SessionId(value: 0), DatabaseType.mysql, "");
+    }
+    final code = ref.watch(sessionRepoProvider).getCode(sessionDetailModel.sessionId);
+    return SessionController.init(
+      sessionDetailModel.sessionId,
+      sessionDetailModel.dbType ?? DatabaseType.mysql,
+      code ?? "",
+    );
   }
 }

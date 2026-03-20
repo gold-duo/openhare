@@ -111,6 +111,7 @@ abstract class SessionOpBarModel with _$SessionOpBarModel {
   const factory SessionOpBarModel({
     required SessionId sessionId,
     InstanceId? instanceId,
+    DatabaseType? dbType,
     required ConnId? connId,
     required SQLConnectState? state,
     required String currentSchema,
@@ -204,6 +205,7 @@ abstract class SessionStatusModel with _$SessionStatusModel {
 abstract class SessionSQLEditorModel with _$SessionSQLEditorModel {
   const factory SessionSQLEditorModel({
     required SessionId sessionId,
+    DatabaseType? dbType,
     String? currentSchema,
     List<MetaDataNode>? metadata,
   }) = _SessionSQLEditorModel;
