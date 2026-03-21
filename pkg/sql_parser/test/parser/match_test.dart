@@ -152,6 +152,13 @@ void main() {
   test('query with comments', () {
     testMatch("select /* comment */ * from t1", "select * from t1", true);
     testMatch("select -- line comment\n* from t1", "select * from t1", true);
+    // 行注释到输入末尾（无换行）：`--` 后整段仍为注释，不应把其中的 token 当 SQL。
+    testMatch("select -- line to eof", "select", true);
+  });
+
+  test('mysql dangerous sql: delete with where only inside line comment', () {
+    expect(parser(DialectType.mysql, 'delete from t1 -- where id =1;').isDangerousSQL, isTrue);
+    expect(parser(DialectType.mysql, 'delete from t1 where id =1').isDangerousSQL, isFalse);
   });
 
   test('{0} skips zero tokens', () {

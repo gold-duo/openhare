@@ -23,7 +23,8 @@ class _MySQLCommentBuilder implements TokenBuilder {
         return (true, TokenType.comment);
       }
     }
-    return (false, null);
+    // 匹配到结束也算注释的一部分
+    return (true, TokenType.comment);
   }
 
   (bool, TokenType?) matchRightComment(LexerContext ctx) {

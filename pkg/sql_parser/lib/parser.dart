@@ -1,5 +1,11 @@
 library;
 
+export 'src/lexer/token.dart';
+export 'src/lexer/scanner.dart';
+export 'src/lexer/lexer.dart';
+export 'src/parser/parser.dart';
+export 'src/parser/match.dart';
+
 import 'package:sql_parser/src/parser/match.dart';
 
 import 'src/dialect/mysql/lexer.dart';
