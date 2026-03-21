@@ -50,29 +50,31 @@ abstract class AIChatToolExecutor {
   /// 策略判断：是否需要二次确认（仅表达规则，不落库）。
   bool checkNeedsAwaitUserConfirm(Ref ref, AIChatId chatId);
 
-  /// 当 [checkNeedsAwaitUserConfirm] 为 `true` 时调用：仅写入待确认状态，不执行实际操作。
-  Future<void> stagePending(Ref ref, AIChatId chatId, {required void Function() onInvalidate});
+  /// 初始化消息
+  void initMessage(Ref ref, AIChatId chatId);
+
+  /// 设置消息状态, 可以是待确认、执行中、执行失败、执行成功
+  void setStatus(
+    Ref ref,
+    AIChatId chatId,
+    AIChatToolQueryState status, {
+    required void Function() onInvalidate,
+  });
 
   /// 当 [checkNeedsAwaitUserConfirm] 为 `false` 时调用：直接执行并更新结果。
   Future<void> run(Ref ref, AIChatId chatId, {required void Function() onInvalidate});
-
-  /// 用户拒绝待执行的操作。
-  void rejectPending(Ref ref, AIChatId chatId, AIChatMessageId messageId, void Function() onInvalidate);
-
-  /// 用户确认后继续执行。
-  Future<void> approvePending(Ref ref, AIChatId chatId, AIChatMessageId messageId, void Function() onInvalidate);
 }
 
 AIChatToolExecutor? createAIChatToolExecutor(AIChatMessageToolCall toolCall) {
   switch (toolCall.name) {
     case SqlExecuteQueryToolExecutor.toolName:
-      return SqlExecuteQueryToolExecutor(query: toolCall.arguments['query'] as String);
+      return SqlExecuteQueryToolExecutor.fromToolCall(toolCall);
     default:
       debugPrint('❌ [Chat] 未知的工具: ${toolCall.name}');
       return null;
   }
 }
 
-AIChatToolExecutor? createAIChatToolExecutorFromToolsModel(AIChatMessageToolCallsModel model) {
-  return SqlExecuteQueryToolExecutor(query: model.toolCall.query);
+AIChatToolExecutor? createAIChatToolExecutorFromModel(AIChatMessageToolCallsModel model) {
+  return SqlExecuteQueryToolExecutor(model);
 }

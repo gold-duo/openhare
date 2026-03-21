@@ -1,6 +1,7 @@
 import 'package:client/models/ai.dart';
 import 'package:client/models/sessions.dart';
 import 'package:client/repositories/ai/chat.dart';
+import 'package:client/services/ai/llm_sdk.dart';
 import 'package:client/services/ai/tool.dart';
 import 'package:client/services/instances/instances.dart';
 import 'package:client/services/sessions/session_conn.dart';
@@ -10,18 +11,32 @@ import 'package:sql_parser/parser.dart';
 
 /// LLM `execute_query`：策略判断、待确认、执行与续跑。
 final class SqlExecuteQueryToolExecutor implements AIChatToolExecutor {
-  const SqlExecuteQueryToolExecutor({required this.query});
+  SqlExecuteQueryToolExecutor(this.model);
+
+  SqlExecuteQueryToolExecutor.fromToolCall(AIChatMessageToolCall toolCall)
+    : model = AIChatMessageToolCallsModel(
+        id: AIChatMessageId.generate(),
+        toolCall: AIChatMessageToolCallQueryModel(
+          query: toolCall.arguments['query'] as String,
+          execState: AIChatToolQueryState.awaitingUserConfirm,
+        ),
+      );
 
   static const String toolName = 'execute_query';
 
-  final String query;
+  AIChatMessageToolCallsModel model;
 
   @override
   String get name => toolName;
 
   @override
+  void initMessage(Ref ref, AIChatId chatId) {
+    ref.read(aiChatRepoProvider).addMessage(chatId, AIChatMessageItem.toolsResult(model));
+  }
+
+  @override
   bool checkNeedsAwaitUserConfirm(Ref ref, AIChatId chatId) {
-    if (query.isEmpty) {
+    if (model.toolCall.query.isEmpty) {
       return false;
     }
     final sessionId = SessionId(value: chatId.value);
@@ -32,7 +47,7 @@ final class SqlExecuteQueryToolExecutor implements AIChatToolExecutor {
       dialect = inst?.dbType.dialectType ?? DialectType.mysql;
     }
 
-    final trimmed = query.trim();
+    final trimmed = model.toolCall.query.trim();
     if (trimmed.isEmpty) return true;
     try {
       final chunks = splitSQL(dialect, trimmed, skipWhitespace: true, skipComment: true);
@@ -49,37 +64,30 @@ final class SqlExecuteQueryToolExecutor implements AIChatToolExecutor {
   }
 
   @override
-  Future<void> stagePending(Ref ref, AIChatId chatId, {required void Function() onInvalidate}) async {
-    if (query.isEmpty) {
-      throw Exception('query 参数不能为空');
+  void setStatus(Ref ref, AIChatId chatId, AIChatToolQueryState status, {required void Function() onInvalidate}) {
+    // 已经是最终状态了,不再更新(理论上不会进这个分支)
+    if (model.toolCall.isFinished || model.toolCall.isFailed) {
+      return;
     }
-
-    final msg = AIChatMessageToolCallsModel(
-      id: AIChatMessageId.generate(),
-      toolCall: AIChatMessageToolCallQueryModel(
-        query: query,
-        execState: AIChatToolQueryState.awaitingUserConfirm,
-      ),
+    model = model.copyWith(
+      toolCall: model.toolCall.copyWith(execState: status),
     );
-    ref.read(aiChatRepoProvider).addMessage(chatId, AIChatMessageItem.toolsResult(msg));
+    ref.read(aiChatRepoProvider).updateMessageById(chatId, model.id, AIChatMessageItem.toolsResult(model));
     onInvalidate();
   }
 
   @override
   Future<void> run(Ref ref, AIChatId chatId, {required void Function() onInvalidate}) async {
-    if (query.isEmpty) {
-      throw Exception('query 参数不能为空');
+    if (!model.toolCall.isApproved) {
+      return;
     }
 
+    final query = model.toolCall.query;
     // 更新状态为running
-    final msg = AIChatMessageToolCallsModel(
-      id: AIChatMessageId.generate(),
-      toolCall: AIChatMessageToolCallQueryModel(
-        query: query,
-        execState: AIChatToolQueryState.running,
-      ),
+    model = model.copyWith(
+      toolCall: model.toolCall.copyWith(execState: AIChatToolQueryState.running),
     );
-    ref.read(aiChatRepoProvider).addMessage(chatId, AIChatMessageItem.toolsResult(msg));
+    ref.read(aiChatRepoProvider).updateMessageById(chatId, model.id, AIChatMessageItem.toolsResult(model));
     onInvalidate();
 
     // 执行查询
@@ -94,7 +102,7 @@ final class SqlExecuteQueryToolExecutor implements AIChatToolExecutor {
       final queryResult = await connServices.query(sessionModel.connId!, query);
       final executeTime = DateTime.now().difference(startTime);
 
-      final done = msg.copyWith(
+      model = model.copyWith(
         toolCall: queryResult == null
             ? AIChatMessageToolCallQueryModel(
                 query: query,
@@ -109,61 +117,18 @@ final class SqlExecuteQueryToolExecutor implements AIChatToolExecutor {
                 execState: AIChatToolQueryState.finished,
               ),
       );
-      ref.read(aiChatRepoProvider).updateMessageById(chatId, msg.id, AIChatMessageItem.toolsResult(done));
+      ref.read(aiChatRepoProvider).updateMessageById(chatId, model.id, AIChatMessageItem.toolsResult(model));
       onInvalidate();
     } catch (e) {
-      final err = msg.copyWith(
+      model = model.copyWith(
         toolCall: AIChatMessageToolCallQueryModel(
           query: query,
           errorMessage: e.toString(),
           execState: AIChatToolQueryState.failed,
         ),
       );
-      ref.read(aiChatRepoProvider).updateMessageById(chatId, msg.id, AIChatMessageItem.toolsResult(err));
+      ref.read(aiChatRepoProvider).updateMessageById(chatId, model.id, AIChatMessageItem.toolsResult(model));
       onInvalidate();
     }
-  }
-
-  @override
-  void rejectPending(Ref ref, AIChatId chatId, AIChatMessageId messageId, void Function() onInvalidate) {
-    final found = ref
-        .read(aiChatRepoProvider)
-        .getMessageById(chatId, messageId)
-        ?.maybeWhen(
-          toolsResult: (t) => t,
-          orElse: () => null,
-        );
-    if (found == null || !found.toolCall.isAwaitingUserConfirm) return;
-
-    final rejected = found.copyWith(
-      toolCall: AIChatMessageToolCallQueryModel(
-        query: found.toolCall.query,
-        execState: AIChatToolQueryState.rejected,
-      ),
-    );
-    ref.read(aiChatRepoProvider).updateMessageById(chatId, messageId, AIChatMessageItem.toolsResult(rejected));
-    onInvalidate();
-  }
-
-  @override
-  Future<void> approvePending(Ref ref, AIChatId chatId, AIChatMessageId messageId, void Function() onInvalidate) async {
-    final found = ref
-        .read(aiChatRepoProvider)
-        .getMessageById(chatId, messageId)
-        ?.maybeWhen(
-          toolsResult: (t) => t,
-          orElse: () => null,
-        );
-    if (found == null || !found.toolCall.isAwaitingUserConfirm) return;
-
-    final query = found.toolCall.query;
-    final running = found.copyWith(
-      toolCall: AIChatMessageToolCallQueryModel(
-        query: query,
-        execState: AIChatToolQueryState.running,
-      ),
-    );
-    ref.read(aiChatRepoProvider).updateMessageById(chatId, messageId, AIChatMessageItem.toolsResult(running));
-    onInvalidate();
   }
 }

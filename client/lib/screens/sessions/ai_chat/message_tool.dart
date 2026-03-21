@@ -56,11 +56,12 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
   bool get _hasResultToShow {
     final tc = widget.toolCall;
     return switch (tc.execState) {
+      AIChatToolQueryState.initializing => false,
       AIChatToolQueryState.awaitingUserConfirm => false,
+      AIChatToolQueryState.approved => false,
       AIChatToolQueryState.running => false,
       AIChatToolQueryState.rejected => false,
-      AIChatToolQueryState.finished =>
-        tc.queryResult != null && tc.queryResult!.columns.isNotEmpty && tc.queryResult!.rows.isNotEmpty,
+      AIChatToolQueryState.finished => tc.queryResult != null,
       AIChatToolQueryState.failed => tc.errorMessage?.isNotEmpty ?? false,
     };
   }
@@ -112,7 +113,7 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
 
   Widget _buildResultTable(BuildContext context, BaseQueryResult result) {
     if (result.columns.isEmpty || result.rows.isEmpty) {
-      return const SizedBox.shrink();
+      return const SizedBox(height: _expandedTableHeight);
     }
 
     final columns = _buildDataGridColumns(
@@ -240,7 +241,9 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
                     ),
                   const Spacer(),
                   switch (tc.execState) {
+                    AIChatToolQueryState.initializing => const SizedBox.shrink(),
                     AIChatToolQueryState.awaitingUserConfirm => _buildFooterConfirmActions(context),
+                    AIChatToolQueryState.approved => const SizedBox.shrink(),
                     AIChatToolQueryState.running => const Loading.small(),
                     AIChatToolQueryState.rejected => Text(l10n.ai_chat_execution_cancelled, style: statusStyle),
                     AIChatToolQueryState.finished => Text(l10n.ai_chat_execution_success, style: statusStyle),

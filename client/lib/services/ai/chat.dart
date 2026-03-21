@@ -82,28 +82,28 @@ class AIChatService extends _$AIChatService {
     LLMAgentId agentId,
     String systemPrompt,
   ) async {
-    final chatModel = ref.read(aiChatRepoProvider).getAIChatById(chatId);
-    if (chatModel == null) return;
-    AIChatMessageToolCallsModel? toolsMsg;
-    for (final item in chatModel.messages) {
-      final t = item.maybeWhen(
-        toolsResult: (m) => m.id == messageId ? m : null,
-        orElse: () => null,
-      );
-      if (t != null) {
-        toolsMsg = t;
-        break;
-      }
-    }
-    if (toolsMsg == null) return;
-
-    final executor = createAIChatToolExecutorFromToolsModel(toolsMsg);
-    if (executor == null) return;
-    if (!approved) {
-      executor.rejectPending(ref, chatId, messageId, _invalidateSelf);
+    final model = ref.read(aiChatRepoProvider).getMessageById(chatId, messageId);
+    if (model == null) {
       return;
     }
-    await executor.approvePending(ref, chatId, messageId, _invalidateSelf);
+    final toolsModel = model.maybeWhen(
+      toolsResult: (m) => m,
+      orElse: () => null,
+    );
+    if (toolsModel == null) {
+      return;
+    }
+    final executor = createAIChatToolExecutorFromModel(toolsModel);
+    if (executor == null) return;
+    if (!approved) {
+      // 用户拒绝执行该 SQL
+      executor.setStatus(ref, chatId, AIChatToolQueryState.rejected, onInvalidate: _invalidateSelf);
+      return;
+    } else {
+      // 用户确认执行该 SQL
+      executor.setStatus(ref, chatId, AIChatToolQueryState.approved, onInvalidate: _invalidateSelf);
+      await executor.run(ref, chatId, onInvalidate: _invalidateSelf);
+    }
     // 继续对话
     await chat(chatId, agentId, systemPrompt);
   }
@@ -243,13 +243,21 @@ class AIChatService extends _$AIChatService {
           }
           final executor = createAIChatToolExecutor(toolCall);
           if (executor != null) {
+            executor.initMessage(ref, chatId);
             if (executor.checkNeedsAwaitUserConfirm(ref, chatId)) {
               // 如果需要用户确认，则写入待确认状态，并结束本轮 chat
-              await executor.stagePending(ref, chatId, onInvalidate: _invalidateSelf);
+              executor.setStatus(
+                ref,
+                chatId,
+                AIChatToolQueryState.awaitingUserConfirm,
+                onInvalidate: _invalidateSelf,
+              );
               break chatLoop;
+            } else {
+              // 如果不需要用户确认, 则自动批准，并执行工具.
+              executor.setStatus(ref, chatId, AIChatToolQueryState.approved, onInvalidate: _invalidateSelf);
+              await executor.run(ref, chatId, onInvalidate: _invalidateSelf);
             }
-            // 如果不需要用户确认，则直接执行工具
-            await executor.run(ref, chatId, onInvalidate: _invalidateSelf);
           }
         }
         continue;

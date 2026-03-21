@@ -205,14 +205,20 @@ abstract class AIChatAssistantMessageModel with _$AIChatAssistantMessageModel {
 }
 
 enum AIChatToolQueryState {
+  /// 初始化
+  initializing,
+
   /// 等待用户在聊天内确认
   awaitingUserConfirm,
 
-  /// 已确认且正在向数据库发起请求
-  running,
-
   /// 用户拒绝执行该 SQL
   rejected,
+
+  /// 用户确认执行该 SQL
+  approved,
+
+  /// 已确认且正在向数据库发起请求
+  running,
 
   /// 执行成功（[queryResult] 有值）
   finished,
@@ -240,9 +246,8 @@ abstract class AIChatMessageToolCallQueryModel with _$AIChatMessageToolCallQuery
   bool get isAwaitingUserConfirm => execState == AIChatToolQueryState.awaitingUserConfirm;
 
   bool get isRejected => execState == AIChatToolQueryState.rejected;
-
+  bool get isApproved => execState == AIChatToolQueryState.approved;
   bool get isFinished => execState == AIChatToolQueryState.finished;
-
   bool get isFailed => execState == AIChatToolQueryState.failed;
 }
 
