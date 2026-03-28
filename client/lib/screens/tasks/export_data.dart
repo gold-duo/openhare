@@ -315,11 +315,7 @@ class _ExportDataDialogContentState extends ConsumerState<_ExportDataDialogConte
   Widget build(BuildContext context) {
     return CustomDialog(
       title: AppLocalizations.of(context)!.export_data_title,
-      titleIcon: const RectangleIconButton.medium(
-        icon: Icons.file_download,
-        iconColor: Colors.green,
-        verticalOffset: 1.5,
-      ),
+      titleIcon: const Icon(Icons.file_download, color: Colors.green),
       content: Form(
         key: _formKey,
         child: Column(

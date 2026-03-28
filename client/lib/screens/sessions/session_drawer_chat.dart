@@ -74,7 +74,7 @@ class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
   void _runSQL(BuildContext context, WidgetRef ref, SessionAIChatModel model, String code) {
     final SQLDefiner sd = parser(model.dbType?.dialectType ?? DialectType.mysql, code);
     if (sd.isDangerousSQL && model.config.enableQueryCheck) {
-      queryDangerousSQLDialog(context, ref, model.sessionId, model.dbType?.dialectType ?? DialectType.mysql, code);
+      queryDangerousSQLDialog(context, ref, model.sessionId, model.config, model.dbType?.dialectType ?? DialectType.mysql, code);
     } else {
       ref.read(sQLResultsServicesProvider.notifier).queryAddResult(model.sessionId, code);
     }

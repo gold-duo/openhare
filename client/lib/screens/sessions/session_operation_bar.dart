@@ -149,6 +149,7 @@ class SessionOpBar extends ConsumerWidget {
                     context,
                     ref,
                     model.sessionId,
+                    model.config,
                     model.dbType?.dialectType ?? DialectType.mysql,
                     query,
                   );
@@ -181,6 +182,7 @@ class SessionOpBar extends ConsumerWidget {
                         context,
                         ref,
                         model.sessionId,
+                        model.config,
                         model.dbType?.dialectType ?? DialectType.mysql,
                         query,
                       );
@@ -570,50 +572,11 @@ class _SessionConfigBarState extends ConsumerState<SessionConfigBar> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final textTheme = theme.textTheme;
 
-    final header = OverlayMenuHeader(
-      height: 74,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(kSpacingMedium, kSpacingMedium, kSpacingSmall, kSpacingSmall),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: cs.primaryContainer,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(kSpacingSmall),
-                child: Icon(
-                  Icons.settings,
-                  size: 20,
-                  color: cs.onPrimaryContainer,
-                ),
-              ),
-            ),
-            const SizedBox(width: kSpacingSmall),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.session_config_title,
-                    style: textTheme.titleMedium,
-                  ),
-                  Text(
-                    l10n.session_config_subtitle,
-                    style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+    final header = OverlayMenuHeader.tile(
+      icon: Icons.tune,
+      title: l10n.session_config_title,
+      subtitle: l10n.session_config_subtitle,
     );
 
     return OverlayMenu(
@@ -625,14 +588,14 @@ class _SessionConfigBarState extends ConsumerState<SessionConfigBar> {
       footer: OverlayMenuFooter(height: kSpacingMedium, child: const SizedBox.shrink()),
       tabs: [
         OverlayConfigItem.number(
-          height: 64,
+          height: 84,
           title: l10n.session_config_query_limit,
           description: l10n.session_config_query_limit_hint,
           value: widget.model.config.queryLimit,
           onChanged: _onQueryLimitChanged,
         ),
         OverlayConfigItem.checkbox(
-          height: 64,
+          height: 84,
           title: l10n.session_config_query_check,
           description: l10n.session_config_query_check_desc,
           value: widget.model.config.enableQueryCheck,
@@ -643,7 +606,7 @@ class _SessionConfigBarState extends ConsumerState<SessionConfigBar> {
       ],
       child: RectangleIconButton.medium(
         tooltip: l10n.button_tooltip_session_config,
-        icon: Icons.settings,
+        icon: Icons.tune,
         onPressed: null,
         iconColor: Theme.of(context).colorScheme.onSurface,
       ),
@@ -729,6 +692,7 @@ void queryDangerousSQLDialog(
   BuildContext context,
   WidgetRef ref,
   SessionId sessionId,
+  SessionConfigModel config,
   DialectType dialectType,
   String query,
 ) {
@@ -741,15 +705,30 @@ void queryDangerousSQLDialog(
         Icons.play_circle_outline_rounded,
         color: Colors.green,
       ),
+      subtitle: AppLocalizations.of(context)!.tip_dangerous_sql_desc,
+      footerLeading: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppLocalizations.of(context)!.tip_dangerous_sql_footer_hint,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(width: kSpacingTiny),
+          Text("\""),
+          Icon(
+            Icons.tune,
+            size: 16,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+          Text("\""),
+        ],
+      ),
       maxHeight: 420,
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            AppLocalizations.of(context)!.tip_dangerous_sql_desc,
-            style: textTheme.titleMedium,
-          ),
-          const SizedBox(height: kSpacingMedium),
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(

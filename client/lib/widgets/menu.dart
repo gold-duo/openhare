@@ -279,7 +279,7 @@ class _OverlayNumberTextFieldState extends State<_OverlayNumberTextField> {
       onEnter: (_) => setState(() => _hovering = true),
       onExit: (_) => setState(() => _hovering = false),
       child: SizedBox(
-        width: 110,
+        width: 100,
         child: TextField(
           controller: _controller,
           keyboardType: TextInputType.number,
@@ -310,9 +310,9 @@ class _OverlayNumberTextFieldState extends State<_OverlayNumberTextField> {
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: cs.primary),
             ),
-            suffixIconConstraints: const BoxConstraints.tightFor(width: 34, height: 32),
+            suffixIconConstraints: const BoxConstraints.tightFor(width: 32, height: 32),
             suffixIcon: SizedBox(
-              width: 34,
+              width: 32,
               height: 32,
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
@@ -404,11 +404,23 @@ class OverlayConfigItem extends OverlayMenuItem {
       height: height,
       title: title,
       description: description,
-      trailing: Checkbox(
-        value: value,
-        onChanged: (v) {
-          if (v != null) onChanged(v);
-        },
+      trailing: SizedBox(
+        width: 100,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            SizedBox(
+              width: 32,
+              height: 32,
+              child: Checkbox(
+                value: value,
+                onChanged: (v) {
+                  if (v != null) onChanged(v);
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -465,6 +477,62 @@ class OverlayMenuHeader extends StatelessWidget {
   final Widget child;
 
   const OverlayMenuHeader({super.key, required this.height, required this.child});
+
+  factory OverlayMenuHeader.tile({
+    Key? key,
+    double height = 74,
+    required IconData icon,
+    required String title,
+    String? subtitle,
+  }) {
+    return OverlayMenuHeader(
+      key: key,
+      height: height,
+      child: Builder(
+        builder: (context) {
+          final theme = Theme.of(context);
+          final cs = theme.colorScheme;
+          final textTheme = theme.textTheme;
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(kSpacingMedium, kSpacingMedium, kSpacingSmall, kSpacingSmall),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: cs.primaryContainer,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(kSpacingSmall),
+                    child: Icon(
+                      icon,
+                      size: 20,
+                      color: cs.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: kSpacingSmall),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: textTheme.titleMedium),
+                      if (subtitle != null && subtitle.isNotEmpty)
+                        Text(
+                          subtitle,
+                          style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

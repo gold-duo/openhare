@@ -247,6 +247,10 @@
   "@tip_dangerous_sql_desc": {
     "description": "Warning message before executing dangerous SQL"
   },
+  "tip_dangerous_sql_footer_hint": "You can skip this step in settings",
+  "@tip_dangerous_sql_footer_hint": {
+    "description": "Footer hint in dangerous SQL dialog: configurable skip"
+  },
   "ai_chat_input_tip": "Please enter your question...",
   "@ai_chat_input_tip": {
     "description": "AI chat input tip"
@@ -513,6 +517,10 @@
   "task_recent_tasks": "Recent Tasks",
   "@task_recent_tasks": {
     "description": "Recent tasks header"
+  },
+  "task_recent_tasks_subtitle": "Top 10 tasks (running + recent)",
+  "@task_recent_tasks_subtitle": {
+    "description": "Task overview: up to 5 running + 5 recent (10 total)"
   },
   "export_data_title": "Export Data",
   "@export_data_title": {

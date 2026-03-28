@@ -63,20 +63,22 @@ void doActionDialog(
 // 通用的自定义对话框组件
 class CustomDialog extends StatelessWidget {
   final String title;
+  final String? subtitle;
   final Widget? titleIcon;
-  final Widget? titleTail;
+  final Widget? footerLeading;
   final Widget content;
-  final List<Widget>? actions;
+  final List<Widget> actions;
   final double? maxWidth;
   final double? maxHeight;
 
   const CustomDialog({
     super.key,
     required this.title,
+    this.subtitle,
     this.titleIcon,
-    this.titleTail,
+    this.footerLeading,
     required this.content,
-    this.actions,
+    required this.actions,
     this.maxWidth = 640,
     this.maxHeight,
   });
@@ -106,36 +108,69 @@ class CustomDialog extends StatelessWidget {
             kSpacingMedium,
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  if (titleIcon != null) ...[
-                    titleIcon!,
-                    const SizedBox(width: kSpacingSmall),
-                  ],
-                  Text(title, style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
-                  if (titleTail != null)
-                    Expanded(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          titleTail!,
+              Builder(
+                builder: (context) {
+                  final theme = Theme.of(context);
+                  final cs = theme.colorScheme;
+                  final textTheme = theme.textTheme;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: kSpacingSmall, right: kSpacingSmall),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (titleIcon != null) ...[
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: cs.primaryContainer,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(kSpacingSmall),
+                              child: titleIcon!,
+                            ),
+                          ),
                           const SizedBox(width: kSpacingSmall),
                         ],
-                      ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(title, style: textTheme.titleMedium),
+                              if (subtitle != null && subtitle!.isNotEmpty)
+                                Text(
+                                  subtitle!,
+                                  style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                ],
+                  );
+                },
               ),
               const SizedBox(height: kSpacingMedium),
               Expanded(child: content),
-              if (actions != null) ...[
-                const SizedBox(height: kSpacingMedium),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: actions!,
-                ),
-              ],
+              const SizedBox(height: kSpacingMedium),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: footerLeading == null ? MainAxisAlignment.end : MainAxisAlignment.start,
+                children: [
+                  if (footerLeading != null)
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: footerLeading!,
+                      ),
+                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: actions,
+                  ),
+                ],
+              ),
             ],
           ),
         ),
