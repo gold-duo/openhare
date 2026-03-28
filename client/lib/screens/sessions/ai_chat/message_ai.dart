@@ -39,11 +39,7 @@ class _AIMessageState extends State<AIMessage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         GestureDetector(
-          onTap: () {
-            setState(() {
-              _isThinkingExpanded = !_isThinkingExpanded;
-            });
-          },
+          onTap: () => setState(() => _isThinkingExpanded = !_isThinkingExpanded),
           child: Row(
             children: [
               Icon(

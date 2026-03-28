@@ -3,6 +3,7 @@
 import 'package:client/models/sessions.dart';
 import 'package:client/repositories/sessions/sessions.dart';
 import 'package:client/services/sessions/sessions.dart';
+import 'package:client/widgets/chat_list_view.dart';
 import 'package:client/widgets/data_grid.dart';
 import 'package:client/widgets/split_view.dart';
 import 'package:client/widgets/sql_highlight.dart';
@@ -28,7 +29,7 @@ class SessionController {
   final MentionTextEditingController chatInputController;
   final TextEditingController aiChatSearchTextController;
   final TextEditingController aiChatModelSearchTextController;
-  final KeepOffestScrollController aiChatScrollController;
+  final ChatScrollController chatScrollController;
 
   // drawer
   final KeepOffestScrollController metadataTreeScrollController;
@@ -39,7 +40,7 @@ class SessionController {
     required this.aiChatSearchTextController,
     required this.aiChatModelSearchTextController,
     required this.chatInputController,
-    required this.aiChatScrollController,
+    required this.chatScrollController,
     required this.sqlEditorController,
     required this.sqlEditorScrollController,
     required this.metadataTreeScrollController,
@@ -71,7 +72,7 @@ class SessionController {
       aiChatSearchTextController: TextEditingController(),
       aiChatModelSearchTextController: TextEditingController(),
       chatInputController: MentionTextEditingController(),
-      aiChatScrollController: KeepOffestScrollController(),
+      chatScrollController: ChatScrollController(),
 
       // drawer
       metadataTreeScrollController: KeepOffestScrollController(),
@@ -95,7 +96,7 @@ class SessionController {
       cache[sessionId]!.aiChatSearchTextController.dispose();
       cache[sessionId]!.aiChatModelSearchTextController.dispose();
       cache[sessionId]!.chatInputController.dispose();
-      cache[sessionId]!.aiChatScrollController.dispose();
+      cache[sessionId]!.chatScrollController.dispose();
       // drawer
       cache[sessionId]!.metadataTreeScrollController.dispose();
       // remove cache

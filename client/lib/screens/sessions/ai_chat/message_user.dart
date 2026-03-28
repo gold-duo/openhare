@@ -47,9 +47,8 @@ class _UserMessageState extends ConsumerState<UserMessage> {
     final canRetry = hasAgent && isIdle;
     final showRetry = _hovering && hasAgent;
     return Padding(
-      padding: const EdgeInsets.only(bottom: kSpacingMedium),
+      padding: const EdgeInsets.only(bottom: kSpacingSmall, top: kSpacingSmall),
       child: Align(
-        // alignment: Alignment.centerLeft,
         child: MouseRegion(
           onEnter: (_) => setState(() => _hovering = true),
           onExit: (_) => setState(() => _hovering = false),

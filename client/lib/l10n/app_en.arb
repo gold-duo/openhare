@@ -343,6 +343,10 @@
   "@button_tooltip_session_config": {
     "description": "Button tooltip session SQL config"
   },
+  "button_tooltip_go_to_bottom": "Scroll to bottom",
+  "@button_tooltip_go_to_bottom": {
+    "description": "Button tooltip chat scroll to bottom"
+  },
   "session_config_title": "Query options",
   "@session_config_title": {
     "description": "Session config overlay title"

@@ -9,7 +9,6 @@ import 'package:client/widgets/code_auto_complete.dart';
 import 'package:client/widgets/const.dart';
 import 'package:client/widgets/menu.dart';
 import 'package:client/widgets/mention_text.dart';
-import 'package:client/widgets/scroll.dart';
 import 'package:client/widgets/sql_highlight.dart';
 import 'package:client/utils/fuzzy_match.dart';
 import 'package:client/widgets/tooltip.dart';
@@ -22,15 +21,15 @@ import 'package:hugeicons/hugeicons.dart';
 class SessionChatInputCard extends ConsumerStatefulWidget {
   final SessionAIChatModel model;
   final MentionTextEditingController controller;
-  final KeepOffestScrollController scrollController;
   final TextEditingController modelSearchTextController;
+  final VoidCallback? onSendMessage;
 
   const SessionChatInputCard({
     super.key,
     required this.model,
     required this.controller,
-    required this.scrollController,
     required this.modelSearchTextController,
+    this.onSendMessage,
   });
 
   @override
@@ -159,17 +158,7 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
           message: text,
           refText: refText.isEmpty ? null : refText,
         );
-
-    // 滚动到底部
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (widget.scrollController.hasClients) {
-        widget.scrollController.animateTo(
-          widget.scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+    widget.onSendMessage?.call();
   }
 
   @override
@@ -238,7 +227,10 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
                         tooltip: AppLocalizations.of(context)!.button_tooltip_send_message,
                         icon: Icons.send,
                         onPressed: (widget.model.canSendMessage() && !hardStopped && _hasInputContent())
-                            ? () => _sendMessage(widget.model.chatModel.id, widget.model)
+                            ? () {
+                                _sendMessage(widget.model.chatModel.id, widget.model);
+                                widget.controller.clear();
+                              }
                             : null,
                       ),
               ],

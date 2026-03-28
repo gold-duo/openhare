@@ -85,6 +85,7 @@
     "button_tooltip_refresh_metadata": "刷新数据库元信息",
     "button_tooltip_ai_test": "测试 LLM API",
     "button_tooltip_session_config": "会话查询选项",
+    "button_tooltip_go_to_bottom": "回到底部",
     "session_config_title": "查询选项",
     "session_config_subtitle": "仅作用于当前会话",
     "session_config_query_limit": "查询行数",
