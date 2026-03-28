@@ -81,6 +81,11 @@ abstract class SessionConfigModel with _$SessionConfigModel {
   const factory SessionConfigModel({
     @Default(100) int queryLimit, // 每次查询的记录数, 0 表示不限制, 会自动补全limit语句
     @Default(true) bool enableQueryCheck, // 是否启用查询二次检查, true 表示启用, false 表示不启用
+
+    // ai chat config
+    @Default(false) bool askDQL, // 是否启用聊天输入时确认DQL语句
+    @Default(true) bool askNoDQL, // 是否启用聊天输入时确认非DQL语句
+    @Default(true) bool askDangerousSQL, // 是否启用聊天输入时确认高影响、危险SQL语句
   }) = _SessionConfigModel;
 }
 

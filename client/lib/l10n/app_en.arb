@@ -367,9 +367,45 @@
   "@session_config_query_check": {
     "description": "Session config: confirm before executing certain SQL"
   },
-  "session_config_query_check_desc": "When enabled, prompt before running potentially destructive statements",
+  "session_config_query_check_desc": "When enabled, prompt before running potentially destructive SQL",
   "@session_config_query_check_desc": {
     "description": "Session config: dangerous SQL confirmation description"
+  },
+  "button_tooltip_ai_chat_config": "AI chat options",
+  "@button_tooltip_ai_chat_config": {
+    "description": "Button tooltip AI chat input confirmation options"
+  },
+  "ai_chat_config_title": "AI chat options",
+  "@ai_chat_config_title": {
+    "description": "AI chat config overlay title"
+  },
+  "ai_chat_config_subtitle": "Applies to this session only",
+  "@ai_chat_config_subtitle": {
+    "description": "AI chat config overlay subtitle"
+  },
+  "ai_chat_config_ask_dql": "Confirm DQL",
+  "@ai_chat_config_ask_dql": {
+    "description": "AI chat: confirm before sending DQL from input"
+  },
+  "ai_chat_config_ask_dql_desc": "When enabled, Confirm DQL before executed (EX: select) ",
+  "@ai_chat_config_ask_dql_desc": {
+    "description": "AI chat confirm DQL description"
+  },
+  "ai_chat_config_ask_no_dql": "Confirm non-DQL",
+  "@ai_chat_config_ask_no_dql": {
+    "description": "AI chat: confirm non-DQL before send"
+  },
+  "ai_chat_config_ask_no_dql_desc": "When enabled, Confirm non-DQL before executed (EX: create) ",
+  "@ai_chat_config_ask_no_dql_desc": {
+    "description": "AI chat confirm non-DQL description"
+  },
+  "ai_chat_config_ask_dangerous": "Confirm dangerous SQL",
+  "@ai_chat_config_ask_dangerous": {
+    "description": "AI chat: confirm dangerous SQL"
+  },
+  "ai_chat_config_ask_dangerous_desc": "When enabled, confirm potentially destructive SQL before executed (EX: drop)",
+  "@ai_chat_config_ask_dangerous_desc": {
+    "description": "AI chat confirm dangerous SQL description"
   },
   "metadata_tree_database": "Database",
   "@metadata_tree_database": {

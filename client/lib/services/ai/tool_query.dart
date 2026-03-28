@@ -41,6 +41,7 @@ final class SqlExecuteQueryToolExecutor implements AIChatToolExecutor {
     }
     final sessionId = SessionId(value: chatId.value);
     final session = ref.read(sessionsServicesProvider.notifier).getSession(sessionId);
+    final config = session?.config ?? const SessionConfigModel();
     DialectType dialect = DialectType.mysql;
     if (session?.instanceId != null) {
       final inst = ref.read(instancesServicesProvider.notifier).getInstanceById(session!.instanceId!);
@@ -55,7 +56,9 @@ final class SqlExecuteQueryToolExecutor implements AIChatToolExecutor {
       final statements = parts.isEmpty ? <String>[trimmed] : parts;
       for (final s in statements) {
         final sd = parser(dialect, s);
-        if (sd.sqlType != SQLType.dql || sd.isDangerousSQL) return true;
+        if (_statementNeedsUserConfirm(sd, config)) {
+          return true;
+        }
       }
       return false;
     } catch (_) {
@@ -132,4 +135,15 @@ final class SqlExecuteQueryToolExecutor implements AIChatToolExecutor {
       onInvalidate();
     }
   }
+}
+
+/// 是否与当前会话的 AI 对话发送选项一致：危险 SQL / DQL / 非 DQL 分别对应 [SessionConfigModel] 的三个开关。
+bool _statementNeedsUserConfirm(SQLDefiner sd, SessionConfigModel config) {
+  if (sd.isDangerousSQL) {
+    return config.askDangerousSQL;
+  }
+  if (sd.sqlType == SQLType.dql) {
+    return config.askDQL;
+  }
+  return config.askNoDQL;
 }

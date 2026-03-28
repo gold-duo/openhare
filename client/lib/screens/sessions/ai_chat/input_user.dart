@@ -4,6 +4,7 @@ import 'package:client/models/sessions.dart';
 import 'package:client/services/ai/agent.dart';
 import 'package:client/services/ai/chat.dart';
 import 'package:client/services/ai/prompt.dart';
+import 'package:client/services/sessions/sessions.dart';
 import 'package:client/widgets/button.dart';
 import 'package:client/widgets/code_auto_complete.dart';
 import 'package:client/widgets/const.dart';
@@ -199,6 +200,8 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
                 const SizedBox(width: kSpacingTiny),
                 // 模型选择
                 ModelSelectorWidget(model: widget.model, modelSearchTextController: widget.modelSearchTextController),
+                const SizedBox(width: kSpacingTiny),
+                AIChatConfigBar(model: widget.model),
                 const Spacer(),
 
                 _buildBudgetIndicator(context, progress),
@@ -237,6 +240,94 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// AI 对话发送确认选项（与会话栏「查询选项」同风格的 Overlay）
+class AIChatConfigBar extends ConsumerStatefulWidget {
+  final SessionAIChatModel model;
+
+  const AIChatConfigBar({super.key, required this.model});
+
+  @override
+  ConsumerState<AIChatConfigBar> createState() => _AIChatConfigBarState();
+}
+
+class _AIChatConfigBarState extends ConsumerState<AIChatConfigBar> {
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final header = OverlayMenuHeader.tile(
+      icon: Icons.tune,
+      title: l10n.ai_chat_config_title,
+      subtitle: l10n.ai_chat_config_subtitle,
+    );
+
+    return OverlayMenu(
+      closeOnSelectItem: false,
+      spacing: kSpacingTiny,
+      maxHeight: 400,
+      maxWidth: 420,
+      isAbove: true,
+      header: header,
+      footer: OverlayMenuFooter(height: kSpacingMedium, child: const SizedBox.shrink()),
+      tabs: [
+        OverlayConfigItem.checkbox(
+          height: 84,
+          title: l10n.ai_chat_config_ask_dql,
+          description: l10n.ai_chat_config_ask_dql_desc,
+          value: widget.model.config.askDQL,
+          onChanged: (v) {
+            setState(() {
+              ref
+                  .read(sessionsServicesProvider.notifier)
+                  .updateSessionConfig(
+                    widget.model.sessionId,
+                    widget.model.config.copyWith(askDQL: v),
+                  );
+            });
+          },
+        ),
+        OverlayConfigItem.checkbox(
+          height: 84,
+          title: l10n.ai_chat_config_ask_no_dql,
+          description: l10n.ai_chat_config_ask_no_dql_desc,
+          value: widget.model.config.askNoDQL,
+          onChanged: (v) {
+            setState(() {
+              ref
+                  .read(sessionsServicesProvider.notifier)
+                  .updateSessionConfig(
+                    widget.model.sessionId,
+                    widget.model.config.copyWith(askNoDQL: v),
+                  );
+            });
+          },
+        ),
+        OverlayConfigItem.checkbox(
+          height: 84,
+          title: l10n.ai_chat_config_ask_dangerous,
+          description: l10n.ai_chat_config_ask_dangerous_desc,
+          value: widget.model.config.askDangerousSQL,
+          onChanged: (v) {
+            setState(() {
+              ref
+                  .read(sessionsServicesProvider.notifier)
+                  .updateSessionConfig(
+                    widget.model.sessionId,
+                    widget.model.config.copyWith(askDangerousSQL: v),
+                  );
+            });
+          },
+        ),
+      ],
+      child: RectangleIconButton.medium(
+        tooltip: l10n.button_tooltip_ai_chat_config,
+        icon: Icons.tune,
+        onPressed: null,
+        iconColor: Theme.of(context).colorScheme.onSurface,
       ),
     );
   }
