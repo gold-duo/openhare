@@ -44,10 +44,7 @@ void main() {
     final wrapped1 = parser(DialectType.oracle, "select * from dual;").wrapLimit(limit: 10);
     expect(wrapped1, "SELECT * FROM (select * from dual) dt_1 WHERE ROWNUM <= 10");
 
-    final wrapped2 = parser(DialectType.oracle, "select * from dual").wrapLimit(limit: 10, offset: 5);
-    expect(
-      wrapped2,
-      "SELECT * FROM (SELECT dt_1.*, ROWNUM rn_ FROM (select * from dual) dt_1 WHERE ROWNUM <= 15) WHERE rn_ > 5",
-    );
+    final wrapped2 = parser(DialectType.oracle, "select * from dual").wrapLimit(limit: 10);
+    expect(wrapped2, "SELECT * FROM (select * from dual) dt_1 WHERE ROWNUM <= 10");
   });
 }

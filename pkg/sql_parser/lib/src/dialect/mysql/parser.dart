@@ -80,13 +80,15 @@ class MysqlSQLDefiner extends SQLDefiner {
   }
 
   @override
-  String wrapLimit({int limit = 10, int offset = 0}) {
+  String wrapLimit({int limit = 100}) {
     if (Matcher(MySQLLexer(content)).match("select {*}")) {
       // 去掉结尾的注释和分号，这样才能被子查询包裹
       final sql = MySQLLexer(content).trimEndWhere((token) {
-        return token.id == TokenType.whitespace || token.id == TokenType.comment || token.id == TokenType.punctuation;
+        return token.id == TokenType.whitespace ||
+            token.id == TokenType.comment ||
+            (token.id == TokenType.punctuation && token.content == ";");
       });
-      return "SELECT * FROM ($sql) AS dt_1 LIMIT $limit OFFSET $offset;";
+      return "SELECT * FROM ($sql) AS dt_1 LIMIT $limit"; // todo: 存在一些不能直接包裹的语句，需要支持
     }
     return content;
   }

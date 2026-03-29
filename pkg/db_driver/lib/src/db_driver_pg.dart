@@ -1,7 +1,6 @@
 import 'package:collection/collection.dart';
 import 'package:pg/pg.dart';
-import 'package:sql_parser/parser.dart';
-import 'package:uuid/uuid.dart';
+import 'package:sql_parser/parser.dart' as sp;
 import 'db_driver_interface.dart';
 import 'db_driver_conn_meta.dart';
 import 'db_driver_metadata.dart';
@@ -87,6 +86,9 @@ class PGConnection extends BaseConnection {
 
   PGConnection(this._conn, this._meta);
 
+  @override
+  sp.SQLDefiner parser(String sql) => sp.parser(sp.DialectType.pg, sql);
+
   static Future<BaseConnection> open(
       {required ConnectValue meta, String? schema}) async {
     final conn = await PGConn.open(
@@ -151,39 +153,7 @@ class PGConnection extends BaseConnection {
   }
 
   @override
-  Future<BaseQueryResult> query(String sql, {int? limit}) async {
-    final queryId = Uuid().v4();
-    List<BaseQueryColumn>? resultColumns;
-    BigInt? resultAffectedRows;
-    List<QueryResultRow> rows = [];
-
-    await for (final item in queryStream(sql, limit: limit)) {
-      switch (item) {
-        case QueryStreamItemHeader(:final columns, :final affectedRows):
-          resultColumns = columns;
-          resultAffectedRows = affectedRows;
-        case QueryStreamItemRow(:final row):
-          rows.add(row);
-      }
-    }
-
-    if (resultColumns == null || resultAffectedRows == null) {
-      throw StateError('No metadata received');
-    }
-
-    return BaseQueryResult(queryId, resultColumns, rows, resultAffectedRows);
-  }
-
-  @override
-  Stream<BaseQueryStreamItem> queryStream(String sql, {int? limit}) async* {
-    final sd = parser(DialectType.pg, sql);
-    if (limit != null && sd.canLimit) {
-      sql = sd.wrapLimit(limit: limit);
-    }
-
-    final queryId = Uuid().v4();
-    sql = "/* call by openhare, uuid: $queryId */ $sql";
-
+  Stream<BaseQueryStreamItem> queryStreamInternal(String sql) async* {
     List<BaseQueryColumn>? columns;
     await for (final item in _conn.queryStream(query: sql)) {
       switch (item) {
@@ -205,10 +175,6 @@ class PGConnection extends BaseConnection {
         case ResultRow():
           throw StateError('Received row before header');
       }
-    }
-    if (sd.changeSchema) {
-      final currentSchema = await getCurrentSchema();
-      onSchemaChanged(currentSchema ?? "");
     }
   }
 

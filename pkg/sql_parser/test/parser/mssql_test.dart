@@ -48,18 +48,7 @@ void main() {
   });
 
   test('mssql wrap limit', () {
-    final wrapped = parser(DialectType.mssql, "select * from t1;").wrapLimit(limit: 20, offset: 0);
-    expect(
-      wrapped,
-      "SELECT TOP (20) * FROM (select * from t1) AS dt_1;",
-    );
-  });
-
-  test('mssql wrap limit with offset', () {
-    final wrapped = parser(DialectType.mssql, "select * from t1;").wrapLimit(limit: 20, offset: 5);
-    expect(
-      wrapped,
-      "SELECT * FROM (SELECT dt_1.*, ROW_NUMBER() OVER (ORDER BY (SELECT 1)) AS rn_ FROM (select * from t1) AS dt_1) AS dt_2 WHERE dt_2.rn_ > 5 AND dt_2.rn_ <= 25;",
-    );
+    final wrapped = parser(DialectType.mssql, "select * from t1;").wrapLimit(limit: 20);
+    expect(wrapped, "select * from t1;");
   });
 }

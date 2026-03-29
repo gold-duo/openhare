@@ -71,26 +71,17 @@ class MssqlSQLDefiner extends SQLDefiner {
   }
 
   @override
-  String wrapLimit({int limit = 10, int offset = 0}) {
-    return content;
+  String wrapLimit({int limit = 100}) {
     // todo: 实现 MSSQL 分页查询, 直接包裹子查询的方式不行，内部不能用order by
-    // if (!Matcher(MssqlLexer(content)).match("select {*}")) {
-    //   return content;
-    // }
+    if (!Matcher(MssqlLexer(content)).match("select {*}")) {
+      return content;
+    }
 
-    // final sql = MssqlLexer(content).trimEndWhere((token) {
-    //   return token.id == TokenType.whitespace ||
-    //       token.id == TokenType.comment ||
-    //       (token.id == TokenType.punctuation && token.content == ";");
-    // });
-
-    // if (offset <= 0) {
-    //   print("11111111111");
-    //   return "SELECT TOP ($limit) * FROM ($sql) AS dt_1;";
-    // }
-    // return "SELECT TOP ($limit) * FROM ($sql) AS dt_1;";
-
-    // final maxRowNum = offset + limit;
-    // return "SELECT * FROM (SELECT dt_1.*, ROW_NUMBER() OVER (ORDER BY (SELECT 1)) AS rn_ FROM ($sql) AS dt_1) AS dt_2 WHERE dt_2.rn_ > $offset AND dt_2.rn_ <= $maxRowNum;";
+    final sql = MssqlLexer(content).trimEndWhere((token) {
+      return token.id == TokenType.whitespace ||
+          token.id == TokenType.comment ||
+          (token.id == TokenType.punctuation && token.content == ";");
+    });
+    return "SELECT TOP ($limit) * FROM ($sql) AS dt_1;";
   }
 }

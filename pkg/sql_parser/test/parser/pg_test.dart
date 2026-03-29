@@ -51,7 +51,7 @@ SELECT 1;
   });
 
   test('pg wrap limit', () {
-    final wrapped = parser(DialectType.pg, "select * from t1;").wrapLimit(limit: 20, offset: 5);
-    expect(wrapped, "SELECT * FROM (select * from t1) AS dt_1 LIMIT 20 OFFSET 5;");
+    final wrapped = parser(DialectType.pg, "select * from t1;").wrapLimit(limit: 20);
+    expect(wrapped, "SELECT * FROM (select * from t1) AS dt_1 LIMIT 20");
   });
 }

@@ -70,21 +70,18 @@ class OracleSQLDefiner extends SQLDefiner {
   }
 
   @override
-  String wrapLimit({int limit = 10, int offset = 0}) {
+  String wrapLimit({int limit = 100}) {
     if (!Matcher(OracleLexer(content)).match("select {*}")) {
       return content;
     }
 
     // 去掉结尾空白/注释/分号后再包裹.
     final sql = OracleLexer(content).trimEndWhere((token) {
-      return token.id == TokenType.whitespace || token.id == TokenType.comment || token.id == TokenType.punctuation;
+      return token.id == TokenType.whitespace ||
+          token.id == TokenType.comment ||
+          (token.id == TokenType.punctuation && token.content == ";");
     });
 
-    if (offset <= 0) {
-      return "SELECT * FROM ($sql) dt_1 WHERE ROWNUM <= $limit";
-    }
-
-    final maxRowNum = offset + limit;
-    return "SELECT * FROM (SELECT dt_1.*, ROWNUM rn_ FROM ($sql) dt_1 WHERE ROWNUM <= $maxRowNum) WHERE rn_ > $offset";
+    return "SELECT * FROM ($sql) dt_1 WHERE ROWNUM <= $limit";
   }
 }

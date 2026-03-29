@@ -109,7 +109,7 @@ abstract class SQLDefiner {
     throw Exception("Not implemented");
   }
 
-  String wrapLimit({int limit = 100, int offset = 0}) {
+  String wrapLimit({int limit = 100}) {
     throw Exception("Not implemented");
   }
 }

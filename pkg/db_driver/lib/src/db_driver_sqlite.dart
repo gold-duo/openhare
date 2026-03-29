@@ -1,9 +1,8 @@
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
-import 'package:sql_parser/parser.dart';
+import 'package:sql_parser/parser.dart' as sp;
 import 'package:sqlite/sqlite.dart';
-import 'package:uuid/uuid.dart';
 
 import 'db_driver_conn_meta.dart';
 import 'db_driver_interface.dart';
@@ -54,6 +53,9 @@ class SQLiteConnection extends BaseConnection {
 
   SQLiteConnection(this._conn);
 
+  @override
+  sp.SQLDefiner parser(String sql) => sp.parser(sp.DialectType.sqlite, sql);
+
   static Future<BaseConnection> open(
       {required ConnectValue meta, String? schema}) async {
     var dsn = meta.getDbFile();
@@ -83,39 +85,7 @@ class SQLiteConnection extends BaseConnection {
   }
 
   @override
-  Future<BaseQueryResult> query(String sql, {int? limit}) async {
-    final queryId = Uuid().v4();
-    List<BaseQueryColumn>? resultColumns;
-    BigInt? resultAffectedRows;
-    final rows = <QueryResultRow>[];
-
-    await for (final item in queryStream(sql, limit: limit)) {
-      switch (item) {
-        case QueryStreamItemHeader(:final columns, :final affectedRows):
-          resultColumns = columns;
-          resultAffectedRows = affectedRows;
-        case QueryStreamItemRow(:final row):
-          rows.add(row);
-      }
-    }
-
-    if (resultColumns == null || resultAffectedRows == null) {
-      throw StateError('No header received');
-    }
-
-    return BaseQueryResult(queryId, resultColumns, rows, resultAffectedRows);
-  }
-
-  @override
-  Stream<BaseQueryStreamItem> queryStream(String sql, {int? limit}) async* {
-    final sd = parser(DialectType.sqlite, sql);
-    if (limit != null && sd.canLimit) {
-      sql = sd.wrapLimit(limit: limit);
-    }
-
-    final queryId = Uuid().v4();
-    sql = "/* call by openhare, uuid: $queryId */ $sql";
-
+  Stream<BaseQueryStreamItem> queryStreamInternal(String sql) async* {
     List<BaseQueryColumn>? columns;
 
     await for (final item in _conn.query(query: sql)) {
@@ -141,10 +111,6 @@ class SQLiteConnection extends BaseConnection {
         case QueryStreamItem_Error(:final field0):
           throw Exception(field0);
       }
-    }
-    if (sd.changeSchema) {
-      final currentSchema = await getCurrentSchema();
-      onSchemaChanged(currentSchema ?? "");
     }
   }
 

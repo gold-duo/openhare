@@ -69,15 +69,17 @@ class SqliteSQLDefiner extends SQLDefiner {
   }
 
   @override
-  String wrapLimit({int limit = 10, int offset = 0}) {
+  String wrapLimit({int limit = 100}) {
     if (!Matcher(SqliteLexer(content)).match("select {*}")) {
       return content;
     }
 
     final sql = SqliteLexer(content).trimEndWhere((token) {
-      return token.id == TokenType.whitespace || token.id == TokenType.comment || token.id == TokenType.punctuation;
+      return token.id == TokenType.whitespace ||
+          token.id == TokenType.comment ||
+          (token.id == TokenType.punctuation && token.content == ";");
     });
 
-    return "SELECT * FROM ($sql) AS dt_1 LIMIT $limit OFFSET $offset;";
+    return "SELECT * FROM ($sql) AS dt_1 LIMIT $limit";
   }
 }
