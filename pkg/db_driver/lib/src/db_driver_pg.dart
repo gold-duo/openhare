@@ -1,7 +1,6 @@
 import 'package:collection/collection.dart';
 import 'package:pg/pg.dart';
-import 'package:sql_parser/parser.dart';
-import 'package:uuid/uuid.dart';
+import 'package:sql_parser/parser.dart' as sp;
 import 'db_driver_interface.dart';
 import 'db_driver_conn_meta.dart';
 import 'db_driver_metadata.dart';
@@ -87,6 +86,9 @@ class PGConnection extends BaseConnection {
 
   PGConnection(this._conn, this._meta);
 
+  @override
+  sp.SQLDefiner parser(String sql) => sp.parser(sp.DialectType.pg, sql);
+
   static Future<BaseConnection> open(
       {required ConnectValue meta, String? schema}) async {
     final conn = await PGConn.open(
@@ -151,43 +153,7 @@ class PGConnection extends BaseConnection {
   }
 
   @override
-  Future<BaseQueryResult> query(String sql, {int? limit}) async {
-    final queryId = Uuid().v4();
-    List<BaseQueryColumn>? resultColumns;
-    BigInt? resultAffectedRows;
-    List<QueryResultRow> rows = [];
-    
-    await for (final item in queryStream(sql, limit: limit)) {
-      switch (item) {
-        case QueryStreamItemHeader(:final columns, :final affectedRows):
-          resultColumns = columns;
-          resultAffectedRows = affectedRows;
-        case QueryStreamItemRow(:final row):
-          rows.add(row);
-      }
-    }
-    
-    if (resultColumns == null || resultAffectedRows == null) {
-      throw StateError('No metadata received');
-    }
-    
-    return BaseQueryResult(queryId, resultColumns, rows, resultAffectedRows);
-  }
-
-  String _wrapLimit(String sql, int limit) {
-    sql = sql.trimRight();
-    if (sql.endsWith(";")) sql = sql.substring(0, sql.length - 1);
-    return "SELECT * FROM ($sql) AS dt_1 LIMIT $limit;";
-  }
-
-  @override
-  Stream<BaseQueryStreamItem> queryStream(String sql, {int? limit}) async* {
-    final firstTok = Lexer(sql).firstTrim();
-    if (limit != null &&
-        firstTok != null &&
-        firstTok.content.toLowerCase() == "select") {
-      sql = _wrapLimit(sql, limit);
-    }
+  Stream<BaseQueryStreamItem> queryStreamInternal(String sql) async* {
     List<BaseQueryColumn>? columns;
     await for (final item in _conn.queryStream(query: sql)) {
       switch (item) {
@@ -259,10 +225,10 @@ ORDER BY
         // handler columns
         final columnRows = tableRows[table]!;
         final columnNodes = columnRows
-            .map((result) => MetaDataNode(MetaType.column,
-                    result.getString("column_name")!)
-                ..withProp(MetaDataPropType.dataType,
-                    _getDataType(result.getString("data_type")!)))
+            .map((result) =>
+                MetaDataNode(MetaType.column, result.getString("column_name")!)
+                  ..withProp(MetaDataPropType.dataType,
+                      _getDataType(result.getString("data_type")!)))
             .toList();
         tableNode.items = columnNodes;
       }
@@ -284,7 +250,11 @@ ORDER BY
       "real" ||
       "double precision" =>
         DataType.number,
-      "character varying" || "varchar" || "character" || "char" || "text" =>
+      "character varying" ||
+      "varchar" ||
+      "character" ||
+      "char" ||
+      "text" =>
         DataType.char,
       "timestamp without time zone" ||
       "timestamp with time zone" ||

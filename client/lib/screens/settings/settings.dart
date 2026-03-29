@@ -271,9 +271,10 @@ void showLLMApiSettingDialog(
     builder: (context) {
       return CustomDialog(
         title: title,
-        titleTail: _OnlyOpenAICompatibleTip(),
+        subtitle: AppLocalizations.of(context)!.llm_api_only_openai_compatible,
+        titleIcon: Icon(Icons.extension, color: Theme.of(context).colorScheme.primary),
         maxWidth: 600,
-        maxHeight: 400,
+        maxHeight: 420,
         actions: [
           TextButton(
             onPressed: () {
@@ -507,27 +508,6 @@ class _InfoRow extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _OnlyOpenAICompatibleTip extends StatelessWidget {
-  const _OnlyOpenAICompatibleTip();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: kSpacingSmall, vertical: kSpacingTiny),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-      ),
-      child: Text(
-        AppLocalizations.of(context)!.llm_api_only_openai_compatible,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      ),
     );
   }
 }

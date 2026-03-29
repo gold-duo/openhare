@@ -3,7 +3,6 @@ import 'package:client/models/sessions.dart';
 import 'package:client/screens/tasks/export_data.dart';
 import 'package:client/screens/tasks/task_overview.dart';
 import 'package:client/services/sessions/session_drawer.dart';
-import 'package:client/services/sessions/session_sql_editor.dart';
 import 'package:client/services/sessions/session_sql_result.dart';
 import 'package:client/services/sessions/session_conn.dart';
 import 'package:client/services/sessions/session_metadata.dart';
@@ -14,8 +13,11 @@ import 'package:client/widgets/dialog.dart';
 import 'package:client/widgets/button.dart';
 import 'package:client/widgets/divider.dart';
 import 'package:client/widgets/loading.dart';
+import 'package:client/widgets/sql_highlight.dart';
 import 'package:client/widgets/tooltip.dart';
+import 'package:db_driver/db_driver.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:sql_parser/parser.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:sql_editor/re_editor.dart';
@@ -32,9 +34,14 @@ class SessionOpBar extends ConsumerWidget {
     this.height = 36,
   });
 
-  String getQuery() {
+  String getQuery(SessionOpBarModel model) {
     var content = codeController.text.toString();
-    List<SQLChunk> querys = Splitter(content, ";", skipWhitespace: true, skipComment: true).split();
+    List<SQLChunk> querys = splitSQL(
+      model.dbType?.dialectType ?? DialectType.mysql,
+      content,
+      skipWhitespace: true,
+      skipComment: true,
+    );
     CodeLineSelection s = codeController.selection;
     String query;
     // 当界面手动选中了文本片段则仅执行该片段，当前还不支持多SQL执行.
@@ -134,9 +141,21 @@ class SessionOpBar extends ConsumerWidget {
       iconColor: SQLConnectState.isIdle(model.state) ? Colors.green : Colors.grey,
       onPressed: SQLConnectState.isIdle(model.state)
           ? () {
-              String query = getQuery();
+              String query = getQuery(model);
               if (query.isNotEmpty) {
-                ref.read(sQLResultsServicesProvider.notifier).query(model.sessionId, query);
+                final df = parser(model.dbType?.dialectType ?? DialectType.mysql, query);
+                if (df.isDangerousSQL && model.config.enableQueryCheck) {
+                  queryDangerousSQLDialog(
+                    context,
+                    ref,
+                    model.sessionId,
+                    model.config,
+                    model.dbType?.dialectType ?? DialectType.mysql,
+                    query,
+                  );
+                } else {
+                  ref.read(sQLResultsServicesProvider.notifier).query(model.sessionId, query);
+                }
               }
             }
           : () {
@@ -155,9 +174,21 @@ class SessionOpBar extends ConsumerWidget {
           iconColor: SQLConnectState.isIdle(model.state) ? Colors.green : Colors.grey,
           onPressed: SQLConnectState.isIdle(model.state)
               ? () {
-                  String query = getQuery();
+                  String query = getQuery(model);
                   if (query.isNotEmpty) {
-                    ref.read(sQLResultsServicesProvider.notifier).queryAddResult(model.sessionId, query);
+                    final df = parser(model.dbType?.dialectType ?? DialectType.mysql, query);
+                    if (df.isDangerousSQL && model.config.enableQueryCheck) {
+                      queryDangerousSQLDialog(
+                        context,
+                        ref,
+                        model.sessionId,
+                        model.config,
+                        model.dbType?.dialectType ?? DialectType.mysql,
+                        query,
+                      );
+                    } else {
+                      ref.read(sQLResultsServicesProvider.notifier).queryAddResult(model.sessionId, query);
+                    }
                   }
                 }
               : () {
@@ -175,7 +206,7 @@ class SessionOpBar extends ConsumerWidget {
       iconColor: SQLConnectState.isIdle(model.state) ? const Color.fromARGB(255, 241, 192, 84) : Colors.grey,
       onPressed: SQLConnectState.isIdle(model.state)
           ? () {
-              String query = getQuery();
+              String query = getQuery(model);
               if (query.isNotEmpty) {
                 ref.read(sQLResultsServicesProvider.notifier).queryAddResult(model.sessionId, "explain $query");
               }
@@ -193,7 +224,13 @@ class SessionOpBar extends ConsumerWidget {
       iconColor: Colors.green,
       verticalOffset: 1,
       onPressed: () {
-        showExportDataDialog(context, instanceId: model.instanceId!, schema: model.currentSchema, query: getQuery());
+        showExportDataDialog(
+          context,
+          instanceId: model.instanceId!,
+          schema: model.currentSchema,
+          query: getQuery(model),
+          dbType: model.dbType ?? DatabaseType.mysql,
+        );
       },
     );
   }
@@ -219,7 +256,7 @@ class SessionOpBar extends ConsumerWidget {
       tooltip: AppLocalizations.of(context)!.button_tooltip_save,
       icon: Icons.save,
       onPressed: () {
-        ref.read(sessionSQLEditorServiceProvider(model.sessionId).notifier).saveCode();
+        ref.read(sessionsServicesProvider.notifier).saveCode(model.sessionId);
       },
     );
   }
@@ -263,6 +300,7 @@ class SessionOpBar extends ConsumerWidget {
           explainWidget(context, ref, model),
           exportDataWidget(context, model),
           taskOverviewWidget(context, ref, model),
+          SessionConfigBar(model: model),
           divider(context),
           saveWidget(context, ref, model),
           const Expanded(child: SessionDrawerBar()),
@@ -493,6 +531,89 @@ class _SchemaBarState extends ConsumerState<SchemaBar> {
   }
 }
 
+class SessionConfigBar extends ConsumerStatefulWidget {
+  final SessionOpBarModel model;
+
+  const SessionConfigBar({
+    super.key,
+    required this.model,
+  });
+
+  @override
+  ConsumerState<SessionConfigBar> createState() => _SessionConfigBarState();
+}
+
+class _SessionConfigBarState extends ConsumerState<SessionConfigBar> {
+  void _onQueryLimitChanged(int? value) {
+    if (value == null) {
+      return;
+    }
+    setState(() {
+      ref
+          .read(sessionsServicesProvider.notifier)
+          .updateSessionConfig(
+            widget.model.sessionId,
+            widget.model.config.copyWith(queryLimit: value),
+          );
+    });
+  }
+
+  void _onEnableQueryCheckChanged(bool value) {
+    setState(() {
+      ref
+          .read(sessionsServicesProvider.notifier)
+          .updateSessionConfig(
+            widget.model.sessionId,
+            widget.model.config.copyWith(enableQueryCheck: value),
+          );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    final header = OverlayMenuHeader.tile(
+      icon: Icons.tune,
+      title: l10n.session_config_title,
+      subtitle: l10n.session_config_subtitle,
+    );
+
+    return OverlayMenu(
+      closeOnSelectItem: false,
+      spacing: kSpacingTiny,
+      maxHeight: 320,
+      maxWidth: 420,
+      header: header,
+      footer: OverlayMenuFooter(height: kSpacingMedium, child: const SizedBox.shrink()),
+      tabs: [
+        OverlayConfigItem.number(
+          height: 84,
+          title: l10n.session_config_query_limit,
+          description: l10n.session_config_query_limit_hint,
+          value: widget.model.config.queryLimit,
+          onChanged: _onQueryLimitChanged,
+        ),
+        OverlayConfigItem.checkbox(
+          height: 84,
+          title: l10n.session_config_query_check,
+          description: l10n.session_config_query_check_desc,
+          value: widget.model.config.enableQueryCheck,
+          onChanged: (v) {
+            _onEnableQueryCheckChanged(v);
+          },
+        ),
+      ],
+      child: RectangleIconButton.medium(
+        tooltip: l10n.button_tooltip_session_config,
+        icon: Icons.tune,
+        onPressed: null,
+        iconColor: Theme.of(context).colorScheme.onSurface,
+      ),
+    );
+  }
+}
+
 class SessionDrawerBar extends ConsumerWidget {
   final double height;
 
@@ -565,4 +686,94 @@ class SessionDrawerBar extends ConsumerWidget {
       ],
     );
   }
+}
+
+void queryDangerousSQLDialog(
+  BuildContext context,
+  WidgetRef ref,
+  SessionId sessionId,
+  SessionConfigModel config,
+  DialectType dialectType,
+  String query,
+) {
+  final textTheme = Theme.of(context).textTheme;
+  showDialog(
+    context: context,
+    builder: (_) => CustomDialog(
+      title: AppLocalizations.of(context)!.tip_dangerous_sql_title,
+      titleIcon: Icon(
+        Icons.play_circle_outline_rounded,
+        color: Colors.green,
+      ),
+      subtitle: AppLocalizations.of(context)!.tip_dangerous_sql_desc,
+      footerLeading: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppLocalizations.of(context)!.tip_dangerous_sql_footer_hint,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(width: kSpacingTiny),
+          Text("\""),
+          Icon(
+            Icons.tune,
+            size: 16,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+          Text("\""),
+        ],
+      ),
+      maxHeight: 420,
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: kSpacingSmall,
+                vertical: kSpacingMedium,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+              ),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.vertical,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SelectableText.rich(
+                    getSQLHighlightTextSpan(
+                      dialectType,
+                      query,
+                      defalutStyle: GoogleFonts.robotoMono(
+                        textStyle: textTheme.bodySmall,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(AppLocalizations.of(context)!.cancel),
+        ),
+        const SizedBox(width: kSpacingSmall),
+        TextButton(
+          onPressed: () {
+            ref.read(sQLResultsServicesProvider.notifier).query(sessionId, query);
+            Navigator.of(context).pop();
+          },
+          child: Text(AppLocalizations.of(context)!.confirm),
+        ),
+      ],
+    ),
+  );
 }

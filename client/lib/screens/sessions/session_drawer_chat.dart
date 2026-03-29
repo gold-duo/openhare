@@ -1,12 +1,15 @@
 import 'package:client/models/sessions.dart';
 import 'package:client/models/settings.dart';
+import 'package:client/screens/sessions/session_operation_bar.dart';
 import 'package:client/services/sessions/session_chat.dart';
 import 'package:client/services/sessions/session_controller.dart';
 import 'package:client/services/sessions/session_sql_result.dart';
 import 'package:client/services/settings/settings.dart';
 import 'package:client/widgets/button.dart';
+import 'package:client/widgets/chat_list_view.dart';
 import 'package:client/widgets/const.dart';
 import 'package:client/widgets/empty.dart';
+import 'package:db_driver/db_driver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:client/models/ai.dart';
@@ -16,26 +19,36 @@ import 'package:client/screens/sessions/ai_chat/message_tool.dart';
 import 'package:client/screens/sessions/ai_chat/message_user.dart';
 import 'package:client/screens/sessions/ai_chat/message_ai.dart';
 import 'package:client/screens/sessions/ai_chat/input_user.dart';
+import 'package:client/services/ai/chat.dart';
+import 'package:client/services/ai/prompt.dart';
+import 'package:sql_parser/parser.dart';
 
-class SessionDrawerChat extends ConsumerStatefulWidget {
+class SessionDrawerChat extends ConsumerWidget {
   const SessionDrawerChat({super.key});
 
   @override
-  ConsumerState<SessionDrawerChat> createState() => _SessionDrawerChatState();
-}
-
-class _SessionDrawerChatState extends ConsumerState<SessionDrawerChat> {
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     SessionAIChatModel model = ref.watch(sessionAIChatProvider);
+    SessionController sessionController = ref.watch(selectedSessionControllerProvider);
+    final chatScrollController = sessionController.chatScrollController;
     return Column(
       children: [
         // 聊天内容
         Expanded(
-          child: (model.llmAgents.agents.isEmpty) ? const SessionChatGuide() : SessionChatMessages(model: model),
+          child: (model.llmAgents.agents.isEmpty)
+              ? const SessionChatGuide()
+              : SessionChatMessages(
+                  model: model,
+                  chatScrollController: chatScrollController,
+                ),
         ),
         // 下方的输入框区域
-        SessionChatInputCard(model: model),
+        SessionChatInputCard(
+          model: model,
+          controller: sessionController.chatInputController,
+          modelSearchTextController: sessionController.aiChatModelSearchTextController,
+          onSendMessage: chatScrollController.goToBottom,
+        ),
         const SizedBox(height: kSpacingMedium),
       ],
     );
@@ -44,7 +57,12 @@ class _SessionDrawerChatState extends ConsumerState<SessionDrawerChat> {
 
 class SessionChatMessages extends ConsumerStatefulWidget {
   final SessionAIChatModel model;
-  const SessionChatMessages({super.key, required this.model});
+  final ChatScrollController chatScrollController;
+  const SessionChatMessages({
+    super.key,
+    required this.model,
+    required this.chatScrollController,
+  });
 
   @override
   ConsumerState<SessionChatMessages> createState() => _SessionChatMessagesState();
@@ -52,10 +70,27 @@ class SessionChatMessages extends ConsumerStatefulWidget {
 
 class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
   int _lastMessageCount = 0;
-  DateTime? _lastScrollTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _lastMessageCount = widget.model.chatModel.messages.length;
+  }
 
   void _runSQL(BuildContext context, WidgetRef ref, SessionAIChatModel model, String code) {
-    ref.read(sQLResultsServicesProvider.notifier).queryAddResult(model.sessionId, code);
+    final SQLDefiner sd = parser(model.dbType?.dialectType ?? DialectType.mysql, code);
+    if (sd.isDangerousSQL && model.config.enableQueryCheck) {
+      queryDangerousSQLDialog(
+        context,
+        ref,
+        model.sessionId,
+        model.config,
+        model.dbType?.dialectType ?? DialectType.mysql,
+        code,
+      );
+    } else {
+      ref.read(sQLResultsServicesProvider.notifier).queryAddResult(model.sessionId, code);
+    }
   }
 
   Widget _buildMessage(
@@ -69,43 +104,28 @@ class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
       userMessage: (msg) => UserMessage(message: msg, sessionChatModel: model),
       assistantMessage: (msg) => AIMessage(
         message: msg,
+        dbType: model.dbType ?? DatabaseType.mysql,
         onRunSQL: SQLConnectState.isIdle(model.state) ? (code) => _runSQL(context, ref, model, code) : null,
       ),
       toolsResult: (msg) => ToolCallWidget(
+        chatId: model.chatModel.id,
+        toolsMessageId: msg.id,
+        dbType: model.dbType ?? DatabaseType.mysql,
         toolCall: msg.toolCall,
         onRun: SQLConnectState.isIdle(model.state) ? (query) => _runSQL(context, ref, model, query) : null,
+        onResolveToolQuery: model.llmAgents.lastUsedLLMAgent != null
+            ? (approved) => ref
+                  .read(aIChatServiceProvider.notifier)
+                  .resolveToolQueryExecution(
+                    model.chatModel.id,
+                    msg.id,
+                    approved,
+                    model.llmAgents.lastUsedLLMAgent!.id,
+                    genChatSystemPrompt(model),
+                  )
+            : null,
       ),
     );
-  }
-
-  void _scrollToBottom({bool isWaiting = false}) {
-    final scrollController = SessionController.sessionController(widget.model.sessionId).aiChatScrollController;
-    if (!scrollController.hasClients) return;
-
-    final position = scrollController.position;
-    if (!position.hasContentDimensions) return;
-
-    // 节流：waiting状态下更频繁，其他情况节流更严格
-    final now = DateTime.now();
-    final throttleDuration = isWaiting ? const Duration(milliseconds: 100) : const Duration(milliseconds: 200);
-    if (_lastScrollTime != null && now.difference(_lastScrollTime!) < throttleDuration) {
-      return;
-    }
-    _lastScrollTime = now;
-
-    final target = position.maxScrollExtent;
-    final distance = (position.pixels - target).abs();
-
-    // 如果已经很接近底部，直接跳转
-    if (distance < 30) {
-      scrollController.jumpTo(target);
-    } else {
-      scrollController.animateTo(
-        target,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-      );
-    }
   }
 
   @override
@@ -113,47 +133,23 @@ class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
     super.didUpdateWidget(oldWidget);
     final messages = widget.model.chatModel.messages;
 
-    // 消息数量变化时滚动
     if (messages.length != _lastMessageCount) {
       _lastMessageCount = messages.length;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _scrollToBottom();
-        }
-      });
     }
-    _lastMessageCount = messages.length;
-  }
 
-  @override
-  void initState() {
-    super.initState();
-    _lastMessageCount = widget.model.chatModel.messages.length;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _scrollToBottom();
-      }
-    });
+    // 新消息加入或流式输出更新时，若仍处于自动滚动状态则跟随底部。
+    widget.chatScrollController.onContentChanged();
   }
 
   @override
   Widget build(BuildContext context) {
     final messages = widget.model.chatModel.messages;
-    final state = widget.model.chatModel.state;
 
-    // 等待状态时（流式输出）滚动到底部
-    if (state == AIChatState.waiting) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _scrollToBottom(isWaiting: true);
-        }
-      });
-    }
-
-    return ListView.builder(
-      controller: SessionController.sessionController(widget.model.sessionId).aiChatScrollController,
+    return ChatListView(
+      chatScrollController: widget.chatScrollController,
       itemCount: messages.length,
-      padding: const EdgeInsets.fromLTRB(kSpacingSmall, kSpacingMedium, kSpacingSmall + kSpacingTiny, 0),
+      bottomAnchorHeight: 100,
+      padding: const EdgeInsets.fromLTRB(kSpacingSmall, 0, kSpacingSmall + kSpacingTiny, 0),
       itemBuilder: (context, index) {
         return _buildMessage(context, ref, widget.model, messages[index], index);
       },

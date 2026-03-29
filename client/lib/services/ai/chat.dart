@@ -3,11 +3,9 @@ import 'package:client/models/sessions.dart';
 import 'package:client/repositories/ai/agent.dart';
 import 'package:client/repositories/ai/chat.dart';
 import 'package:client/services/ai/llm_sdk.dart';
-import 'package:client/services/ai/tool.dart' as tool_lib;
+import 'package:client/services/ai/tool.dart';
 import 'package:client/services/sessions/session_conn.dart';
 import 'package:client/services/sessions/sessions.dart';
-import 'package:db_driver/db_driver.dart';
-import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:client/utils/state_value.dart';
 
@@ -57,7 +55,7 @@ class AIChatService extends _$AIChatService {
     if (messages.isEmpty) return false;
     final last = messages.last;
     return last.maybeWhen(
-      toolsResult: (toolsResult) => toolsResult.toolCall.result?.state == State.running,
+      toolsResult: (toolsResult) => toolsResult.toolCall.execState == AIChatToolQueryState.running,
       orElse: () => false,
     );
   }
@@ -77,61 +75,37 @@ class AIChatService extends _$AIChatService {
     }
   }
 
-  Future<void> _executeQueryTool(AIChatId chatId, String query) async {
-    if (query.isEmpty) {
-      throw Exception('query 参数不能为空');
+  Future<void> resolveToolQueryExecution(
+    AIChatId chatId,
+    AIChatMessageId messageId,
+    bool approved,
+    LLMAgentId agentId,
+    String systemPrompt,
+  ) async {
+    final model = ref.read(aiChatRepoProvider).getMessageById(chatId, messageId);
+    if (model == null) {
+      return;
     }
-    final sessionId = SessionId(value: chatId.value);
-    final model = AIChatMessageToolCallsModel(
-      id: AIChatMessageId.generate(),
-      toolCall: AIChatMessageToolCallQueryModel(
-        query: query,
-        result: StateValue<BaseQueryResult>.running(),
-      ),
+    final toolsModel = model.maybeWhen(
+      toolsResult: (m) => m,
+      orElse: () => null,
     );
-
-    // 先记录toolcall的执行状态
-    ref.read(aiChatRepoProvider).addMessage(chatId, AIChatMessageItem.toolsResult(model));
-    _invalidateSelf();
-
-    try {
-      // 获取 session 和 connId
-      final sessionModel = ref.read(sessionsServicesProvider.notifier).getSession(sessionId);
-      if (sessionModel == null || sessionModel.connId == null) {
-        throw Exception('会话未连接');
-      }
-      // todo: 统一时间计算
-      // 记录开始时间
-      final startTime = DateTime.now();
-
-      // 直接调用 conn 的 query 方法
-      final connServices = ref.read(sessionConnsServicesProvider.notifier);
-      final queryResult = await connServices.query(sessionModel.connId!, query);
-
-      // 计算执行时间
-      final executeTime = DateTime.now().difference(startTime);
-
-      final completedModel = model.copyWith(
-        toolCall: AIChatMessageToolCallQueryModel(
-          query: query,
-          result: queryResult != null
-              ? StateValue<BaseQueryResult>.done(queryResult)
-              : StateValue<BaseQueryResult>.error('查询返回空结果'), // todo: 不应该返回空结果，应该返回错误信息。对空的处理不太合理。
-          executeTime: executeTime,
-        ),
-      );
-      ref.read(aiChatRepoProvider).updateMessageById(chatId, model.id, AIChatMessageItem.toolsResult(completedModel));
-      _invalidateSelf();
-    } catch (e) {
-      final errorModel = model.copyWith(
-        toolCall: AIChatMessageToolCallQueryModel(
-          query: query,
-          result: StateValue<BaseQueryResult>.error(e.toString()),
-        ),
-      );
-      ref.read(aiChatRepoProvider).updateMessageById(chatId, model.id, AIChatMessageItem.toolsResult(errorModel));
-      _invalidateSelf();
+    if (toolsModel == null) {
+      return;
     }
+    final executor = createAIChatToolExecutorFromModel(toolsModel);
+    if (executor == null) return;
+    if (!approved) {
+      // 用户拒绝执行该 SQL
+      executor.setStatus(ref, chatId, AIChatToolQueryState.rejected, onInvalidate: _invalidateSelf);
+      return;
+    } else {
+      // 用户确认执行该 SQL
+      executor.setStatus(ref, chatId, AIChatToolQueryState.approved, onInvalidate: _invalidateSelf);
+      await executor.run(ref, chatId, onInvalidate: _invalidateSelf);
+    }
+    // 继续对话
+    await chat(chatId, agentId, systemPrompt);
   }
 
   /// 进行AI对话，请求接口，存储消息并刷新使用 provider 来动态刷新页面
@@ -169,12 +143,13 @@ class AIChatService extends _$AIChatService {
 
     _updateState(chatId, AIChatState.waiting);
 
-    final llmSdk = LLMProvider.create(lastUsedLLMAgent.setting, systemPrompt, tools: [tool_lib.QueryTool()]);
+    final llmSdk = LLMProvider.create(lastUsedLLMAgent.setting, systemPrompt, tools: [QueryTool()]);
 
     // 节流：限制 UI 刷新频率（跨 turn 持续生效）
     DateTime? lastUpdateTime;
     const throttleDuration = Duration(milliseconds: 200);
 
+    chatLoop:
     while (true) {
       final model = repo.getAIChatById(chatId);
       if (model == null) {
@@ -266,21 +241,23 @@ class AIChatService extends _$AIChatService {
           if (_isCancelled(chatId)) {
             break;
           }
-          try {
-            // 获取工具参数
-            final arguments = toolCall.arguments;
-            // 根据工具名称执行对应的工具
-            if (toolCall.name == 'execute_query') {
-              final queryValue = arguments['query'];
-              final query = queryValue is String ? queryValue : (queryValue?.toString() ?? '');
-
-              await _executeQueryTool(chatId, query);
+          final executor = createAIChatToolExecutor(toolCall);
+          if (executor != null) {
+            executor.initMessage(ref, chatId);
+            if (executor.checkNeedsAwaitUserConfirm(ref, chatId)) {
+              // 如果需要用户确认，则写入待确认状态，并结束本轮 chat
+              executor.setStatus(
+                ref,
+                chatId,
+                AIChatToolQueryState.awaitingUserConfirm,
+                onInvalidate: _invalidateSelf,
+              );
+              break chatLoop;
             } else {
-              debugPrint('❌ [Chat] 未知的工具: ${toolCall.name}');
+              // 如果不需要用户确认, 则自动批准，并执行工具.
+              executor.setStatus(ref, chatId, AIChatToolQueryState.approved, onInvalidate: _invalidateSelf);
+              await executor.run(ref, chatId, onInvalidate: _invalidateSelf);
             }
-          } catch (e) {
-            debugPrint('❌ [Chat] 工具执行失败: ${toolCall.name}');
-            debugPrint('    - 错误: $e');
           }
         }
         continue;
@@ -288,7 +265,10 @@ class AIChatService extends _$AIChatService {
       // 正常完成（无工具调用时默认结束）
       break;
     }
-    _updateState(chatId, AIChatState.idle);
+    // 用户已取消对话时不要覆盖为 idle，否则 UI 无法区分「已取消」
+    if (!_isCancelled(chatId)) {
+      _updateState(chatId, AIChatState.idle);
+    }
   }
 
   void retryChat(AIChatId id, LLMAgentId agentId, String systemPrompt, AIChatUserMessageModel retryMessage) {

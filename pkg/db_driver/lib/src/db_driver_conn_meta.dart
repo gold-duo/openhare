@@ -1,19 +1,44 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:sql_parser/parser.dart';
 
 part 'db_driver_conn_meta.freezed.dart';
 part 'db_driver_conn_meta.g.dart';
 
-enum DatabaseType { mysql, pg, oracle, mssql, sqlite }
+enum DatabaseType {
+  mysql,
+  pg,
+  oracle,
+  mssql,
+  sqlite;
+
+  DialectType get dialectType {
+    switch (this) {
+      case DatabaseType.mysql:
+        return DialectType.mysql;
+      case DatabaseType.pg:
+        return DialectType.pg;
+      case DatabaseType.oracle:
+        return DialectType.oracle;
+      case DatabaseType.mssql:
+        return DialectType.mssql;
+      case DatabaseType.sqlite:
+        return DialectType.sqlite;
+    }
+  }
+}
 
 enum ConnectTargetType { network, dbFile }
 
 @Freezed(toStringOverride: false)
 abstract class ConnectTarget with _$ConnectTarget {
   const ConnectTarget._();
-  const factory ConnectTarget.network({required String host, required int port}) = _ConnectTargetNetwork;
-  const factory ConnectTarget.dbFile({required String dbFile}) = _ConnectTargetDbFile;
+  const factory ConnectTarget.network(
+      {required String host, required int port}) = _ConnectTargetNetwork;
+  const factory ConnectTarget.dbFile({required String dbFile}) =
+      _ConnectTargetDbFile;
 
-  factory ConnectTarget.fromJson(Map<String, dynamic> json) => _$ConnectTargetFromJson(json);
+  factory ConnectTarget.fromJson(Map<String, dynamic> json) =>
+      _$ConnectTargetFromJson(json);
 
   @override
   String toString() {
@@ -92,7 +117,7 @@ class TargetNetworkPortMeta extends SettingMeta {
 
   @override
   String? defaultValue; // set default port for host:port
-  
+
   TargetNetworkPortMeta(this.defaultValue);
 }
 

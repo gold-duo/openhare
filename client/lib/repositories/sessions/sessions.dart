@@ -44,6 +44,8 @@ class SessionRepoImpl extends SessionRepo {
   final Box<SessionCodeStorage> _sessionCodeBox;
   ReorderSelectedList<SessionStorage>? _sessionCache;
 
+  final Map<int, SessionConfigModel> _sessionConfigMap = {};
+
   final Map<int, ConnId> _connIdMap = {};
 
   SessionRepoImpl(this.ob) : _sessionBox = ob.store.box(), _sessionCodeBox = ob.store.box();
@@ -65,6 +67,7 @@ class SessionRepoImpl extends SessionRepo {
       instanceId: session.instance.hasValue ? InstanceId(value: session.instance.targetId) : null,
       currentSchema: session.currentSchema,
       connId: _connIdMap[session.id],
+      config: getSessionConfig(SessionId(value: session.id)),
     );
   }
 
@@ -103,6 +106,19 @@ class SessionRepoImpl extends SessionRepo {
   }
 
   @override
+  void updateSessionConfig(SessionId sessionId, SessionConfigModel config) {
+    _sessionConfigMap[sessionId.value] = config;
+  }
+
+  @override
+  SessionConfigModel getSessionConfig(SessionId sessionId) {
+    if (!_sessionConfigMap.containsKey(sessionId.value)) {
+      _sessionConfigMap[sessionId.value] = SessionConfigModel();
+    }
+    return _sessionConfigMap[sessionId.value]!;
+  }
+
+  @override
   void setConnId(SessionId sessionId, ConnId connId) {
     _connIdMap[sessionId.value] = connId;
   }
@@ -128,6 +144,8 @@ class SessionRepoImpl extends SessionRepo {
     if (sessionCache != null) {
       _sessions.removeAt(_sessions.indexOf(sessionCache));
     }
+    // 从配置中移除
+    _sessionConfigMap.remove(sessionId.value);
   }
 
   SessionStorage? _getSession(SessionId sessionId) {

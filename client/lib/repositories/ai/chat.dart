@@ -107,6 +107,26 @@ class AIChatRepoImpl extends AIChatRepo {
   }
 
   @override
+  AIChatMessageItem? getMessageById(AIChatId id, AIChatMessageId messageId) {
+    final chat = _aiChats[id];
+    if (chat == null) {
+      return null;
+    }
+    for (final item in chat.messages) {
+      final matches = item.maybeWhen(
+        userMessage: (msg) => msg.id.value == messageId.value,
+        assistantMessage: (msg) => msg.id.value == messageId.value,
+        toolsResult: (result) => result.id.value == messageId.value,
+        orElse: () => false,
+      );
+      if (matches) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  @override
   void updateMessageById(AIChatId chatId, AIChatMessageId messageId, AIChatMessageItem message) {
     final chat = _aiChats[chatId];
     if (chat == null) {

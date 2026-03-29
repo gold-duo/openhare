@@ -56,7 +56,7 @@ class SQLEditor extends ConsumerWidget {
     SessionSQLEditorModel model = ref.watch(selectedSessionSQLEditorProvider);
 
     List<CodeKeywordPrompt> keywordPrompt = [
-      for (final keyword in keywords) KeywordPrompt(word: keyword),
+      for (final keyword in keywords(model.dbType?.dialectType ?? DialectType.mysql)) KeywordPrompt(word: keyword),
     ];
     if (model.metadata != null) {
       keywordPrompt.addAll(buildMetadataKeyword(model.metadata!));
@@ -98,6 +98,7 @@ class SQLEditor extends ConsumerWidget {
                       children: [
                         const SizedBox(width: kSpacingTiny),
                         CodeLineNumber(
+                          model: model,
                           textStyle: textStyle,
                           totalHeight: constraints.maxHeight,
                           notifier: notifier,
@@ -119,6 +120,7 @@ class SQLEditor extends ConsumerWidget {
 }
 
 class CodeLineNumber extends StatefulWidget {
+  final SessionSQLEditorModel model;
   final double totalHeight;
   final TextStyle textStyle;
   final CodeIndicatorValueNotifier notifier;
@@ -126,6 +128,7 @@ class CodeLineNumber extends StatefulWidget {
 
   const CodeLineNumber({
     super.key,
+    required this.model,
     required this.notifier,
     required this.totalHeight,
     required this.textStyle,
@@ -182,7 +185,12 @@ class _CodeLineNumberState extends State<CodeLineNumber> {
       return SizedBox(width: width);
     }
     var content = widget.codeController.text.toString();
-    List<SQLChunk> querys = Splitter(content, ";", skipWhitespace: true, skipComment: true).split();
+    List<SQLChunk> querys = splitSQL(
+      widget.model.dbType?.dialectType ?? DialectType.mysql,
+      content,
+      skipWhitespace: true,
+      skipComment: true,
+    );
     CodeLineSelection s = widget.codeController.selection;
 
     // 计算当前选中的SQL块的开始和结束行.

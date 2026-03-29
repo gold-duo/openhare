@@ -3,11 +3,10 @@
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
-import 'package:uuid/uuid.dart';
 import 'package:mysql/mysql.dart';
 import 'db_driver_interface.dart';
 import 'db_driver_metadata.dart';
-import 'package:sql_parser/parser.dart';
+import 'package:sql_parser/parser.dart' as sp;
 import 'package:db_driver/src/db_driver_conn_meta.dart';
 
 class MysqlQueryValue extends BaseQueryValue {
@@ -131,6 +130,9 @@ class MySQLConnection extends BaseConnection {
 
   MySQLConnection(this._conn, this._dsn);
 
+  @override
+  sp.SQLDefiner parser(String sql) => sp.parser(sp.DialectType.mysql, sql);
+
   static Future<BaseConnection> open(
       {required ConnectValue meta, String? schema}) async {
     final dsn = Uri(
@@ -177,49 +179,7 @@ class MySQLConnection extends BaseConnection {
   }
 
   @override
-  Future<BaseQueryResult> query(String sql, {int? limit}) async {
-    final queryId = Uuid().v4();
-    List<BaseQueryColumn>? resultColumns;
-    BigInt? resultAffectedRows;
-    List<QueryResultRow> rows = [];
-
-    await for (final item in queryStream(sql, limit: limit)) {
-      switch (item) {
-        case QueryStreamItemHeader(:final columns, :final affectedRows):
-          resultColumns = columns;
-          resultAffectedRows = affectedRows;
-        case QueryStreamItemRow(:final row):
-          rows.add(row);
-      }
-    }
-
-    if (resultColumns == null || resultAffectedRows == null) {
-      throw StateError('No header received');
-    }
-
-    return BaseQueryResult(queryId, resultColumns, rows, resultAffectedRows);
-  }
-
-  String _wrapLimit(String sql, int limit) {
-    sql = sql.trimRight();
-    if (sql.endsWith(";")) sql = sql.substring(0, sql.length - 1);
-    return "SELECT * FROM ($sql) AS dt_1 Limit $limit;";
-  }
-
-  @override
-  Stream<BaseQueryStreamItem> queryStream(String sql, {int? limit}) async* {
-    // 判断是否是 SELECT 语句, 若是则根据 limit 参数决定是否嵌套一层 LIMIT 限制返回数据量
-    final firstTok = Lexer(sql).firstTrim();
-    if (limit != null &&
-        firstTok != null &&
-        firstTok.content.toLowerCase() == "select") {
-      sql = _wrapLimit(sql, limit);
-    }
-
-    final queryId = Uuid().v4(); // todo: 统一处理
-    // 加入注释. todo: 通用方法处理
-    sql = "/* call by openhare, uuid: $queryId */ $sql";
-
+  Stream<BaseQueryStreamItem> queryStreamInternal(String sql) async* {
     List<BaseQueryColumn>? columns;
 
     try {
@@ -249,12 +209,6 @@ class MySQLConnection extends BaseConnection {
       }
     } catch (e) {
       rethrow;
-    }
-
-    // 如果执行的语句包含`use schema`
-    if (firstTok != null && firstTok.content.toLowerCase() == "use") {
-      final schema = await getCurrentSchema();
-      onSchemaChanged(schema ?? "");
     }
   }
 
@@ -308,10 +262,10 @@ ORDER BY
 
           final columnRows = byTable[table]!;
           final columnNodes = columnRows
-              .map((result) =>
-                  MetaDataNode(MetaType.column, result.getString("COLUMN_NAME")!)
-                    ..withProp(MetaDataPropType.dataType,
-                        getDataType(result.getString("DATA_TYPE")!)))
+              .map((result) => MetaDataNode(
+                  MetaType.column, result.getString("COLUMN_NAME")!)
+                ..withProp(MetaDataPropType.dataType,
+                    getDataType(result.getString("DATA_TYPE")!)))
               .toList();
           tableNode.items = columnNodes;
         }
@@ -330,7 +284,7 @@ ORDER BY
       schemas.add(result.getString("Database") ?? "");
     }
     return schemas;
-  } 
+  }
 
   @override
   Future<void> setCurrentSchema(String schema) async {
@@ -346,18 +300,6 @@ ORDER BY
     final currentSchema = rows.first.getString("DATABASE()");
     return currentSchema;
   }
-
-  // Future<List<MetaDataNode>> getTables(String schema) async {
-  //   List<MetaDataNode> tables = List.empty(growable: true);
-  //   final results = await _query(
-  //       "select TABLE_NAME from information_schema.tables where table_schema='$schema' and TABLE_TYPE in ('BASE TABLE','SYSTEM VIEW')");
-  //   final rows = results.rows;
-  //   for (final result in rows) {
-  //     tables.add(MetaDataNode(MetaType.table, result.getString("TABLE_NAME")!));
-  //     // tables.add();
-  //   }
-  //   return tables;
-  // }
 
   static DataType getDataType(String dataType) {
     return switch (dataType) {
@@ -383,34 +325,4 @@ ORDER BY
       _ => DataType.blob,
     };
   }
-
-  // Future<List<MetaDataNode>> getTableColumns(
-  //     String schema, String table) async {
-  //   List<MetaDataNode> columns = List.empty(growable: true);
-  //   // ref: https://dev.mysql.com/doc/refman/8.4/en/information-schema-columns-table.html
-  //   final results = await _query(
-  //       "select COLUMN_NAME, COLUMN_DEFAULT, IS_NULLABLE, DATA_TYPE, CHARACTER_SET_NAME, COLLATION_NAME, COLUMN_TYPE, COLUMN_KEY, COLUMN_COMMENT, EXTRA from information_schema.columns where TABLE_SCHEMA = '$schema' and TABLE_NAME = '$table'");
-  //   final rows = results.rows;
-  //   for (final result in rows) {
-  //     final node =
-  //         MetaDataNode(MetaType.column, result.getString("COLUMN_NAME")!)
-  //           ..withProp(MetaDataPropType.dataType,
-  //               getDataType(result.getString("DATA_TYPE")!));
-
-  //     columns.add(node);
-  //     // columns.add(TableColumnMeta.loadFromRow(result));
-  //   }
-  //   return columns;
-  // }
-
-  // Future<List<MetaDataNode>> getTableKeys(String schema, String table) async {
-  //   List<TableKeyMeta> keys = List.empty(growable: true);
-  //   final results = await _query(
-  //       "SELECT INDEX_NAME, GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX SEPARATOR \",\") AS COLUMNS FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = '$schema' AND TABLE_NAME = '$table' GROUP BY INDEX_NAME");
-  //   final rows = results.rows;
-  //   for (final result in rows) {
-  //     keys.add(TableKeyMeta.loadFromRow(result));
-  //   }
-  //   return keys;
-  // }
 }

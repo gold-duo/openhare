@@ -1,6 +1,8 @@
 import 'dart:math';
 
 import 'package:db_driver/src/db_driver_metadata.dart';
+import 'package:sql_parser/parser.dart';
+import 'package:uuid/uuid.dart';
 
 enum DataType {
   number,
@@ -98,15 +100,15 @@ abstract class BaseConnection {
   BaseConnection();
 
   Future<void> ping();
-  Future<BaseQueryResult> query(String sql, {int? limit});
-  Stream<BaseQueryStreamItem> queryStream(String sql, {int? limit});
   Future<void> killQuery();
+  Stream<BaseQueryStreamItem> queryStreamInternal(String sql);
   Future<void> close();
   Future<List<MetaDataNode>> metadata();
   Future<List<String>> schemas();
   Future<String?> getCurrentSchema();
   Future<void> setCurrentSchema(String schema);
   Future<String> version();
+  SQLDefiner parser(String sql);
 
   void listen(
       {Function()? onCloseCallback,
@@ -115,4 +117,47 @@ abstract class BaseConnection {
   }
 
   void onSchemaChanged(String schema) => onSchemaChangedCallback?.call(schema);
+
+  Future<BaseQueryResult> query(String sql, {int? limit}) async {
+    final queryId = Uuid().v4();
+    List<BaseQueryColumn>? resultColumns;
+    BigInt? resultAffectedRows;
+    final rows = <QueryResultRow>[];
+
+    await for (final item in queryStream(sql, limit: limit)) {
+      switch (item) {
+        case QueryStreamItemHeader(:final columns, :final affectedRows):
+          resultColumns = columns;
+          resultAffectedRows = affectedRows;
+        case QueryStreamItemRow(:final row):
+          // 增加防护：如果limit > 0，则只取limit条数据.
+          if (limit != null && limit > 0 && rows.length >= limit) {
+            continue;
+          } else {
+            rows.add(row);
+          }
+      }
+    }
+
+    if (resultColumns == null || resultAffectedRows == null) {
+      throw StateError('No header received');
+    }
+
+    return BaseQueryResult(queryId, resultColumns, rows, resultAffectedRows);
+  }
+
+  Stream<BaseQueryStreamItem> queryStream(String sql, {int? limit}) async* {
+    final sd = parser(sql);
+    if (limit != null && limit > 0 && sd.canLimit) {
+      sql = sd.wrapLimit(limit);
+    }
+    final queryId = Uuid().v4();
+    sql = '/* call by openhare, uuid: $queryId */ $sql';
+
+    yield* queryStreamInternal(sql);
+    if (sd.changeSchema) {
+      final currentSchema = await getCurrentSchema();
+      onSchemaChanged(currentSchema ?? '');
+    }
+  }
 }

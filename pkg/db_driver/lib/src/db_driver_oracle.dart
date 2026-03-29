@@ -2,8 +2,7 @@
 
 import 'package:collection/collection.dart';
 import 'package:oracle/oracle.dart' as oracle_impl;
-import 'package:sql_parser/parser.dart';
-import 'package:uuid/uuid.dart';
+import 'package:sql_parser/parser.dart' as sp;
 
 import 'db_driver_conn_meta.dart';
 import 'db_driver_interface.dart';
@@ -37,6 +36,9 @@ class OracleConnection extends BaseConnection {
   final oracle_impl.OracleConnection _conn;
 
   OracleConnection(this._conn);
+
+  @override
+  sp.SQLDefiner parser(String sql) => sp.parser(sp.DialectType.oracle, sql);
 
   static Future<BaseConnection> open(
       {required ConnectValue meta, String? schema}) async {
@@ -76,65 +78,9 @@ class OracleConnection extends BaseConnection {
   }
 
   @override
-  Future<BaseQueryResult> query(String sql, {int? limit}) async {
-    final queryId = Uuid().v4();
-    List<BaseQueryColumn>? resultColumns;
-    BigInt? resultAffectedRows;
-    final rows = <QueryResultRow>[];
-
-    await for (final item in queryStream(sql, limit: limit)) {
-      switch (item) {
-        case QueryStreamItemHeader(:final columns, :final affectedRows):
-          resultColumns = columns;
-          resultAffectedRows = affectedRows;
-        case QueryStreamItemRow(:final row):
-          rows.add(row);
-      }
-    }
-
-    if (resultColumns == null || resultAffectedRows == null) {
-      throw StateError('No header received');
-    }
-
-    return BaseQueryResult(queryId, resultColumns, rows, resultAffectedRows);
-  }
-
-  String _wrapLimit(String sql, int limit) {
-    return "SELECT * FROM ($sql) WHERE ROWNUM <= $limit";
-  }
-
-  int _resolveBatchSize(int? limit) {
-    if (limit == null || limit <= 0) {
-      return 256;
-    }
-    if (limit < 32) {
-      return 32;
-    }
-    if (limit > 512) {
-      return 512;
-    }
-    return limit;
-  }
-
-  @override
-  Stream<BaseQueryStreamItem> queryStream(String sql, {int? limit}) async* {
-    // 去除SQL语句末尾的分号, 原因：Oracle 查询语句不能以分号结尾, 否则会报错（ORA-00911: 无效字符）。
-    sql = sql.trimRight();
-    if (sql.endsWith(";")) sql = sql.substring(0, sql.length - 1);
-
-    final firstTok = Lexer(sql).firstTrim();
-    if (limit != null &&
-        firstTok != null &&
-        (firstTok.content.toLowerCase() == "select")) {
-      sql = _wrapLimit(sql, limit);
-    }
-
-    final queryId = Uuid().v4();
-    sql = "/* call by openhare, uuid: $queryId */ $sql";
-
-    final batchSize = _resolveBatchSize(limit);
+  Stream<BaseQueryStreamItem> queryStreamInternal(String sql) async* {
     List<BaseQueryColumn>? columns;
-    await for (final item in _conn.queryStream(sql, batchSize: batchSize)) {
+    await for (final item in _conn.queryStream(sql, batchSize: 100)) {
       switch (item) {
         case oracle_impl.OracleQueryStreamHeader():
           columns = item.columns
@@ -158,12 +104,6 @@ class OracleConnection extends BaseConnection {
             ),
           );
       }
-    }
-
-    // 如果执行了 ALTER SESSION 相关语句，尝试刷新 schema
-    if (firstTok != null && firstTok.content.toLowerCase() == "alter") {
-      final currentSchema = await getCurrentSchema();
-      onSchemaChanged(currentSchema ?? "");
     }
   }
 

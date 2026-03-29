@@ -62,7 +62,11 @@ class SQLResultsServices extends _$SQLResultsServices {
     try {
       DateTime start = DateTime.now();
       final connServices = ref.read(sessionConnsServicesProvider.notifier);
-      BaseQueryResult? queryResult = await connServices.query(sessionModel!.connId!, query);
+      BaseQueryResult? queryResult = await connServices.query(
+        sessionModel!.connId!,
+        query,
+        limit: sessionModel.config.queryLimit,
+      );
       DateTime end = DateTime.now();
       // sleep 100ms, 不然当界面刷新太快时，无法感知结果是没变还是没执行.
       await Future.delayed(const Duration(milliseconds: 100));

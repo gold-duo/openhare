@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:db_driver/db_driver.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:client/utils/state_value.dart';
+import 'package:client/utils/time_format.dart';
 import 'package:uuid/uuid.dart';
 
 part 'ai.freezed.dart';
@@ -24,6 +25,7 @@ abstract class AIChatRepo {
   AIChatModel create(AIChatModel model);
   AIChatModel? getAIChatById(AIChatId id);
   void delete(AIChatId id);
+  AIChatMessageItem? getMessageById(AIChatId id, AIChatMessageId messageId);
   void updateMessages(AIChatId id, List<AIChatMessageItem> messages);
   void addMessage(AIChatId id, AIChatMessageItem message);
   void updateState(AIChatId id, AIChatState state);
@@ -203,13 +205,51 @@ abstract class AIChatAssistantMessageModel with _$AIChatAssistantMessageModel {
   }
 }
 
+enum AIChatToolQueryState {
+  /// 初始化
+  initializing,
+
+  /// 等待用户在聊天内确认
+  awaitingUserConfirm,
+
+  /// 用户拒绝执行该 SQL
+  rejected,
+
+  /// 用户确认执行该 SQL
+  approved,
+
+  /// 已确认且正在向数据库发起请求
+  running,
+
+  /// 执行成功（[queryResult] 有值）
+  finished,
+
+  /// 执行失败或空结果（[errorMessage] 有值）
+  failed,
+}
+
 @freezed
 abstract class AIChatMessageToolCallQueryModel with _$AIChatMessageToolCallQueryModel {
+  const AIChatMessageToolCallQueryModel._();
+
   const factory AIChatMessageToolCallQueryModel({
     required String query,
-    StateValue<BaseQueryResult>? result,
+
+    /// 执行成功时的查询结果；仅 [finished] 时有值。
+    BaseQueryResult? queryResult,
+
+    /// 执行失败或空结果时的说明；仅 [failed] 时有值。
+    String? errorMessage,
     Duration? executeTime,
+    @Default(AIChatToolQueryState.running) AIChatToolQueryState execState,
   }) = _AIChatMessageToolCallQueryModel;
+
+  bool get isAwaitingUserConfirm => execState == AIChatToolQueryState.awaitingUserConfirm;
+
+  bool get isRejected => execState == AIChatToolQueryState.rejected;
+  bool get isApproved => execState == AIChatToolQueryState.approved;
+  bool get isFinished => execState == AIChatToolQueryState.finished;
+  bool get isFailed => execState == AIChatToolQueryState.failed;
 }
 
 @freezed
@@ -222,50 +262,51 @@ abstract class AIChatMessageToolCallsModel with _$AIChatMessageToolCallsModel {
   }) = _AIChatMessageToolCallsModel;
 
   String toMessage() {
-    if (toolCall.result == null) return '';
-    return toolCall.result!.match(
-      (result) => _getSQLResultString(result) ?? '',
-      (error) => error,
-      () => '正在执行查询...',
-    );
-  }
+    final m = <String, dynamic>{
+      'query': toolCall.query,
+      'status': toolCall.execState.name,
+    };
 
-  /// 获取 SQL Result 字符串
-  ///
-  /// [result] SQL 查询结果
-  ///
-  /// 返回 JSON 字符串，包含查询结果的列信息和数据行
-  String? _getSQLResultString(BaseQueryResult result) {
-    try {
-      final data = <String, dynamic>{
-        'success': true,
-        'affectedRows': result.affectedRows.toString(),
-        'columns': result.columns
-            .map(
-              (c) => {
-                'name': c.name,
-                'type': c.dataType().name,
-              },
-            )
-            .toList(),
-        'rows': result.rows.map((row) {
-          final rowMap = <String, dynamic>{};
-          for (var i = 0; i < row.values.length && i < result.columns.length; i++) {
-            final column = result.columns[i];
-            final value = row.values[i];
-            rowMap[column.name] = value.getString();
-          }
-          return rowMap;
-        }).toList(),
-      };
-      final jsonString = jsonEncode(data);
-      return jsonString;
-    } catch (e) {
-      return jsonEncode({
-        'success': false,
-        'error': e.toString(),
-      });
+    switch (toolCall.execState) {
+      case AIChatToolQueryState.failed:
+        m['error'] = toolCall.errorMessage ?? '';
+        break;
+      case AIChatToolQueryState.finished:
+        final result = toolCall.queryResult;
+        if (result != null) {
+          final executeTimeStr = toolCall.executeTime?.format() ?? '';
+          final columns = result.columns
+              .map(
+                (c) => {
+                  'name': c.name,
+                  'type': c.dataType().name,
+                },
+              )
+              .toList();
+          final rows = result.rows.map((row) {
+            final rowMap = <String, dynamic>{};
+            for (var i = 0; i < row.values.length && i < result.columns.length; i++) {
+              final column = result.columns[i];
+              final value = row.values[i];
+              rowMap[column.name] = value.getString();
+            }
+            return rowMap;
+          }).toList();
+          m['affectedRows'] = result.affectedRows.toString();
+          m['executeTime'] = executeTimeStr;
+          m['columns'] = columns;
+          m['rows'] = rows;
+        }
+        break;
+      case AIChatToolQueryState.initializing:
+      case AIChatToolQueryState.awaitingUserConfirm:
+      case AIChatToolQueryState.rejected:
+      case AIChatToolQueryState.approved:
+      case AIChatToolQueryState.running:
+        break;
     }
+
+    return jsonEncode(m);
   }
 }
 

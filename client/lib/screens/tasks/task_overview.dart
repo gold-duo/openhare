@@ -61,7 +61,7 @@ class ExportDataTaskOverviewItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: kSpacingSmall,
+        horizontal: kSpacingMedium,
         vertical: kSpacingSmall,
       ),
       child: Row(
@@ -203,8 +203,8 @@ class TaskOverviewMenu extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    const headerHeight = 42.0;
-    const footerHeight = 42.0;
+    const headerHeight = 74.0;
+    const footerHeight = 52.0;
     const itemHeight = 62.0;
 
     final overview = ref.watch(taskOverviewServiceProvider);
@@ -239,23 +239,11 @@ class TaskOverviewMenu extends ConsumerWidget {
               )
               .toList();
 
-    final header = OverlayMenuHeader(
+    final header = OverlayMenuHeader.tile(
       height: headerHeight,
-      child: Padding(
-        padding: const EdgeInsets.only(
-          left: kSpacingSmall + kSpacingTiny, // 文字与图标对齐
-          right: kSpacingSmall,
-          top: kSpacingSmall,
-          bottom: kSpacingSmall,
-        ),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            l10n.task_recent_tasks,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-        ),
-      ),
+      icon: Icons.schedule,
+      title: l10n.task_recent_tasks,
+      subtitle: l10n.task_recent_tasks_subtitle,
     );
 
     final footer = OverlayMenuFooter(
@@ -266,10 +254,10 @@ class TaskOverviewMenu extends ConsumerWidget {
       },
       child: Padding(
         padding: const EdgeInsets.only(
-          left: kSpacingSmall + kSpacingTiny, // 文字与图标对齐
-          right: kSpacingSmall,
+          left: kSpacingMedium + kSpacingTiny, // 文字与图标对齐
+          right: kSpacingMedium,
           top: kSpacingSmall,
-          bottom: kSpacingSmall,
+          bottom: kSpacingMedium,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,

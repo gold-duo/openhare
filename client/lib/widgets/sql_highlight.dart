@@ -29,9 +29,9 @@ TextStyle? getStyle(TokenType type) {
   return sqlLightTheme[type];
 }
 
-TextSpan getSQLHighlightTextSpan(String text, {TextStyle? defalutStyle}) {
+TextSpan getSQLHighlightTextSpan(DialectType dialectType, String text, {TextStyle? defalutStyle}) {
   return TextSpan(
-    children: Lexer(text)
+    children: createLexer(dialectType, text)
         .tokens()
         .map<TextSpan>(
           (tok) => TextSpan(

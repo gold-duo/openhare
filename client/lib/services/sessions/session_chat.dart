@@ -45,6 +45,7 @@ class SessionAIChatNotifier extends _$SessionAIChatNotifier {
     return SessionAIChatModel(
       chatModel: aiChatModel,
       sessionId: session.sessionId,
+      config: session.config,
       currentSchema: session.currentSchema,
       dbType: session.dbType,
       metadata: metadata?.value,

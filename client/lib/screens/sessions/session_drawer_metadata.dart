@@ -44,6 +44,7 @@ class SessionDrawerMetadata extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     AsyncValue<SessionMetadataTreeModel> model = ref.watch(selectedSessionMetadataTreeProvider);
+    SessionController sessionController = ref.watch(selectedSessionControllerProvider);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(kSpacingSmall - 5, kSpacingTiny, kSpacingSmall, 0),
@@ -53,10 +54,7 @@ class SessionDrawerMetadata extends ConsumerWidget {
         children: [
           Expanded(
             child: model.when(
-              data: (value) => bodyPage(
-                value.metadataTreeCtrl,
-                SessionController.sessionController(value.sessionId).metadataTreeScrollController,
-              ),
+              data: (value) => bodyPage(value.metadataTreeCtrl, sessionController.metadataTreeScrollController),
               error: (error, trace) => errorPage(context, ref, error.toString()),
               loading: () => loadingPage(),
             ),

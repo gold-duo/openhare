@@ -1,7 +1,6 @@
 import "token.dart";
 import "scanner.dart";
 import "token_builder.dart";
-import 'keyword.dart';
 
 class LexerContext {
   Pos startPos;
@@ -13,20 +12,10 @@ class LexerContext {
         startPos = Pos.init();
 }
 
-class Lexer extends LexerContext {
-  static TokenBuilder builder = TokenRooter(<TokenBuilder>[
-    EOFTokenBuilder(),
-    SpaceTokenBuilder(),
-    KeyWordTokenBuilder(keywords),
-    SingleQValueTokenBuilder(),
-    DoubleQValueTokenBuilder(),
-    BackQValueTokenBuilder(),
-    NumberTokenBuilder(),
-    CommentBuilder(),
-    PunctuationTokenBuilder(),
-  ]);
+abstract class Lexer extends LexerContext {
+  final TokenBuilder builder;
 
-  Lexer(String content) : super(content);
+  Lexer(this.builder, String content) : super(content);
 
   Token scan() {
     if (eof) {
@@ -34,8 +23,7 @@ class Lexer extends LexerContext {
     }
     var (match, tok) = builder.matchToken(this);
 
-    Token token =
-        (!match || tok == null) ? genToken(TokenType.invalid) : genToken(tok);
+    Token token = (!match || tok == null) ? genToken(TokenType.invalid) : genToken(tok);
 
     // 如果scanner next 失败, 则代表已经偏移结束了
     scanner.next() ? startPos = scanner.pos : eof = true;
@@ -72,12 +60,23 @@ class Lexer extends LexerContext {
 
   // 获取第一个token, 去掉空格或注释.
   Token? firstTrim() {
-    return first((token) =>
-        (token.id == TokenType.whitespace || token.id == TokenType.comment));
+    return first((token) => (token.id == TokenType.whitespace || token.id == TokenType.comment));
   }
 
   Token genToken(TokenType tok) {
-    return Token(tok, scanner.subString(startPos, scanner.pos), startPos.copy(),
-        scanner.pos.copy());
+    return Token(tok, scanner.subString(startPos, scanner.pos), startPos.copy(), scanner.pos.copy());
+  }
+
+  // trim 掉结尾满足条件的token, 并基于首尾token位置返回原始切片
+  String trimEndWhere(bool Function(Token token) check) {
+    List<Token> allToken = tokens().toList();
+    int end = allToken.length - 1;
+    while (end >= 0 && check(allToken[end])) {
+      end--;
+    }
+    if (end < 0) {
+      return "";
+    }
+    return scanner.subString(allToken.first.startPos, allToken[end].endPos);
   }
 }

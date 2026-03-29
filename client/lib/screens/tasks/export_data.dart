@@ -11,6 +11,7 @@ import 'package:client/widgets/const.dart';
 import 'package:client/widgets/dialog.dart';
 import 'package:client/widgets/loading.dart';
 import 'package:client/widgets/sql_highlight.dart';
+import 'package:db_driver/db_driver.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,6 +29,7 @@ Future<ExportDataParameters?> showExportDataDialog(
   required InstanceId instanceId,
   required String schema,
   required String query,
+  required DatabaseType dbType,
 }) async {
   return showDialog<ExportDataParameters>(
     context: context,
@@ -35,6 +37,7 @@ Future<ExportDataParameters?> showExportDataDialog(
       instanceId: instanceId,
       schema: schema,
       query: query,
+      dbType: dbType,
     ),
   );
 }
@@ -43,11 +46,13 @@ class _ExportDataDialogContent extends ConsumerStatefulWidget {
   final InstanceId instanceId;
   final String schema;
   final String query;
+  final DatabaseType dbType;
 
   const _ExportDataDialogContent({
     required this.instanceId,
     required this.schema,
     required this.query,
+    required this.dbType,
   });
 
   @override
@@ -227,6 +232,7 @@ class _ExportDataDialogContentState extends ConsumerState<_ExportDataDialogConte
                         scrollDirection: Axis.horizontal,
                         child: SelectableText.rich(
                           getSQLHighlightTextSpan(
+                            widget.dbType.dialectType,
                             widget.query,
                             defalutStyle: GoogleFonts.robotoMono(textStyle: Theme.of(context).textTheme.bodySmall),
                           ),
@@ -309,11 +315,7 @@ class _ExportDataDialogContentState extends ConsumerState<_ExportDataDialogConte
   Widget build(BuildContext context) {
     return CustomDialog(
       title: AppLocalizations.of(context)!.export_data_title,
-      titleIcon: const RectangleIconButton.medium(
-        icon: Icons.file_download,
-        iconColor: Colors.green,
-        verticalOffset: 1.5,
-      ),
+      titleIcon: const Icon(Icons.file_download, color: Colors.green),
       content: Form(
         key: _formKey,
         child: Column(

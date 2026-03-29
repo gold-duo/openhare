@@ -4,7 +4,7 @@ import 'package:client/models/sessions.dart';
 import 'package:client/services/ai/agent.dart';
 import 'package:client/services/ai/chat.dart';
 import 'package:client/services/ai/prompt.dart';
-import 'package:client/services/sessions/session_controller.dart';
+import 'package:client/services/sessions/sessions.dart';
 import 'package:client/widgets/button.dart';
 import 'package:client/widgets/code_auto_complete.dart';
 import 'package:client/widgets/const.dart';
@@ -21,8 +21,17 @@ import 'package:hugeicons/hugeicons.dart';
 
 class SessionChatInputCard extends ConsumerStatefulWidget {
   final SessionAIChatModel model;
+  final MentionTextEditingController controller;
+  final TextEditingController modelSearchTextController;
+  final VoidCallback? onSendMessage;
 
-  const SessionChatInputCard({super.key, required this.model});
+  const SessionChatInputCard({
+    super.key,
+    required this.model,
+    required this.controller,
+    required this.modelSearchTextController,
+    this.onSendMessage,
+  });
 
   @override
   ConsumerState<SessionChatInputCard> createState() => _SessionChatInputCardState();
@@ -32,13 +41,12 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
   @override
   void initState() {
     super.initState();
-    final controller = SessionController.sessionController(widget.model.sessionId).chatInputController;
-    controller.addListener(_onInputChanged);
+    widget.controller.addListener(_onInputChanged);
   }
 
   @override
   void dispose() {
-    SessionController.sessionController(widget.model.sessionId).chatInputController.removeListener(_onInputChanged);
+    widget.controller.removeListener(_onInputChanged);
     super.dispose();
   }
 
@@ -47,7 +55,7 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
   }
 
   bool _hasInputContent() {
-    final text = SessionController.sessionController(widget.model.sessionId).chatInputController.displayText;
+    final text = widget.controller.displayText;
     return text.trim().isNotEmpty;
   }
 
@@ -134,12 +142,11 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
   }
 
   Future<void> _sendMessage(AIChatId chatId, SessionAIChatModel chatModel) async {
-    final chatInputController = SessionController.sessionController(chatModel.sessionId).chatInputController;
-    final text = chatInputController.displayText;
+    final text = widget.controller.displayText;
     if (text.trim().isEmpty) return;
 
     // 如果用户通过 @ 提及了表，则把表结构信息放到 ref 里
-    final mentionedTables = chatInputController.segments.whereType<MentionSegment>().map((s) => s.label).toList();
+    final mentionedTables = widget.controller.segments.whereType<MentionSegment>().map((s) => s.label).toList();
     final refText = _buildTableRef(chatModel, mentionedTables);
 
     // 调用AIChatService的chat方法
@@ -152,19 +159,7 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
           message: text,
           refText: refText.isEmpty ? null : refText,
         );
-
-    final scrollController = SessionController.sessionController(chatModel.sessionId).aiChatScrollController;
-
-    // 滚动到底部
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (scrollController.hasClients) {
-        scrollController.animateTo(
-          scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+    widget.onSendMessage?.call();
   }
 
   @override
@@ -190,6 +185,7 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
             // 输入框
             ChatInputFieldWidget(
               model: widget.model,
+              controller: widget.controller,
               onSubmitted: (widget.model.canSendMessage() && !hardStopped && _hasInputContent())
                   ? () => _sendMessage(widget.model.chatModel.id, widget.model)
                   : null,
@@ -203,7 +199,9 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
               children: [
                 const SizedBox(width: kSpacingTiny),
                 // 模型选择
-                ModelSelectorWidget(model: widget.model),
+                ModelSelectorWidget(model: widget.model, modelSearchTextController: widget.modelSearchTextController),
+                const SizedBox(width: kSpacingTiny),
+                AIChatConfigBar(model: widget.model),
                 const Spacer(),
 
                 _buildBudgetIndicator(context, progress),
@@ -232,7 +230,10 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
                         tooltip: AppLocalizations.of(context)!.button_tooltip_send_message,
                         icon: Icons.send,
                         onPressed: (widget.model.canSendMessage() && !hardStopped && _hasInputContent())
-                            ? () => _sendMessage(widget.model.chatModel.id, widget.model)
+                            ? () {
+                                _sendMessage(widget.model.chatModel.id, widget.model);
+                                widget.controller.clear();
+                              }
                             : null,
                       ),
               ],
@@ -244,11 +245,100 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
   }
 }
 
+/// AI 对话发送确认选项（与会话栏「查询选项」同风格的 Overlay）
+class AIChatConfigBar extends ConsumerStatefulWidget {
+  final SessionAIChatModel model;
+
+  const AIChatConfigBar({super.key, required this.model});
+
+  @override
+  ConsumerState<AIChatConfigBar> createState() => _AIChatConfigBarState();
+}
+
+class _AIChatConfigBarState extends ConsumerState<AIChatConfigBar> {
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final header = OverlayMenuHeader.tile(
+      icon: Icons.tune,
+      title: l10n.ai_chat_config_title,
+      subtitle: l10n.ai_chat_config_subtitle,
+    );
+
+    return OverlayMenu(
+      closeOnSelectItem: false,
+      spacing: kSpacingTiny,
+      maxHeight: 400,
+      maxWidth: 420,
+      isAbove: true,
+      header: header,
+      footer: OverlayMenuFooter(height: kSpacingMedium, child: const SizedBox.shrink()),
+      tabs: [
+        OverlayConfigItem.checkbox(
+          height: 84,
+          title: l10n.ai_chat_config_ask_dql,
+          description: l10n.ai_chat_config_ask_dql_desc,
+          value: widget.model.config.askDQL,
+          onChanged: (v) {
+            setState(() {
+              ref
+                  .read(sessionsServicesProvider.notifier)
+                  .updateSessionConfig(
+                    widget.model.sessionId,
+                    widget.model.config.copyWith(askDQL: v),
+                  );
+            });
+          },
+        ),
+        OverlayConfigItem.checkbox(
+          height: 84,
+          title: l10n.ai_chat_config_ask_no_dql,
+          description: l10n.ai_chat_config_ask_no_dql_desc,
+          value: widget.model.config.askNoDQL,
+          onChanged: (v) {
+            setState(() {
+              ref
+                  .read(sessionsServicesProvider.notifier)
+                  .updateSessionConfig(
+                    widget.model.sessionId,
+                    widget.model.config.copyWith(askNoDQL: v),
+                  );
+            });
+          },
+        ),
+        OverlayConfigItem.checkbox(
+          height: 84,
+          title: l10n.ai_chat_config_ask_dangerous,
+          description: l10n.ai_chat_config_ask_dangerous_desc,
+          value: widget.model.config.askDangerousSQL,
+          onChanged: (v) {
+            setState(() {
+              ref
+                  .read(sessionsServicesProvider.notifier)
+                  .updateSessionConfig(
+                    widget.model.sessionId,
+                    widget.model.config.copyWith(askDangerousSQL: v),
+                  );
+            });
+          },
+        ),
+      ],
+      child: RectangleIconButton.medium(
+        tooltip: l10n.button_tooltip_ai_chat_config,
+        icon: Icons.tune,
+        onPressed: null,
+        iconColor: Theme.of(context).colorScheme.onSurface,
+      ),
+    );
+  }
+}
+
 /// 模型选择器组件
 class ModelSelectorWidget extends ConsumerStatefulWidget {
   final SessionAIChatModel model;
+  final TextEditingController modelSearchTextController;
 
-  const ModelSelectorWidget({super.key, required this.model});
+  const ModelSelectorWidget({super.key, required this.model, required this.modelSearchTextController});
 
   @override
   ConsumerState<ModelSelectorWidget> createState() => _ModelSelectorWidgetState();
@@ -274,10 +364,6 @@ class _ModelSelectorWidgetState extends ConsumerState<ModelSelectorWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final modelSearchTextController = SessionController.sessionController(
-      widget.model.sessionId,
-    ).aiChatModelSearchTextController;
-
     // 模型选择工具栏
     final modelToolWidget = Container(
       constraints: const BoxConstraints(
@@ -302,7 +388,7 @@ class _ModelSelectorWidgetState extends ConsumerState<ModelSelectorWidget> {
       isAbove: true,
       spacing: kSpacingTiny,
       tabs: [
-        for (var agent in _filteredAgents(widget.model, modelSearchTextController.text))
+        for (var agent in _filteredAgents(widget.model, widget.modelSearchTextController.text))
           OverlayMenuItem(
             height: 24,
             child: Padding(
@@ -343,7 +429,9 @@ class _ModelSelectorWidgetState extends ConsumerState<ModelSelectorWidget> {
           child: SearchBarTheme(
             data: SearchBarThemeData(
               textStyle: WidgetStatePropertyAll(Theme.of(context).textTheme.bodySmall),
-              backgroundColor: WidgetStatePropertyAll(Theme.of(context).colorScheme.surfaceContainerLowest), // 模型选择工具栏搜索框背景色
+              backgroundColor: WidgetStatePropertyAll(
+                Theme.of(context).colorScheme.surfaceContainerLowest,
+              ), // 模型选择工具栏搜索框背景色
               elevation: const WidgetStatePropertyAll(0),
               constraints: const BoxConstraints(minHeight: 24),
             ),
@@ -353,7 +441,7 @@ class _ModelSelectorWidgetState extends ConsumerState<ModelSelectorWidget> {
                   color: Theme.of(context).colorScheme.outlineVariant, // 模型选择工具栏搜索框边框颜色
                 ),
               ),
-              controller: modelSearchTextController,
+              controller: widget.modelSearchTextController,
               onChanged: (value) {
                 _onModelSearchChanged();
               },
@@ -380,12 +468,14 @@ class _TablePrompt extends FuzzyMatchCodePrompt {
 /// 聊天输入框组件
 class ChatInputFieldWidget extends ConsumerStatefulWidget {
   final SessionAIChatModel model;
+  final MentionTextEditingController controller;
   final VoidCallback? onSubmitted;
   final bool enabled;
 
   const ChatInputFieldWidget({
     super.key,
     required this.model,
+    required this.controller,
     this.onSubmitted,
     this.enabled = true,
   });
@@ -489,10 +579,8 @@ class _ChatInputFieldWidgetState extends ConsumerState<ChatInputFieldWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final controller = SessionController.sessionController(widget.model.sessionId).chatInputController;
-
     return MentionTextField(
-      controller: controller,
+      controller: widget.controller,
       style: Theme.of(context).textTheme.bodyMedium,
       textAlignVertical: TextAlignVertical.center,
       minLines: 1,
@@ -509,7 +597,7 @@ class _ChatInputFieldWidgetState extends ConsumerState<ChatInputFieldWidget> {
       mentionItemBuilder: _mentionItemBuilder,
       onSubmitted: (_) {
         widget.onSubmitted?.call();
-        controller.clear();
+        widget.controller.clear();
       },
     );
   }

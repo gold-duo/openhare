@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:client/widgets/const.dart';
 import 'package:flutter/material.dart';
 
 class OverlayMenu extends StatefulWidget {
@@ -214,11 +217,322 @@ class _OverlayMenuItemState extends State<OverlayMenuItem> {
   }
 }
 
+class _OverlayNumberTextField extends StatefulWidget {
+  const _OverlayNumberTextField({
+    required this.value,
+    required this.onChanged,
+  });
+
+  /// 当前应展示的数字（与外部状态一致；外部变更时通过 [didUpdateWidget] 同步到输入框）。
+  final int value;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  State<_OverlayNumberTextField> createState() => _OverlayNumberTextFieldState();
+}
+
+class _OverlayNumberTextFieldState extends State<_OverlayNumberTextField> {
+  late final TextEditingController _controller;
+  bool _showSuccess = false;
+  bool _hovering = false;
+  Timer? _successTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value.toString());
+  }
+
+  @override
+  void didUpdateWidget(_OverlayNumberTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != oldWidget.value) {
+      _controller.text = widget.value.toString();
+    }
+  }
+
+  @override
+  void dispose() {
+    _successTimer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    FocusScope.of(context).unfocus();
+    widget.onChanged(int.tryParse(_controller.text.trim()));
+    setState(() => _showSuccess = true);
+    _successTimer?.cancel();
+    _successTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() => _showSuccess = false);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: SizedBox(
+        width: 100,
+        child: TextField(
+          controller: _controller,
+          keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.done,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+          onSubmitted: (_) => _submit(),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: cs.surfaceContainerHigh,
+            isDense: true,
+            hintStyle: theme.textTheme.bodySmall?.copyWith(
+              color: cs.onSurfaceVariant,
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: kSpacingSmall, vertical: kSpacingSmall),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: cs.outlineVariant,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: cs.primary),
+            ),
+            suffixIconConstraints: const BoxConstraints.tightFor(width: 32, height: 32),
+            suffixIcon: SizedBox(
+              width: 32,
+              height: 32,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeIn,
+                child: _showSuccess
+                    ? Center(
+                        key: const ValueKey('ok'),
+                        child: Icon(
+                          Icons.check_rounded,
+                          size: kIconSizeMedium,
+                          color: Colors.green.shade700,
+                        ),
+                      )
+                    : _hovering
+                    ? IconButton(
+                        key: const ValueKey('go'),
+                        padding: EdgeInsets.zero,
+                        tooltip: '提交',
+                        style: IconButton.styleFrom(
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                        onPressed: _submit,
+                        icon: Icon(
+                          Icons.task_alt_rounded,
+                          size: kIconSizeMedium,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      )
+                    : const SizedBox(key: ValueKey('empty')),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class OverlayConfigItem extends OverlayMenuItem {
+  OverlayConfigItem({
+    super.key,
+    required super.height,
+    super.onTabSelected,
+    required String title,
+    String? description,
+    required Widget trailing,
+  }) : super(
+         child: _OverlayConfigItemContent(
+           title: title,
+           description: description,
+           trailing: trailing,
+         ),
+       );
+
+  factory OverlayConfigItem.number({
+    Key? key,
+    required double height,
+    required String title,
+    String? description,
+    required int value,
+    required ValueChanged<int?> onChanged,
+  }) {
+    return OverlayConfigItem(
+      key: key,
+      height: height,
+      title: title,
+      description: description,
+      trailing: _OverlayNumberTextField(
+        value: value,
+        onChanged: onChanged,
+      ),
+    );
+  }
+
+  factory OverlayConfigItem.checkbox({
+    Key? key,
+    required double height,
+    required String title,
+    String? description,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return OverlayConfigItem(
+      key: key,
+      height: height,
+      title: title,
+      description: description,
+      trailing: SizedBox(
+        width: 100,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            SizedBox(
+              width: 32,
+              height: 32,
+              child: Checkbox(
+                value: value,
+                onChanged: (v) {
+                  if (v != null) onChanged(v);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OverlayConfigItemContent extends StatelessWidget {
+  const _OverlayConfigItemContent({
+    required this.title,
+    this.description,
+    required this.trailing,
+  });
+
+  final String title;
+  final String? description;
+  final Widget trailing;
+
+  bool get _hasDescription => description != null && description!.isNotEmpty;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: kSpacingSmall, horizontal: kSpacingMedium),
+      child: Row(
+        crossAxisAlignment: _hasDescription ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(title),
+                if (_hasDescription) ...[
+                  const SizedBox(height: kSpacingTiny),
+                  Text(
+                    description!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: kSpacingTiny),
+          trailing,
+        ],
+      ),
+    );
+  }
+}
+
 class OverlayMenuHeader extends StatelessWidget {
   final double height;
   final Widget child;
 
   const OverlayMenuHeader({super.key, required this.height, required this.child});
+
+  factory OverlayMenuHeader.tile({
+    Key? key,
+    double height = 74,
+    required IconData icon,
+    required String title,
+    String? subtitle,
+  }) {
+    return OverlayMenuHeader(
+      key: key,
+      height: height,
+      child: Builder(
+        builder: (context) {
+          final theme = Theme.of(context);
+          final cs = theme.colorScheme;
+          final textTheme = theme.textTheme;
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(kSpacingMedium, kSpacingMedium, kSpacingSmall, kSpacingSmall),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: cs.primaryContainer,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(kSpacingSmall),
+                    child: Icon(
+                      icon,
+                      size: 20,
+                      color: cs.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: kSpacingSmall),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: textTheme.titleMedium),
+                      if (subtitle != null && subtitle.isNotEmpty)
+                        Text(
+                          subtitle,
+                          style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

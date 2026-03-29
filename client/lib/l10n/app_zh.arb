@@ -59,6 +59,9 @@
     "tip_close_session_desc": "此操作将终止查询并关闭连接, 确定关闭活跃会话吗? ",
     "tip_delete_instance": "删除数据源",
     "tip_delete_instance_desc": "删除数据源会同时删除关联的工作台窗口（若开启）",
+    "tip_dangerous_sql_title": "执行查询",
+    "tip_dangerous_sql_desc": "该 SQL 可能带来较大影响，是否继续执行？",
+    "tip_dangerous_sql_footer_hint": "可以通过配置项忽略这个步骤",
     "ai_chat_input_tip": "请输入你的问题...",
     "ai_chat_table_tip": "请在左上角选择一个 schema 后才可以使用表进行AI问答",
     "ai_chat_guide_tip": "没有添加模型，无法使用对话问答功能",
@@ -81,6 +84,23 @@
     "button_tooltip_sql_result_download": "下载SQL结果",
     "button_tooltip_refresh_metadata": "刷新数据库元信息",
     "button_tooltip_ai_test": "测试 LLM API",
+    "button_tooltip_session_config": "会话查询选项",
+    "button_tooltip_go_to_bottom": "回到底部",
+    "session_config_title": "查询选项",
+    "session_config_subtitle": "仅作用于当前会话",
+    "session_config_query_limit": "查询行数",
+    "session_config_query_limit_hint": "DQL语句会自动补充limit语句，0表示不限制",
+    "session_config_query_check": "执行确认",
+    "session_config_query_check_desc": "开启后，执行可能影响较大的语句前会弹出确认",
+    "button_tooltip_ai_chat_config": "AI 对话选项",
+    "ai_chat_config_title": "AI 对话选项",
+    "ai_chat_config_subtitle": "仅作用于当前会话",
+    "ai_chat_config_ask_dql": "确认 DQL",
+    "ai_chat_config_ask_dql_desc": "开启后，执行前会弹出确认是否执行 DQL 语句 (例如: select)",
+    "ai_chat_config_ask_no_dql": "确认非 DQL",
+    "ai_chat_config_ask_no_dql_desc": "开启后，执行前会弹出确认是否执行非 DQL 语句 (例如: create)",
+    "ai_chat_config_ask_dangerous": "确认高影响SQL",
+    "ai_chat_config_ask_dangerous_desc": "开启后，执行前会弹出确认是否执行高影响SQL (例如: drop)",
     "metadata_tree_database": "数据库",
     "metadata_tree_schema": "模式",
     "metadata_tree_table": "表",
@@ -142,6 +162,7 @@
     "task_no_tasks": "暂无任务",
     "task_view_more": "查看更多",
     "task_recent_tasks": "最近任务",
+    "task_recent_tasks_subtitle": "运行中与最近至多 10 条",
     "export_data_title": "导出数据",
     "export_data_directory_label": "导出的目录",
     "export_data_directory_required": "请选择导出的目录",
@@ -237,6 +258,10 @@
     "@ai_chat_execution_failed": {
       "description": "AI对话执行失败状态"
     },
+    "ai_chat_execution_cancelled": "已取消",
+    "@ai_chat_execution_cancelled": {
+      "description": "AI对话用户取消执行工具"
+    },
     "ai_chat_thinking_process": "思考过程",
     "@ai_chat_thinking_process": {
       "description": "AI对话思考过程标签"
@@ -264,6 +289,14 @@
     "ai_chat_budget_context_hard_stopped": "已达到上下文上限；无法继续",
     "@ai_chat_budget_context_hard_stopped": {
       "description": "AI对话上下文已达上限提示"
+    },
+    "ai_chat_tool_confirm_run": "执行",
+    "@ai_chat_tool_confirm_run": {
+      "description": "AI 工具 SQL 确认按钮"
+    },
+    "ai_chat_tool_confirm_decline": "取消",
+    "@ai_chat_tool_confirm_decline": {
+      "description": "AI 工具 SQL 取消按钮"
     },
     "paginated_total_filtered": "总数 {filteredCount}/{count}",
     "@paginated_total_filtered": {

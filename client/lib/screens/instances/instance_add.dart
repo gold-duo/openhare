@@ -165,7 +165,7 @@ class _AddInstanceState extends ConsumerState<AddInstance> {
                 onGroupChange: (group) {
                   addInstanceController.onGroupChange(group);
                 },
-                codeController: addInstanceController.code,
+                codeController: addInstanceController.initQueryCodeController,
               ),
             ),
           ],
@@ -754,11 +754,7 @@ class FormInfo {
 class AddInstanceController extends ChangeNotifier {
   final Map<DatabaseType, Map<String, FormInfo>> infos = {};
 
-  final CodeLineEditingController code = CodeLineEditingController(
-    spanBuilder: ({required codeLines, required context, required style}) {
-      return getSQLHighlightTextSpan(codeLines.asString(TextLineBreak.lf), defalutStyle: style);
-    },
-  );
+  final Map<DatabaseType, CodeLineEditingController> initQueryCodeControllers = {};
 
   DatabaseType selectedDatabaseType = DatabaseType.mysql;
   String? _selectedGroup;
@@ -767,6 +763,10 @@ class AddInstanceController extends ChangeNotifier {
   bool isDatabasePingDoing = false;
   String? databaseConnectError;
 
+  CodeLineEditingController get initQueryCodeController {
+    return initQueryCodeControllers[selectedDatabaseType]!;
+  }
+
   AddInstanceController() {
     for (var connMeta in connectionMetas) {
       final dbInfos = infos.putIfAbsent(connMeta.type, () => {});
@@ -774,7 +774,20 @@ class AddInstanceController extends ChangeNotifier {
         dbInfos[meta.name] = FormInfo(connMeta.type, meta);
       }
     }
-    code.text = connectionMetaMap[selectedDatabaseType]!.initQueryText();
+    // 为每个数据库类型都初始化init query, 切换数据库时要同步改变
+    for (var connMeta in connectionMetas) {
+      final codeController = CodeLineEditingController(
+        spanBuilder: ({required codeLines, required context, required style}) {
+          return getSQLHighlightTextSpan(
+            connMeta.type.dialectType,
+            codeLines.asString(TextLineBreak.lf),
+            defalutStyle: style,
+          );
+        },
+      );
+      codeController.text = connectionMetaMap[connMeta.type]!.initQueryText();
+      initQueryCodeControllers[connMeta.type] = codeController;
+    }
   }
 
   String _fieldText(DatabaseType dbType, String fieldName) {
@@ -822,7 +835,6 @@ class AddInstanceController extends ChangeNotifier {
     if (!isPortChanged && infos[type]?.containsKey(settingMetaNameTargetNetworkPort) == true) {
       port = defaultPort;
     }
-    code.text = connectionMetaMap[selectedDatabaseType]!.initQueryText();
     notifyListeners();
   }
 
@@ -948,10 +960,10 @@ class AddInstanceController extends ChangeNotifier {
           custom[(info.meta as CustomMeta).name] = info.ctrl.text;
       }
     }
-    List<String> querys = Splitter(
-      code.text.trim(),
-      ";",
-    ).split().map((e) => e.content.trim()).whereNot((e) => e.trim() == "").toList();
+    List<String> querys = splitSQL(
+      selectedDatabaseType.dialectType,
+      initQueryCodeControllers[selectedDatabaseType]!.text.trim(),
+    ).map((e) => e.content.trim()).whereNot((e) => e.trim() == "").toList();
     final target = dbFile.isNotEmpty
         ? ConnectTarget.dbFile(dbFile: dbFile)
         : ConnectTarget.network(host: addr, port: port ?? 0);

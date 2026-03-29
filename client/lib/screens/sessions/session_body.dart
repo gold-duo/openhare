@@ -4,7 +4,6 @@ import 'package:client/screens/sessions/session_operation_bar.dart';
 import 'package:client/screens/sessions/session_sql_editor.dart';
 import 'package:client/screens/sessions/session_sql_results.dart';
 import 'package:client/services/sessions/session_drawer.dart';
-import 'package:client/services/sessions/session_sql_editor.dart';
 import 'package:client/services/sessions/session_controller.dart';
 import 'package:client/widgets/divider.dart';
 import 'package:flutter/material.dart';
@@ -16,9 +15,8 @@ class SessionBodyPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    SessionEditorModel sessionEditor = ref.watch(sessionEditorProvider); // todo: 合并或者拆分page, 不要两个页面混在一起刷新
     SessionDrawerModel sessionDrawer = ref.watch(sessionDrawerProvider);
-    SessionController sessionController = SessionController.sessionController(sessionDrawer.sessionId);
+    SessionController sessionController = ref.watch(selectedSessionControllerProvider);
 
     final Widget left = Row(
       children: [
@@ -27,8 +25,8 @@ class SessionBodyPage extends ConsumerWidget {
             controller: sessionController.multiSplitViewCtrl,
             axis: Axis.vertical,
             first: SQLEditor(
-              key: ValueKey(sessionEditor.code),
-              codeController: sessionEditor.code,
+              key: ValueKey(sessionController.sqlEditorController),
+              codeController: sessionController.sqlEditorController,
               scrollController: sessionController.sqlEditorScrollController,
             ),
             second: const SqlResultTables(),
@@ -39,7 +37,7 @@ class SessionBodyPage extends ConsumerWidget {
     );
     return Column(
       children: [
-        SessionOpBar(codeController: sessionEditor.code),
+        SessionOpBar(codeController: sessionController.sqlEditorController),
         const PixelDivider(),
         Expanded(
           child: Container(

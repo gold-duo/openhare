@@ -10,7 +10,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:client/models/ai.dart';
 import 'package:flutter/services.dart';
 import 'package:client/l10n/app_localizations.dart';
-import 'package:client/utils/state_value.dart';
 import 'package:client/utils/time_format.dart';
 
 /// 工具调用结果展示 Widget
@@ -18,13 +17,23 @@ import 'package:client/utils/time_format.dart';
 /// 参考 SqlChatField 设计，用于展示工具调用结果
 /// 针对不同的工具类型使用不同的展示形态
 class ToolCallWidget extends ConsumerStatefulWidget {
+  final AIChatId chatId;
+  final AIChatMessageId toolsMessageId;
   final AIChatMessageToolCallQueryModel toolCall;
   final Function(String)? onRun;
 
+  /// 待确认 SQL 时：拒绝为 `false`，确认并执行后为 `true`（由上层执行 SQL 并再次发起 [chat]）
+  final Future<void> Function(bool approved)? onResolveToolQuery;
+  final DatabaseType dbType;
+
   const ToolCallWidget({
     super.key,
+    required this.chatId,
+    required this.toolsMessageId,
+    required this.dbType,
     required this.toolCall,
     this.onRun,
+    this.onResolveToolQuery,
   });
 
   @override
@@ -40,25 +49,26 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
   bool _expanded = false;
   bool _footerHovering = false;
 
-  /// 获取结果状态（避免重复访问）
-  StateValue<BaseQueryResult>? get _resultState => widget.toolCall.result;
-
   /// 判断是否有查询内容
   bool get _hasQuery => widget.toolCall.query.isNotEmpty;
 
   /// 判断是否有结果需要显示（包括成功结果和错误）
   bool get _hasResultToShow {
-    if (_resultState == null) return false;
-    return _resultState!.match(
-      (result) => result.columns.isNotEmpty && result.rows.isNotEmpty,
-      (error) => true,
-      () => false,
-    );
+    final tc = widget.toolCall;
+    return switch (tc.execState) {
+      AIChatToolQueryState.initializing => false,
+      AIChatToolQueryState.awaitingUserConfirm => false,
+      AIChatToolQueryState.approved => false,
+      AIChatToolQueryState.running => false,
+      AIChatToolQueryState.rejected => false,
+      AIChatToolQueryState.finished => tc.queryResult != null,
+      AIChatToolQueryState.failed => tc.errorMessage?.isNotEmpty ?? false,
+    };
   }
 
   /// 将SQL转换为单行显示
   String _sqlToSingleLine(String sql) {
-    return sql.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return sql.replaceAll(RegExp(r'\s+'), ' ').trim(); // todo: 使用sql parser 处理
   }
 
   List<DataGridColumn> _buildDataGridColumns(
@@ -103,7 +113,7 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
 
   Widget _buildResultTable(BuildContext context, BaseQueryResult result) {
     if (result.columns.isEmpty || result.rows.isEmpty) {
-      return const SizedBox.shrink();
+      return const SizedBox(height: _expandedTableHeight);
     }
 
     final columns = _buildDataGridColumns(
@@ -135,7 +145,7 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
     return Container(
       height: bottomBarHeight,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLow, // tool 头部背景颜色
+        color: Theme.of(context).colorScheme.surfaceContainerHigh, // tool 头部背景颜色
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(10),
           topRight: Radius.circular(10),
@@ -147,6 +157,12 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
           height: kIconButtonSizeSmall,
           child: Row(
             children: [
+              Icon(
+                Icons.polyline,
+                size: kIconSizeSmall,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: kSpacingTiny),
               Text(
                 AppLocalizations.of(context)!.ai_chat_tool_execute_query,
                 style: Theme.of(context).textTheme.bodySmall,
@@ -187,11 +203,13 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
   }
 
   Widget _buildFooter(BuildContext context) {
-    final baseColor = Theme.of(context).colorScheme.surfaceContainerLow; // tool 底部背景颜色
-    final hoverColor = Theme.of(context).colorScheme.surfaceContainer; // tool 底部 hover 背景颜色
+    final baseColor = Theme.of(context).colorScheme.surfaceContainerHigh; // tool 底部背景颜色
+    final hoverColor = Theme.of(context).colorScheme.surfaceContainerHighest; // tool 底部 hover 背景颜色
     final statusStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
       color: Theme.of(context).colorScheme.onSurfaceVariant, // tool 底部状态文字颜色
     );
+    final l10n = AppLocalizations.of(context)!;
+    final tc = widget.toolCall;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -222,19 +240,15 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
                       color: Theme.of(context).colorScheme.onSurface, // tool 底部 icon 颜色
                     ),
                   const Spacer(),
-                  _resultState == null
-                      ? const SizedBox.shrink()
-                      : _resultState!.match(
-                          (result) => Text(
-                            AppLocalizations.of(context)!.ai_chat_execution_success,
-                            style: statusStyle,
-                          ),
-                          (error) => Text(
-                            AppLocalizations.of(context)!.ai_chat_execution_failed,
-                            style: statusStyle,
-                          ),
-                          () => const Loading.small(),
-                        ),
+                  switch (tc.execState) {
+                    AIChatToolQueryState.initializing => const SizedBox.shrink(),
+                    AIChatToolQueryState.awaitingUserConfirm => _buildFooterConfirmActions(context),
+                    AIChatToolQueryState.approved => const SizedBox.shrink(),
+                    AIChatToolQueryState.running => const Loading.small(),
+                    AIChatToolQueryState.rejected => Text(l10n.ai_chat_execution_cancelled, style: statusStyle),
+                    AIChatToolQueryState.finished => Text(l10n.ai_chat_execution_success, style: statusStyle),
+                    AIChatToolQueryState.failed => Text(l10n.ai_chat_execution_failed, style: statusStyle),
+                  },
                   const SizedBox(width: kSpacingTiny),
                 ],
               ),
@@ -243,6 +257,91 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
         ),
       ),
     );
+  }
+
+  Widget _buildFooterConfirmActions(BuildContext context) {
+    const double footerConfirmButtonWidth = 64;
+    const double footerConfirmButtonHeight = 28;
+    if (widget.onResolveToolQuery == null) {
+      return const SizedBox.shrink();
+    }
+    final theme = Theme.of(context);
+
+    final baseStyle = ButtonStyle(
+      minimumSize: WidgetStateProperty.all(
+        const Size(footerConfirmButtonWidth, footerConfirmButtonHeight),
+      ),
+      padding: WidgetStateProperty.all(
+        const EdgeInsets.symmetric(horizontal: kSpacingSmall),
+      ),
+      textStyle: WidgetStateProperty.all(theme.textTheme.labelSmall),
+      shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
+      alignment: Alignment.center,
+    );
+
+    final cancelStyle = baseStyle.copyWith(
+      foregroundColor: WidgetStateProperty.all(theme.colorScheme.onSurfaceVariant),
+      side: WidgetStateProperty.all(BorderSide(color: theme.colorScheme.outline)),
+      backgroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.hovered)) {
+          return theme.colorScheme.surfaceContainerHighest;
+        }
+        return theme.colorScheme.surface;
+      }),
+    );
+
+    final runStyle = baseStyle.copyWith(
+      textStyle: WidgetStateProperty.all(
+        theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.onPrimary,
+        ),
+      ),
+      backgroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return theme.colorScheme.onSurface;
+        }
+        if (states.contains(WidgetState.pressed)) {
+          return theme.colorScheme.primary;
+        }
+        if (states.contains(WidgetState.hovered)) {
+          return theme.colorScheme.primary;
+        }
+        return theme.colorScheme.primary;
+      }),
+    );
+
+    return Row(
+      children: [
+        OutlinedButton(
+          style: cancelStyle,
+          onPressed: () async {
+            await widget.onResolveToolQuery!.call(false);
+          },
+          child: Text(AppLocalizations.of(context)!.ai_chat_tool_confirm_decline),
+        ),
+        const SizedBox(width: kSpacingTiny),
+        FilledButton(
+          style: runStyle,
+          onPressed: () async {
+            await widget.onResolveToolQuery!.call(true);
+          },
+          child: Text(AppLocalizations.of(context)!.ai_chat_tool_confirm_run),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildResultContent(BuildContext context) {
+    final tc = widget.toolCall;
+    final qr = tc.queryResult;
+    if (qr != null) {
+      return _expanded ? _buildResultTable(context, qr) : _buildResultStatistics(context, qr);
+    }
+    final err = tc.errorMessage;
+    if (err != null && err.isNotEmpty) {
+      return _buildErrorDisplay(context, err);
+    }
+    return const SizedBox.shrink();
   }
 
   Widget _buildQuerySection(BuildContext context) {
@@ -256,6 +355,7 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
             scrollDirection: Axis.horizontal,
             child: RichText(
               text: getSQLHighlightTextSpan(
+                widget.dbType.dialectType,
                 _expanded ? widget.toolCall.query : _sqlToSingleLine(widget.toolCall.query),
                 defalutStyle: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface, // tool 查询文字颜色默认色
@@ -276,7 +376,7 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: Theme.of(context).colorScheme.outlineVariant, // tool 边框颜色
+            color: Theme.of(context).colorScheme.outline, // tool 边框颜色
           ),
         ),
         child: Column(
@@ -296,14 +396,7 @@ class _ToolCallWidgetState extends ConsumerState<ToolCallWidget> {
                 duration: _animationDuration,
                 curve: Curves.easeInOut,
                 child: ClipRect(
-                  child: _resultState == null
-                      ? const SizedBox.shrink()
-                      : _resultState!.match(
-                          (result) =>
-                              _expanded ? _buildResultTable(context, result) : _buildResultStatistics(context, result),
-                          (error) => _buildErrorDisplay(context, error),
-                          () => const SizedBox.shrink(),
-                        ),
+                  child: _buildResultContent(context),
                 ),
               ),
             ],

@@ -2,16 +2,19 @@ import 'package:client/models/ai.dart';
 import 'package:client/screens/sessions/ai_chat/block_sql.dart';
 import 'package:client/widgets/const.dart';
 import 'package:client/l10n/app_localizations.dart';
+import 'package:db_driver/db_driver.dart';
 import 'package:flutter/material.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 
 class AIMessage extends StatefulWidget {
   final AIChatAssistantMessageModel message;
+  final DatabaseType dbType;
   final Function(String)? onRunSQL;
 
   const AIMessage({
     super.key,
     required this.message,
+    required this.dbType,
     this.onRunSQL,
   });
 
@@ -36,11 +39,7 @@ class _AIMessageState extends State<AIMessage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         GestureDetector(
-          onTap: () {
-            setState(() {
-              _isThinkingExpanded = !_isThinkingExpanded;
-            });
-          },
+          onTap: () => setState(() => _isThinkingExpanded = !_isThinkingExpanded),
           child: Row(
             children: [
               Icon(
@@ -113,6 +112,7 @@ class _AIMessageState extends State<AIMessage> {
             return SqlChatField(
               name: name,
               codes: code,
+              dbType: widget.dbType,
               onRun: (name == "sql" && widget.onRunSQL != null) ? widget.onRunSQL : null,
             );
           },

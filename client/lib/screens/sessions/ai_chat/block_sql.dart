@@ -1,6 +1,7 @@
 import 'package:client/widgets/sql_highlight.dart';
 import 'package:client/widgets/button.dart';
 import 'package:client/widgets/const.dart';
+import 'package:db_driver/db_driver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:client/l10n/app_localizations.dart';
@@ -8,9 +9,11 @@ import 'package:client/l10n/app_localizations.dart';
 class SqlChatField extends StatefulWidget {
   final String name;
   final String codes;
+  final DatabaseType dbType;
   final Function(String)? onRun;
   const SqlChatField({
     super.key,
+    required this.dbType,
     required this.codes,
     required this.onRun,
     required this.name,
@@ -32,6 +35,7 @@ class _SqlChatFieldState extends State<SqlChatField> {
         scrollDirection: Axis.horizontal,
         child: SelectableText.rich(
           getSQLHighlightTextSpan(
+            widget.dbType.dialectType,
             widget.codes,
             defalutStyle: TextStyle(
               color: Theme.of(context).colorScheme.onSurface,
