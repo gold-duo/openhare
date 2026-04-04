@@ -1,7 +1,7 @@
 // ignore_for_file: constant_identifier_names
 
 import 'package:collection/collection.dart';
-import 'package:oracle/oracle.dart' as oracle_impl;
+import 'package:go_impl/go_impl.dart' as impl;
 import 'package:sql_parser/parser.dart' as sp;
 
 import 'db_driver_conn_meta.dart';
@@ -9,7 +9,7 @@ import 'db_driver_interface.dart';
 import 'db_driver_metadata.dart';
 
 class OracleQueryValue extends BaseQueryValue {
-  final oracle_impl.OracleCell _cell;
+  final impl.DbQueryValue _cell;
 
   OracleQueryValue(this._cell);
 
@@ -21,7 +21,7 @@ class OracleQueryValue extends BaseQueryValue {
 }
 
 class OracleQueryColumn extends BaseQueryColumn {
-  final oracle_impl.OracleColumn _column;
+  final impl.DbQueryColumn _column;
 
   OracleQueryColumn(this._column);
 
@@ -33,7 +33,7 @@ class OracleQueryColumn extends BaseQueryColumn {
 }
 
 class OracleConnection extends BaseConnection {
-  final oracle_impl.OracleConnection _conn;
+  final impl.ImplConnection _conn;
 
   OracleConnection(this._conn);
 
@@ -51,7 +51,7 @@ class OracleConnection extends BaseConnection {
       path: service,
     ).toString();
 
-    final conn = await oracle_impl.OracleConnection.open(dsn);
+    final conn = await impl.ImplConnection.openOracle(dsn);
     final oc = OracleConnection(conn);
 
     if (schema != null && schema.isNotEmpty) {
@@ -73,16 +73,15 @@ class OracleConnection extends BaseConnection {
 
   @override
   Future<void> killQuery() async {
-    // todo: implement kill query
     return;
   }
 
   @override
   Stream<BaseQueryStreamItem> queryStreamInternal(String sql) async* {
     List<BaseQueryColumn>? columns;
-    await for (final item in _conn.queryStream(sql, batchSize: 100)) {
+    await for (final item in _conn.streamQuery(sql)) {
       switch (item) {
-        case oracle_impl.OracleQueryStreamHeader():
+        case impl.DbQueryHeader():
           columns = item.columns
               .map<BaseQueryColumn>((c) => OracleQueryColumn(c))
               .toList(growable: false);
@@ -90,7 +89,7 @@ class OracleConnection extends BaseConnection {
             columns: columns,
             affectedRows: item.affectedRows,
           );
-        case oracle_impl.OracleQueryStreamRow():
+        case impl.DbQueryRow():
           final currentColumns = columns;
           if (currentColumns == null) {
             throw StateError('No header received before row');
@@ -98,7 +97,7 @@ class OracleConnection extends BaseConnection {
           yield QueryStreamItemRow(
             row: QueryResultRow(
               currentColumns,
-              item.cells
+              item.values
                   .map<BaseQueryValue>((c) => OracleQueryValue(c))
                   .toList(growable: false),
             ),
@@ -122,7 +121,6 @@ class OracleConnection extends BaseConnection {
 
   @override
   Future<List<MetaDataNode>> metadata() async {
-    // ref: all_tab_columns
     final results = await query("""SELECT
     owner AS TABLE_SCHEMA,
     table_name AS TABLE_NAME,
