@@ -60,6 +60,9 @@ final class ImplConnection {
   static Future<ImplConnection> openOracle(String dsn) =>
       open(go_impl_db_type_t.GO_IMPL_DB_ORACLE, dsn);
 
+  static Future<ImplConnection> openMssql(String dsn) =>
+      open(go_impl_db_type_t.GO_IMPL_DB_MSSQL, dsn);
+
   Stream<DbQueryEvent> streamQuery(String sql) async* {
     final port = ReceivePort();
     final sqlPtr = sql.toNativeUtf8();

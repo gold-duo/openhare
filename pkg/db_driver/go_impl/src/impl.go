@@ -20,6 +20,7 @@ typedef enum {
 
 typedef enum {
   GO_IMPL_DB_ORACLE = 0,
+  GO_IMPL_DB_MSSQL = 1,
 } go_impl_db_type_t;
 
 typedef enum {
@@ -272,6 +273,8 @@ func go_impl_conn_open(dbType C.int32_t, dsn *C.char, dartPort C.int64_t) {
 	switch dbType {
 	case C.GO_IMPL_DB_ORACLE:
 		conn, err = openOracleConn(C.GoString(dsn))
+	case C.GO_IMPL_DB_MSSQL:
+		conn, err = openMssqlConn(C.GoString(dsn))
 	default:
 		err = fmt.Errorf("unsupported db type: %d", dbType)
 	}

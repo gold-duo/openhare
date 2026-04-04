@@ -1,9 +1,9 @@
 Pod::Spec.new do |s|
   s.name             = 'go_impl'
   s.version          = '0.0.1'
-  s.summary          = 'Shared Go FFI layer (Oracle via go-ora, future drivers).'
+  s.summary          = 'Shared Go FFI layer (Oracle, SQL Server, …).'
   s.description      = <<-DESC
-Go-based shared native library for Dart FFI: Oracle and future drivers in one dylib.
+Go-based shared native library for Dart FFI: Oracle (go-ora), SQL Server (go-mssqldb), and future drivers in one archive.
                        DESC
   s.homepage         = 'http://example.com'
   s.license          = { :file => '../LICENSE' }
@@ -51,6 +51,7 @@ SCRIPT
     :input_files => [
       '${PODS_TARGET_SRCROOT}/../src/impl.go',
       '${PODS_TARGET_SRCROOT}/../src/oracle.go',
+      '${PODS_TARGET_SRCROOT}/../src/mssql.go',
       '${PODS_TARGET_SRCROOT}/../src/stream_bridge.c',
     ],
     :output_files => ['${DERIVED_FILE_DIR}/libgo_impl.a'],

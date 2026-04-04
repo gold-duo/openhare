@@ -168,7 +168,8 @@ enum go_impl_query_value_type_t {
 }
 
 enum go_impl_db_type_t {
-  GO_IMPL_DB_ORACLE(0)
+  GO_IMPL_DB_ORACLE(0),
+  GO_IMPL_DB_MSSQL(1)
   ;
 
   final int value;
@@ -176,6 +177,7 @@ enum go_impl_db_type_t {
 
   static go_impl_db_type_t fromValue(int value) => switch (value) {
     0 => GO_IMPL_DB_ORACLE,
+    1 => GO_IMPL_DB_MSSQL,
     _ => throw ArgumentError("Unknown value for go_impl_db_type_t: $value"),
   };
 }

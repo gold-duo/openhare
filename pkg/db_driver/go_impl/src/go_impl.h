@@ -40,6 +40,7 @@ typedef enum {
 
 typedef enum {
   GO_IMPL_DB_ORACLE = 0,
+  GO_IMPL_DB_MSSQL = 1,
 } go_impl_db_type_t;
 
 typedef enum {

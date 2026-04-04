@@ -18,8 +18,6 @@ dependencies:
     path: impl/mysql/
   go_impl:
     path: go_impl/
-  mssql:
-    path: impl/mssql/
   sqlite:
     path: impl/sqlite/
   pg:

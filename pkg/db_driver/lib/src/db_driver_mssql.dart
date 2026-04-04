@@ -1,9 +1,7 @@
 // ignore_for_file: constant_identifier_names
 
-import 'dart:convert';
-
 import 'package:collection/collection.dart';
-import 'package:mssql/mssql.dart';
+import 'package:go_impl/go_impl.dart' as impl;
 import 'package:sql_parser/parser.dart' as sp;
 
 import 'db_driver_conn_meta.dart';
@@ -11,125 +9,32 @@ import 'db_driver_interface.dart';
 import 'db_driver_metadata.dart';
 
 class MssqlQueryValue extends BaseQueryValue {
-  final QueryValue _value;
+  final impl.DbQueryValue _cell;
 
-  MssqlQueryValue(this._value);
-
-  @override
-  String? getString() {
-    return switch (_value) {
-      QueryValue_NULL() => null,
-      QueryValue_Bytes(:final field0) =>
-        utf8.decode(field0, allowMalformed: true),
-      QueryValue_Int(:final field0) => field0.toString(),
-      QueryValue_UInt(:final field0) => field0.toString(),
-      QueryValue_Float(:final field0) => field0.toString(),
-      QueryValue_Double(:final field0) => field0.toString(),
-      QueryValue_DateTime(:final field0) => field0.toString(),
-    };
-  }
+  MssqlQueryValue(this._cell);
 
   @override
-  List<int> getBytes() {
-    return switch (_value) {
-      QueryValue_Bytes(:final field0) => field0.toList(),
-      _ => <int>[],
-    };
-  }
+  String? getString() => _cell.asString();
+
+  @override
+  List<int> getBytes() => _cell.asBytes();
 }
 
 class MssqlQueryColumn extends BaseQueryColumn {
-  final QueryColumn _column;
+  final impl.DbQueryColumn _column;
 
   MssqlQueryColumn(this._column);
 
   @override
   String get name => _column.name;
 
-  // Must match rust `column_type_to_u8` mapping in `impl/mssql/rust/src/api/mssql.rs`
-  static const TYPE_NULL = 0;
-  static const TYPE_BIT = 1;
-  static const TYPE_INT1 = 2;
-  static const TYPE_INT2 = 3;
-  static const TYPE_INT4 = 4;
-  static const TYPE_INT8 = 5;
-  static const TYPE_DATETIME4 = 6;
-  static const TYPE_FLOAT4 = 7;
-  static const TYPE_FLOAT8 = 8;
-  static const TYPE_MONEY = 9;
-  static const TYPE_DATETIME = 10;
-  static const TYPE_MONEY4 = 11;
-  static const TYPE_GUID = 12;
-  static const TYPE_INTN = 13;
-  static const TYPE_BITN = 14;
-  static const TYPE_DECIMALN = 15;
-  static const TYPE_NUMERICN = 16;
-  static const TYPE_FLOATN = 17;
-  static const TYPE_DATETIMEN = 18;
-  static const TYPE_DATEN = 19;
-  static const TYPE_TIMEN = 20;
-  static const TYPE_DATETIME2 = 21;
-  static const TYPE_DATETIMEOFFSETN = 22;
-  static const TYPE_BIGVARBIN = 23;
-  static const TYPE_BIGVARCHAR = 24;
-  static const TYPE_BIGBINARY = 25;
-  static const TYPE_BIGCHAR = 26;
-  static const TYPE_NVARCHAR = 27;
-  static const TYPE_NCHAR = 28;
-  static const TYPE_XML = 29;
-  static const TYPE_UDT = 30;
-  static const TYPE_TEXT = 31;
-  static const TYPE_IMAGE = 32;
-  static const TYPE_NTEXT = 33;
-  static const TYPE_SSVARIANT = 34;
-
   @override
-  DataType dataType() {
-    return switch (_column.columnType) {
-      TYPE_XML => DataType.json,
-      TYPE_BIGVARBIN ||
-      TYPE_BIGBINARY ||
-      TYPE_IMAGE ||
-      TYPE_UDT ||
-      TYPE_SSVARIANT =>
-        DataType.blob,
-      TYPE_BIGVARCHAR ||
-      TYPE_BIGCHAR ||
-      TYPE_NVARCHAR ||
-      TYPE_NCHAR ||
-      TYPE_TEXT ||
-      TYPE_NTEXT ||
-      TYPE_GUID =>
-        DataType.char,
-      TYPE_DATETIME4 ||
-      TYPE_DATETIME ||
-      TYPE_DATETIMEN ||
-      TYPE_DATEN ||
-      TYPE_TIMEN ||
-      TYPE_DATETIME2 ||
-      TYPE_DATETIMEOFFSETN =>
-        DataType.time,
-      TYPE_BIT || TYPE_BITN => DataType.dataSet,
-      TYPE_INT1 ||
-      TYPE_INT2 ||
-      TYPE_INT4 ||
-      TYPE_INT8 ||
-      TYPE_INTN ||
-      TYPE_FLOAT4 ||
-      TYPE_FLOAT8 ||
-      TYPE_FLOATN ||
-      TYPE_MONEY ||
-      TYPE_MONEY4 ||
-      TYPE_DECIMALN ||
-      TYPE_NUMERICN =>
-        DataType.number,
-      _ => DataType.char,
-    };
-  }
+  DataType dataType() =>
+      MSSQLConnection.columnDataTypeFromDriverName(_column.typeName);
 }
 
 class MSSQLConnection extends BaseConnection {
-  final ConnWrapper _conn;
+  final impl.ImplConnection _conn;
   final String _dsn;
   String? _spid;
 
@@ -148,18 +53,18 @@ class MSSQLConnection extends BaseConnection {
         meta.getValue("trustServerCertificate", "true");
 
     final dsn = Uri(
-      scheme: "mssql",
+      scheme: 'sqlserver',
       userInfo: '${meta.user}:${Uri.encodeComponent(meta.password)}',
       host: meta.getHost(),
       port: meta.getPort() ?? 1433,
-      path: database,
       queryParameters: {
-        "encrypt": encrypt,
-        "trustServerCertificate": trustServerCertificate,
+        'database': database,
+        'encrypt': encrypt,
+        'trustServerCertificate': trustServerCertificate,
       },
     ).toString();
 
-    final conn = await ConnWrapper.open(dsn: dsn);
+    final conn = await impl.ImplConnection.openMssql(dsn);
     final mc = MSSQLConnection(conn, dsn);
     await mc._loadSpid();
     return mc;
@@ -173,7 +78,6 @@ class MSSQLConnection extends BaseConnection {
   @override
   Future<void> close() async {
     await _conn.close();
-    _conn.dispose();
   }
 
   @override
@@ -185,10 +89,9 @@ class MSSQLConnection extends BaseConnection {
   Future<void> killQuery() async {
     if (_spid == null || _spid!.isEmpty) return;
 
-    // 新连接执行 KILL，最佳努力取消当前连接上的查询
     MSSQLConnection? tmp;
     try {
-      final tmpConn = await ConnWrapper.open(dsn: _dsn);
+      final tmpConn = await impl.ImplConnection.openMssql(_dsn);
       tmp = MSSQLConnection(tmpConn, _dsn);
       await tmp.query("KILL $_spid;");
     } finally {
@@ -205,28 +108,29 @@ class MSSQLConnection extends BaseConnection {
   Stream<BaseQueryStreamItem> queryStreamInternal(String sql) async* {
     List<BaseQueryColumn>? columns;
 
-    await for (final item in _conn.query(query: sql)) {
+    await for (final item in _conn.streamQuery(sql)) {
       switch (item) {
-        case QueryStreamItem_Header(:final field0):
-          columns = field0.columns
+        case impl.DbQueryHeader():
+          columns = item.columns
               .map<BaseQueryColumn>((c) => MssqlQueryColumn(c))
-              .toList();
+              .toList(growable: false);
           yield QueryStreamItemHeader(
             columns: columns,
-            affectedRows: field0.affectedRows,
+            affectedRows: item.affectedRows,
           );
-        case QueryStreamItem_Row(:final field0):
-          if (columns == null) {
-            throw StateError('Received row before header');
+        case impl.DbQueryRow():
+          final currentColumns = columns;
+          if (currentColumns == null) {
+            throw StateError('No header received before row');
           }
           yield QueryStreamItemRow(
             row: QueryResultRow(
-              columns,
-              field0.values.map((v) => MssqlQueryValue(v)).toList(),
+              currentColumns,
+              item.values
+                  .map<BaseQueryValue>((c) => MssqlQueryValue(c))
+                  .toList(growable: false),
             ),
           );
-        case QueryStreamItem_Error(:final field0):
-          throw Exception(field0);
       }
     }
   }
@@ -326,6 +230,34 @@ ORDER BY
       "bit" => DataType.dataSet,
       _ => DataType.char,
     };
+  }
+
+  /// Maps [go-mssqldb](https://github.com/microsoft/go-mssqldb) `ColumnType.DatabaseTypeName()` to UI data types.
+  static DataType columnDataTypeFromDriverName(String typeName) {
+    final t = typeName.toUpperCase().trim();
+    if (t.isEmpty) return DataType.char;
+    // Before matching INT (e.g. `DATETIME2` contains "INT").
+    if (t.contains('DATE') || t.contains('TIME')) return DataType.time;
+    if (t.contains('INT') && !t.contains('POINT')) return DataType.number;
+    if (t.contains('DECIMAL') ||
+        t.contains('NUMERIC') ||
+        t.contains('MONEY')) {
+      return DataType.number;
+    }
+    if (t.contains('FLOAT') || t.contains('REAL')) return DataType.number;
+    if (t.contains('BINARY') ||
+        t.contains('IMAGE') ||
+        t.contains('VARBINARY')) {
+      return DataType.blob;
+    }
+    if (t == 'BIT') return DataType.dataSet;
+    if (t.contains('XML')) return DataType.json;
+    if (t.contains('CHAR') ||
+        t.contains('TEXT') ||
+        t.contains('UNIQUEIDENTIFIER')) {
+      return DataType.char;
+    }
+    return DataType.char;
   }
 
   @override
