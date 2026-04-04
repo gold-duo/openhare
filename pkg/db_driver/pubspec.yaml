@@ -16,8 +16,8 @@ dependencies:
   # path: ^1.8.0
   mysql:
     path: impl/mysql/
-  oracle:
-    path: impl/oracle/
+  go_impl:
+    path: go_impl/
   mssql:
     path: impl/mssql/
   sqlite:
