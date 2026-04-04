@@ -57,11 +57,9 @@ final class ImplConnection {
     }
   }
 
-  static Future<ImplConnection> openOracle(String dsn) =>
-      open(go_impl_db_type_t.GO_IMPL_DB_ORACLE, dsn);
+  static Future<ImplConnection> openOracle(String dsn) => open(go_impl_db_type_t.GO_IMPL_DB_ORACLE, dsn);
 
-  static Future<ImplConnection> openMssql(String dsn) =>
-      open(go_impl_db_type_t.GO_IMPL_DB_MSSQL, dsn);
+  static Future<ImplConnection> openMssql(String dsn) => open(go_impl_db_type_t.GO_IMPL_DB_MSSQL, dsn);
 
   Stream<DbQueryEvent> streamQuery(String sql) async* {
     final port = ReceivePort();
@@ -135,7 +133,7 @@ final class DbQueryHeader extends DbQueryEvent {
         final col = (header.columns + i).ref;
         return DbQueryColumn(
           name: _readCString(col.name),
-          typeName: _readCString(col.column_type),
+          dataType: DbDataType.fromNative(col.data_type),
         );
       }, growable: false);
       return DbQueryHeader(
@@ -179,9 +177,31 @@ final class DbQueryRow extends DbQueryEvent {
 }
 
 final class DbQueryColumn {
-  const DbQueryColumn({required this.name, required this.typeName});
+  const DbQueryColumn({required this.name, required this.dataType});
   final String name;
-  final String typeName;
+  final DbDataType dataType;
+}
+
+enum DbDataType {
+  number,
+  char,
+  time,
+  blob,
+  json,
+  dataSet,
+  ;
+
+  static DbDataType fromNative(int value) {
+    return switch (value) {
+      0 => DbDataType.number,
+      1 => DbDataType.char,
+      2 => DbDataType.time,
+      3 => DbDataType.blob,
+      4 => DbDataType.json,
+      5 => DbDataType.dataSet,
+      _ => DbDataType.char,
+    };
+  }
 }
 
 final class DbQueryValue {
@@ -249,7 +269,10 @@ final class DbQueryValue {
 
   DateTime? asDateTimeUtc() => switch (type) {
     go_impl_query_value_type_t.GO_IMPL_QUERY_VALUE_NULL => null,
-    go_impl_query_value_type_t.GO_IMPL_QUERY_VALUE_DATETIME => DateTime.fromMillisecondsSinceEpoch((value as int?) ?? 0, isUtc: true),
+    go_impl_query_value_type_t.GO_IMPL_QUERY_VALUE_DATETIME => DateTime.fromMillisecondsSinceEpoch(
+      (value as int?) ?? 0,
+      isUtc: true,
+    ),
     _ => null,
   };
 

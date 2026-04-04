@@ -1,17 +1,15 @@
 import 'db_driver_interface.dart';
 import 'db_driver_conn_meta.dart';
 import 'db_driver_mysql.dart';
-import 'package:mysql/mysql.dart' as mysql_lib;
+import 'package:rust_impl/rust_impl.dart' as rust_impl;
 import 'db_driver_oracle.dart';
 import 'db_driver_mssql.dart';
 import 'db_driver_sqlite.dart';
-import 'package:sqlite/sqlite.dart' as sqlite_lib;
 import 'db_driver_pg.dart';
 
 class ConnectionFactory {
   static Future<void> init() async {
-    await mysql_lib.RustLib.init();
-    await sqlite_lib.RustLib.init();
+    await rust_impl.RustLib.init();
   }
 
   static Future<BaseConnection> open(

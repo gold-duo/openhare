@@ -33,9 +33,18 @@ typedef enum {
   GO_IMPL_STREAM_EVENT_CONN_ERROR = 6,
 } go_impl_stream_event_type_t;
 
+typedef enum {
+  GO_IMPL_DATA_TYPE_NUMBER = 0,
+  GO_IMPL_DATA_TYPE_CHAR = 1,
+  GO_IMPL_DATA_TYPE_TIME = 2,
+  GO_IMPL_DATA_TYPE_BLOB = 3,
+  GO_IMPL_DATA_TYPE_JSON = 4,
+  GO_IMPL_DATA_TYPE_DATA_SET = 5,
+} go_impl_data_type_t;
+
 typedef struct db_query_column_t {
   char* name;
-  char* column_type;
+  int32_t data_type;
 } db_query_column_t;
 
 typedef struct db_query_value_t {
@@ -76,9 +85,18 @@ var (
 	errNativeAllocFailed = errors.New("native allocation failed")
 )
 
+const (
+	dataTypeNumber  = int32(C.GO_IMPL_DATA_TYPE_NUMBER)
+	dataTypeChar    = int32(C.GO_IMPL_DATA_TYPE_CHAR)
+	dataTypeTime    = int32(C.GO_IMPL_DATA_TYPE_TIME)
+	dataTypeBlob    = int32(C.GO_IMPL_DATA_TYPE_BLOB)
+	dataTypeJson    = int32(C.GO_IMPL_DATA_TYPE_JSON)
+	dataTypeDataSet = int32(C.GO_IMPL_DATA_TYPE_DATA_SET)
+)
+
 type dbQueryColumn struct {
-	name       string
-	columnType string
+	name     string
+	dataType int32
 }
 
 type dbQueryHeader struct {
@@ -112,11 +130,7 @@ func (h *dbQueryHeader) allocC() (*C.db_query_header_t, error) {
 			freeQueryHeader(header)
 			return nil, errNativeAllocFailed
 		}
-		cols[i].column_type = C.CString(col.columnType)
-		if cols[i].column_type == nil {
-			freeQueryHeader(header)
-			return nil, errNativeAllocFailed
-		}
+		cols[i].data_type = C.int32_t(col.dataType)
 	}
 	return header, nil
 }
@@ -129,9 +143,6 @@ func freeQueryHeader(header *C.db_query_header_t) {
 	for i := range cols {
 		if cols[i].name != nil {
 			C.free(unsafe.Pointer(cols[i].name))
-		}
-		if cols[i].column_type != nil {
-			C.free(unsafe.Pointer(cols[i].column_type))
 		}
 	}
 	if header.columns != nil {

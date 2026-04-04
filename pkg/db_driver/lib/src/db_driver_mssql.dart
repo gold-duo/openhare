@@ -29,8 +29,16 @@ class MssqlQueryColumn extends BaseQueryColumn {
   String get name => _column.name;
 
   @override
-  DataType dataType() =>
-      MSSQLConnection.columnDataTypeFromDriverName(_column.typeName);
+  DataType dataType() {
+    return switch (_column.dataType) {
+      impl.DbDataType.number => DataType.number,
+      impl.DbDataType.char => DataType.char,
+      impl.DbDataType.time => DataType.time,
+      impl.DbDataType.blob => DataType.blob,
+      impl.DbDataType.json => DataType.json,
+      impl.DbDataType.dataSet => DataType.dataSet,
+    };
+  }
 }
 
 class MSSQLConnection extends BaseConnection {
@@ -239,9 +247,7 @@ ORDER BY
     // Before matching INT (e.g. `DATETIME2` contains "INT").
     if (t.contains('DATE') || t.contains('TIME')) return DataType.time;
     if (t.contains('INT') && !t.contains('POINT')) return DataType.number;
-    if (t.contains('DECIMAL') ||
-        t.contains('NUMERIC') ||
-        t.contains('MONEY')) {
+    if (t.contains('DECIMAL') || t.contains('NUMERIC') || t.contains('MONEY')) {
       return DataType.number;
     }
     if (t.contains('FLOAT') || t.contains('REAL')) return DataType.number;

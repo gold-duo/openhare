@@ -14,12 +14,10 @@ dependencies:
   freezed_annotation: ^3.1.0
   json_annotation: ^4.9.0
   # path: ^1.8.0
-  mysql:
-    path: impl/mysql/
+  rust_impl:
+    path: rust_impl/
   go_impl:
     path: go_impl/
-  sqlite:
-    path: impl/sqlite/
   pg:
     path: impl/pg/
   sql_parser:

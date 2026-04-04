@@ -29,7 +29,16 @@ class OracleQueryColumn extends BaseQueryColumn {
   String get name => _column.name;
 
   @override
-  DataType dataType() => OracleConnection._getDataType(_column.typeName);
+  DataType dataType() {
+    return switch (_column.dataType) {
+      impl.DbDataType.number => DataType.number,
+      impl.DbDataType.char => DataType.char,
+      impl.DbDataType.time => DataType.time,
+      impl.DbDataType.blob => DataType.blob,
+      impl.DbDataType.json => DataType.json,
+      impl.DbDataType.dataSet => DataType.dataSet,
+    };
+  }
 }
 
 class OracleConnection extends BaseConnection {

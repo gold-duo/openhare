@@ -210,7 +210,8 @@ enum go_impl_stream_event_type_t {
 final class db_query_column_t extends ffi.Struct {
   external ffi.Pointer<ffi.Char> name;
 
-  external ffi.Pointer<ffi.Char> column_type;
+  @ffi.Int32()
+  external int data_type;
 }
 
 final class db_query_value_t extends ffi.Struct {

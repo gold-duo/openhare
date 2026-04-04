@@ -1,130 +1,51 @@
 // ignore_for_file: constant_identifier_names
 
-import 'dart:convert';
-
 import 'package:collection/collection.dart';
-import 'package:mysql/mysql.dart';
+import 'package:rust_impl/rust_impl.dart' as rust_impl;
 import 'db_driver_interface.dart';
 import 'db_driver_metadata.dart';
 import 'package:sql_parser/parser.dart' as sp;
 import 'package:db_driver/src/db_driver_conn_meta.dart';
 
 class MysqlQueryValue extends BaseQueryValue {
-  final QueryValue _value;
+  final rust_impl.DbQueryValue _value;
 
   MysqlQueryValue(this._value);
 
   @override
   String? getString() {
-    return switch (_value) {
-      QueryValue_NULL() => null,
-      QueryValue_Bytes(:final field0) =>
-        utf8.decode(field0, allowMalformed: true), // todo: support gbk, latin1?
-      QueryValue_Int(:final field0) => field0.toString(),
-      QueryValue_UInt(:final field0) => field0.toString(),
-      QueryValue_Float(:final field0) => field0.toString(),
-      QueryValue_Double(:final field0) => field0.toString(),
-      QueryValue_DateTime(:final field0) => field0.toString(),
-    };
+    return _value.asString();
   }
 
   @override
   List<int> getBytes() {
-    return switch (_value) {
-      QueryValue_Bytes(:final field0) => field0.toList(),
-      _ => <int>[],
-    };
+    return _value.asBytes()?.toList() ?? <int>[];
   }
 }
 
 class MysqlQueryColumn extends BaseQueryColumn {
-  final QueryColumn _column;
+  final rust_impl.DbQueryColumn _column;
 
   MysqlQueryColumn(this._column);
 
   @override
   String get name => _column.name;
 
-  static const MYSQL_TYPE_DECIMAL = 0;
-  static const MYSQL_TYPE_TINY = 1;
-  static const MYSQL_TYPE_SHORT = 2;
-  static const MYSQL_TYPE_LONG = 3;
-  static const MYSQL_TYPE_FLOAT = 4;
-  static const MYSQL_TYPE_DOUBLE = 5;
-  static const MYSQL_TYPE_NULL = 6;
-  static const MYSQL_TYPE_TIMESTAMP = 7;
-  static const MYSQL_TYPE_LONGLONG = 8;
-  static const MYSQL_TYPE_INT24 = 9;
-  static const MYSQL_TYPE_DATE = 10;
-  static const MYSQL_TYPE_TIME = 11;
-  static const MYSQL_TYPE_DATETIME = 12;
-  static const MYSQL_TYPE_YEAR = 13;
-  static const MYSQL_TYPE_NEWDATE = 14;
-  static const MYSQL_TYPE_VARCHAR = 15;
-  static const MYSQL_TYPE_BIT = 16;
-  static const MYSQL_TYPE_TIMESTAMP2 = 17;
-  static const MYSQL_TYPE_DATETIME2 = 18;
-  static const MYSQL_TYPE_TIME2 = 19;
-  static const MYSQL_TYPE_TYPED_ARRAY = 20;
-  static const MYSQL_TYPE_VECTOR = 242;
-  static const MYSQL_TYPE_UNKNOWN = 243;
-  static const MYSQL_TYPE_JSON = 245;
-  static const MYSQL_TYPE_NEWDECIMAL = 246;
-  static const MYSQL_TYPE_ENUM = 247;
-  static const MYSQL_TYPE_SET = 248;
-  static const MYSQL_TYPE_TINY_BLOB = 249;
-  static const MYSQL_TYPE_MEDIUM_BLOB = 250;
-  static const MYSQL_TYPE_LONG_BLOB = 251;
-  static const MYSQL_TYPE_BLOB = 252;
-  static const MYSQL_TYPE_VAR_STRING = 253;
-  static const MYSQL_TYPE_STRING = 254;
-  static const MYSQL_TYPE_GEOMETRY = 255;
-
   @override
   DataType dataType() {
-    return switch (_column.columnType) {
-      MYSQL_TYPE_JSON => DataType.json, // JSON
-
-      MYSQL_TYPE_BIT ||
-      MYSQL_TYPE_TINY_BLOB ||
-      MYSQL_TYPE_MEDIUM_BLOB ||
-      MYSQL_TYPE_LONG_BLOB ||
-      MYSQL_TYPE_BLOB =>
-        DataType.blob, // BLOB, TINY_BLOB, MEDIUM_BLOB, LONG_BLOB
-
-      MYSQL_TYPE_VARCHAR ||
-      MYSQL_TYPE_VAR_STRING ||
-      MYSQL_TYPE_STRING =>
-        DataType.char, // STRING, VARCHAR, VAR_STRING
-
-      MYSQL_TYPE_TIMESTAMP ||
-      MYSQL_TYPE_DATE ||
-      MYSQL_TYPE_TIME ||
-      MYSQL_TYPE_DATETIME ||
-      MYSQL_TYPE_YEAR ||
-      MYSQL_TYPE_TIMESTAMP2 ||
-      MYSQL_TYPE_DATETIME2 ||
-      MYSQL_TYPE_TIME2 =>
-        DataType.time, // DATE, DATETIME, TIMESTAMP
-
-      MYSQL_TYPE_DECIMAL ||
-      MYSQL_TYPE_TINY ||
-      MYSQL_TYPE_SHORT ||
-      MYSQL_TYPE_LONG ||
-      MYSQL_TYPE_FLOAT ||
-      MYSQL_TYPE_DOUBLE ||
-      MYSQL_TYPE_LONGLONG ||
-      MYSQL_TYPE_INT24 ||
-      MYSQL_TYPE_NEWDECIMAL =>
-        DataType.number, // number
-
-      _ => DataType.char,
+    return switch (_column.dataType) {
+      rust_impl.DbDataType.number => DataType.number,
+      rust_impl.DbDataType.char => DataType.char,
+      rust_impl.DbDataType.time => DataType.time,
+      rust_impl.DbDataType.blob => DataType.blob,
+      rust_impl.DbDataType.json => DataType.json,
+      rust_impl.DbDataType.dataSet => DataType.dataSet,
     };
   }
 }
 
 class MySQLConnection extends BaseConnection {
-  final ConnWrapper _conn;
+  final rust_impl.ImplConnection _conn;
   late String? _sessionId;
   final String _dsn;
 
@@ -142,7 +63,7 @@ class MySQLConnection extends BaseConnection {
       port: meta.getPort() ?? 3306,
       path: schema ?? "",
     ).toString();
-    final conn = await ConnWrapper.open(dsn: dsn);
+    final conn = await rust_impl.ImplConnection.openMySql(dsn);
     final mc = MySQLConnection(conn, dsn);
     await mc.loadSessionId();
     return mc;
@@ -151,7 +72,6 @@ class MySQLConnection extends BaseConnection {
   @override
   Future<void> close() async {
     await _conn.close();
-    _conn.dispose();
   }
 
   @override
@@ -167,10 +87,10 @@ class MySQLConnection extends BaseConnection {
 
   @override
   Future<void> killQuery() async {
-    // create new connection to kill query
+    if (_sessionId == null) return;
     MySQLConnection? tmp;
     try {
-      final tmpConn = await ConnWrapper.open(dsn: _dsn);
+      final tmpConn = await rust_impl.ImplConnection.openMySql(_dsn);
       tmp = MySQLConnection(tmpConn, _dsn);
       await tmp.query("KILL QUERY $_sessionId");
     } finally {
@@ -183,28 +103,26 @@ class MySQLConnection extends BaseConnection {
     List<BaseQueryColumn>? columns;
 
     try {
-      await for (final item in _conn.query(query: sql)) {
+      await for (final item in _conn.streamQuery(sql)) {
         switch (item) {
-          case QueryStreamItem_Header(:final field0):
-            columns = field0.columns
+          case rust_impl.DbQueryHeader():
+            columns = item.columns
                 .map<BaseQueryColumn>((c) => MysqlQueryColumn(c))
                 .toList();
             yield QueryStreamItemHeader(
               columns: columns,
-              affectedRows: field0.affectedRows,
+              affectedRows: item.affectedRows,
             );
-          case QueryStreamItem_Row(:final field0):
+          case rust_impl.DbQueryRow():
             if (columns == null) {
               throw StateError('Received row before header');
             }
             yield QueryStreamItemRow(
               row: QueryResultRow(
                 columns,
-                field0.values.map((v) => MysqlQueryValue(v)).toList(),
+                item.values.map((v) => MysqlQueryValue(v)).toList(),
               ),
             );
-          case QueryStreamItem_Error(:final field0):
-            throw Exception(field0);
         }
       }
     } catch (e) {
@@ -223,7 +141,6 @@ class MySQLConnection extends BaseConnection {
   Future<List<MetaDataNode>> metadata() async {
     final schemaList = await schemas();
 
-    // ref: https://dev.mysql.com/doc/refman/8.4/en/information-schema-columns-table.html
     final results = await query("""SELECT 
     t.TABLE_SCHEMA,
     t.TABLE_NAME,

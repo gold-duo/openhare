@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 
 	_ "github.com/microsoft/go-mssqldb"
@@ -14,6 +15,46 @@ type mssqlConn struct {
 
 func (c *mssqlConn) Close() error {
 	return c.db.Close()
+}
+
+func mssqlDataType(typeName string) int32 {
+	t := strings.ToUpper(typeName)
+
+	// MSSQL: check datetime first (contains "INT" in DATETIME)
+	if strings.Contains(t, "DATE") || strings.Contains(t, "TIME") {
+		return dataTypeTime
+	}
+
+	// MSSQL number types
+	if strings.Contains(t, "INT") && !strings.Contains(t, "POINT") ||
+		strings.Contains(t, "DECIMAL") || strings.Contains(t, "NUMERIC") ||
+		strings.Contains(t, "MONEY") || strings.Contains(t, "SMALLMONEY") ||
+		strings.Contains(t, "FLOAT") || strings.Contains(t, "REAL") {
+		return dataTypeNumber
+	}
+
+	// MSSQL binary types
+	if strings.Contains(t, "BINARY") || strings.Contains(t, "VARBINARY") ||
+		strings.Contains(t, "IMAGE") {
+		return dataTypeBlob
+	}
+
+	// MSSQL special types
+	if t == "BIT" {
+		return dataTypeDataSet
+	}
+	if strings.Contains(t, "XML") {
+		return dataTypeJson
+	}
+
+	// MSSQL character types
+	if strings.Contains(t, "CHAR") || strings.Contains(t, "VARCHAR") ||
+		strings.Contains(t, "TEXT") || strings.Contains(t, "NTEXT") ||
+		strings.Contains(t, "UNIQUEIDENTIFIER") {
+		return dataTypeChar
+	}
+
+	return dataTypeChar
 }
 
 func (c *mssqlConn) OpenQuery(sqlText string) (rowCursor, error) {
@@ -39,7 +80,10 @@ func (c *mssqlConn) OpenQuery(sqlText string) (rowCursor, error) {
 		if i < len(colTypes) && colTypes[i] != nil {
 			dbType = colTypes[i].DatabaseTypeName()
 		}
-		columns = append(columns, dbQueryColumn{name: name, columnType: dbType})
+		columns = append(columns, dbQueryColumn{
+			name:     name,
+			dataType: mssqlDataType(dbType),
+		})
 	}
 
 	return &mssqlCur{rows: rows, columns: columns}, nil

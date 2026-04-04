@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	go_ora "github.com/sijms/go-ora/v2"
@@ -13,6 +14,44 @@ type oraConn struct {
 
 func (c *oraConn) Close() error { return c.conn.Close() }
 
+func oracleDataType(typeName string) int32 {
+	t := strings.ToUpper(typeName)
+
+	// Oracle number types
+	if strings.Contains(t, "NUMBER") || strings.Contains(t, "NUMERIC") ||
+		strings.Contains(t, "INTEGER") || strings.Contains(t, "INT") ||
+		strings.Contains(t, "FLOAT") || strings.Contains(t, "DOUBLE") ||
+		strings.Contains(t, "PRECISION") {
+		return dataTypeNumber
+	}
+
+	// Oracle character types
+	if strings.Contains(t, "CHAR") || strings.Contains(t, "VARCHAR") ||
+		strings.Contains(t, "CLOB") || strings.Contains(t, "NCLOB") ||
+		strings.Contains(t, "LONG") || strings.Contains(t, "XMLTYPE") {
+		return dataTypeChar
+	}
+
+	// Oracle date/time types
+	if strings.Contains(t, "DATE") || strings.Contains(t, "TIMESTAMP") ||
+		strings.Contains(t, "INTERVAL") {
+		return dataTypeTime
+	}
+
+	// Oracle binary types
+	if strings.Contains(t, "BLOB") || strings.Contains(t, "BFILE") ||
+		strings.Contains(t, "RAW") || strings.Contains(t, "LONG RAW") {
+		return dataTypeBlob
+	}
+
+	// Oracle JSON
+	if strings.Contains(t, "JSON") {
+		return dataTypeJson
+	}
+
+	return dataTypeChar
+}
+
 func (c *oraConn) OpenQuery(sql string) (rowCursor, error) {
 	stmt := go_ora.NewStmt(sql, c.conn)
 	rows, err := stmt.Query_(nil)
@@ -23,7 +62,11 @@ func (c *oraConn) OpenQuery(sql string) (rowCursor, error) {
 	names := rows.Columns()
 	columns := make([]dbQueryColumn, 0, len(names))
 	for i, name := range names {
-		columns = append(columns, dbQueryColumn{name: name, columnType: rows.ColumnTypeDatabaseTypeName(i)})
+		typeName := rows.ColumnTypeDatabaseTypeName(i)
+		columns = append(columns, dbQueryColumn{
+			name:     name,
+			dataType: oracleDataType(typeName),
+		})
 	}
 	return &oraCur{
 		stmt: stmt, rows: rows, columns: columns,

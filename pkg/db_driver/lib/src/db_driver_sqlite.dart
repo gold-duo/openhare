@@ -1,43 +1,29 @@
-import 'dart:convert';
-
 import 'package:collection/collection.dart';
 import 'package:sql_parser/parser.dart' as sp;
-import 'package:sqlite/sqlite.dart';
+import 'package:rust_impl/rust_impl.dart' as rust_impl;
 
 import 'db_driver_conn_meta.dart';
 import 'db_driver_interface.dart';
 import 'db_driver_metadata.dart';
 
 class SqliteQueryValue extends BaseQueryValue {
-  final QueryValue _value;
+  final rust_impl.DbQueryValue _value;
 
   SqliteQueryValue(this._value);
 
   @override
   String? getString() {
-    return switch (_value) {
-      QueryValue_NULL() => null,
-      QueryValue_Bytes(:final field0) =>
-        utf8.decode(field0, allowMalformed: true),
-      QueryValue_Int(:final field0) => field0.toString(),
-      QueryValue_UInt(:final field0) => field0.toString(),
-      QueryValue_Float(:final field0) => field0.toString(),
-      QueryValue_Double(:final field0) => field0.toString(),
-      QueryValue_DateTime(:final field0) => field0.toString(),
-    };
+    return _value.asString();
   }
 
   @override
   List<int> getBytes() {
-    return switch (_value) {
-      QueryValue_Bytes(:final field0) => field0.toList(),
-      _ => <int>[],
-    };
+    return _value.asBytes()?.toList() ?? <int>[];
   }
 }
 
 class SqliteQueryColumn extends BaseQueryColumn {
-  final QueryColumn _column;
+  final rust_impl.DbQueryColumn _column;
 
   SqliteQueryColumn(this._column);
 
@@ -45,11 +31,20 @@ class SqliteQueryColumn extends BaseQueryColumn {
   String get name => _column.name;
 
   @override
-  DataType dataType() => SQLiteConnection._getDataType(_column.columnType);
+  DataType dataType() {
+    return switch (_column.dataType) {
+      rust_impl.DbDataType.number => DataType.number,
+      rust_impl.DbDataType.char => DataType.char,
+      rust_impl.DbDataType.time => DataType.time,
+      rust_impl.DbDataType.blob => DataType.blob,
+      rust_impl.DbDataType.json => DataType.json,
+      rust_impl.DbDataType.dataSet => DataType.dataSet,
+    };
+  }
 }
 
 class SQLiteConnection extends BaseConnection {
-  final ConnWrapper _conn;
+  final rust_impl.ImplConnection _conn;
 
   SQLiteConnection(this._conn);
 
@@ -62,7 +57,8 @@ class SQLiteConnection extends BaseConnection {
     if (dsn.startsWith("file://")) {
       dsn = Uri.parse(dsn).toFilePath();
     }
-    final conn = await ConnWrapper.open(dsn: dsn.isEmpty ? ":memory:" : dsn);
+    final conn = await rust_impl.ImplConnection.openSqlite(
+        dsn.isEmpty ? ":memory:" : dsn);
     final sqliteConn = SQLiteConnection(conn);
     return sqliteConn;
   }
@@ -70,7 +66,6 @@ class SQLiteConnection extends BaseConnection {
   @override
   Future<void> close() async {
     await _conn.close();
-    _conn.dispose();
   }
 
   @override
@@ -88,28 +83,26 @@ class SQLiteConnection extends BaseConnection {
   Stream<BaseQueryStreamItem> queryStreamInternal(String sql) async* {
     List<BaseQueryColumn>? columns;
 
-    await for (final item in _conn.query(query: sql)) {
+    await for (final item in _conn.streamQuery(sql)) {
       switch (item) {
-        case QueryStreamItem_Header(:final field0):
-          columns = field0.columns
+        case rust_impl.DbQueryHeader():
+          columns = item.columns
               .map<BaseQueryColumn>((c) => SqliteQueryColumn(c))
               .toList();
           yield QueryStreamItemHeader(
             columns: columns,
-            affectedRows: field0.affectedRows,
+            affectedRows: item.affectedRows,
           );
-        case QueryStreamItem_Row(:final field0):
+        case rust_impl.DbQueryRow():
           if (columns == null) {
             throw StateError('Received row before header');
           }
           yield QueryStreamItemRow(
             row: QueryResultRow(
               columns,
-              field0.values.map((v) => SqliteQueryValue(v)).toList(),
+              item.values.map((v) => SqliteQueryValue(v)).toList(),
             ),
           );
-        case QueryStreamItem_Error(:final field0):
-          throw Exception(field0);
       }
     }
   }
