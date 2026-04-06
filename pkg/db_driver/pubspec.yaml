@@ -18,8 +18,6 @@ dependencies:
     path: rust_impl/
   go_impl:
     path: go_impl/
-  pg:
-    path: impl/pg/
   sql_parser:
     path: ../sql_parser/
 

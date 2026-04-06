@@ -1,0 +1,20 @@
+--- a/vendor/github.com/go-sql-driver/mysql/rows.go
++++ b/vendor/github.com/go-sql-driver/mysql/rows.go
+@@ -225,3 +225,17 @@ func (rows *textRows) Next(dest []driver.Value) error {
+ 	}
+ 	return io.EOF
+ }
++
++// RowsAffected returns the number of affected rows for the current result set.
++//
++// PATCH: This method is injected via patches/mysql-rows-affected.patch
++// Reason: The standard database/sql interface doesn't expose affected rows for Query(),
++// only for Exec(). This patch allows retrieving affected rows for INSERT/UPDATE/DELETE
++// statements when using Query() by accessing the underlying MySQL protocol data
++// stored in mysqlConn.result.affectedRows.
++func (rows *mysqlRows) RowsAffected() int64 {
++	if rows.mc == nil || len(rows.mc.result.affectedRows) == 0 {
++		return 0
++	}
++	return rows.mc.result.affectedRows[len(rows.mc.result.affectedRows)-1]
++}

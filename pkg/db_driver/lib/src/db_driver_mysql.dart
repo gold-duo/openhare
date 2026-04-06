@@ -1,30 +1,26 @@
 // ignore_for_file: constant_identifier_names
 
 import 'package:collection/collection.dart';
-import 'package:rust_impl/rust_impl.dart' as rust_impl;
+import 'package:go_impl/go_impl.dart' as impl;
 import 'db_driver_interface.dart';
 import 'db_driver_metadata.dart';
 import 'package:sql_parser/parser.dart' as sp;
 import 'package:db_driver/src/db_driver_conn_meta.dart';
 
 class MysqlQueryValue extends BaseQueryValue {
-  final rust_impl.DbQueryValue _value;
+  final impl.DbQueryValue _cell;
 
-  MysqlQueryValue(this._value);
-
-  @override
-  String? getString() {
-    return _value.asString();
-  }
+  MysqlQueryValue(this._cell);
 
   @override
-  List<int> getBytes() {
-    return _value.asBytes()?.toList() ?? <int>[];
-  }
+  String? getString() => _cell.asString();
+
+  @override
+  List<int> getBytes() => _cell.asBytes();
 }
 
 class MysqlQueryColumn extends BaseQueryColumn {
-  final rust_impl.DbQueryColumn _column;
+  final impl.DbQueryColumn _column;
 
   MysqlQueryColumn(this._column);
 
@@ -34,20 +30,20 @@ class MysqlQueryColumn extends BaseQueryColumn {
   @override
   DataType dataType() {
     return switch (_column.dataType) {
-      rust_impl.DbDataType.number => DataType.number,
-      rust_impl.DbDataType.char => DataType.char,
-      rust_impl.DbDataType.time => DataType.time,
-      rust_impl.DbDataType.blob => DataType.blob,
-      rust_impl.DbDataType.json => DataType.json,
-      rust_impl.DbDataType.dataSet => DataType.dataSet,
+      impl.DbDataType.number => DataType.number,
+      impl.DbDataType.char => DataType.char,
+      impl.DbDataType.time => DataType.time,
+      impl.DbDataType.blob => DataType.blob,
+      impl.DbDataType.json => DataType.json,
+      impl.DbDataType.dataSet => DataType.dataSet,
     };
   }
 }
 
 class MySQLConnection extends BaseConnection {
-  final rust_impl.ImplConnection _conn;
-  late String? _sessionId;
+  final impl.ImplConnection _conn;
   final String _dsn;
+  String? _sessionId;
 
   MySQLConnection(this._conn, this._dsn);
 
@@ -56,16 +52,17 @@ class MySQLConnection extends BaseConnection {
 
   static Future<BaseConnection> open(
       {required ConnectValue meta, String? schema}) async {
-    final dsn = Uri(
-      scheme: "mysql",
-      userInfo: '${meta.user}:${Uri.encodeComponent(meta.password)}',
-      host: meta.getHost(),
-      port: meta.getPort() ?? 3306,
-      path: schema ?? "",
-    ).toString();
-    final conn = await rust_impl.ImplConnection.openMySql(dsn);
+    final database = schema ?? meta.getValue("database", "");
+    final host = meta.getHost();
+    final port = meta.getPort() ?? 3306;
+    final user = meta.user;
+    final password = Uri.encodeComponent(meta.password);
+
+    final dsn = '$user:$password@tcp($host:$port)/$database';
+
+    final conn = await impl.ImplConnection.openMysql(dsn);
     final mc = MySQLConnection(conn, dsn);
-    await mc.loadSessionId();
+    await mc._loadSessionId();
     return mc;
   }
 
@@ -79,18 +76,18 @@ class MySQLConnection extends BaseConnection {
     await query("SELECT 1");
   }
 
-  Future<void> loadSessionId() async {
-    final results = await query("SELECT CONNECTION_ID() AS session_id;");
-    final row = results.rows.first;
-    _sessionId = row.getString("session_id");
+  Future<void> _loadSessionId() async {
+    final results = await query("SELECT CONNECTION_ID() AS session_id");
+    _sessionId = results.rows.first.getString("session_id");
   }
 
   @override
   Future<void> killQuery() async {
     if (_sessionId == null) return;
+
     MySQLConnection? tmp;
     try {
-      final tmpConn = await rust_impl.ImplConnection.openMySql(_dsn);
+      final tmpConn = await impl.ImplConnection.openMysql(_dsn);
       tmp = MySQLConnection(tmpConn, _dsn);
       await tmp.query("KILL QUERY $_sessionId");
     } finally {
@@ -102,39 +99,37 @@ class MySQLConnection extends BaseConnection {
   Stream<BaseQueryStreamItem> queryStreamInternal(String sql) async* {
     List<BaseQueryColumn>? columns;
 
-    try {
-      await for (final item in _conn.streamQuery(sql)) {
-        switch (item) {
-          case rust_impl.DbQueryHeader():
-            columns = item.columns
-                .map<BaseQueryColumn>((c) => MysqlQueryColumn(c))
-                .toList();
-            yield QueryStreamItemHeader(
-              columns: columns,
-              affectedRows: item.affectedRows,
-            );
-          case rust_impl.DbQueryRow():
-            if (columns == null) {
-              throw StateError('Received row before header');
-            }
-            yield QueryStreamItemRow(
-              row: QueryResultRow(
-                columns,
-                item.values.map((v) => MysqlQueryValue(v)).toList(),
-              ),
-            );
-        }
+    await for (final item in _conn.streamQuery(sql)) {
+      switch (item) {
+        case impl.DbQueryHeader():
+          columns = item.columns
+              .map<BaseQueryColumn>((c) => MysqlQueryColumn(c))
+              .toList(growable: false);
+          yield QueryStreamItemHeader(
+            columns: columns,
+            affectedRows: item.affectedRows,
+          );
+        case impl.DbQueryRow():
+          final currentColumns = columns;
+          if (currentColumns == null) {
+            throw StateError('No header received before row');
+          }
+          yield QueryStreamItemRow(
+            row: QueryResultRow(
+              currentColumns,
+              item.values
+                  .map<BaseQueryValue>((c) => MysqlQueryValue(c))
+                  .toList(growable: false),
+            ),
+          );
       }
-    } catch (e) {
-      rethrow;
     }
   }
 
   @override
   Future<String> version() async {
     final results = await query("SELECT VERSION() AS version");
-    final rows = results.rows;
-    return rows.first.getString("version") ?? "";
+    return results.rows.first.getString("version") ?? "";
   }
 
   @override
@@ -157,18 +152,18 @@ WHERE
 ORDER BY
     t.TABLE_SCHEMA,
     t.TABLE_NAME, 
-    c.ORDINAL_POSITION;
-""");
+    c.ORDINAL_POSITION;""");
+
     final rows = results.rows;
     final schemaRows =
         rows.groupListsBy((result) => result.getString("TABLE_SCHEMA")!);
 
-    List<MetaDataNode> schemaNodes = List.empty(growable: true);
+    final schemaNodes = <MetaDataNode>[];
     for (final schema in schemaList) {
       final schemaNode = MetaDataNode(MetaType.schema, schema);
       schemaNodes.add(schemaNode);
 
-      List<MetaDataNode> tableNodes = List.empty(growable: true);
+      final tableNodes = <MetaDataNode>[];
       final tableRows = schemaRows[schema];
       if (tableRows != null) {
         final byTable =
@@ -182,7 +177,7 @@ ORDER BY
               .map((result) => MetaDataNode(
                   MetaType.column, result.getString("COLUMN_NAME")!)
                 ..withProp(MetaDataPropType.dataType,
-                    getDataType(result.getString("DATA_TYPE")!)))
+                    _getDataType(result.getString("DATA_TYPE")!)))
               .toList();
           tableNode.items = columnNodes;
         }
@@ -192,54 +187,56 @@ ORDER BY
     return schemaNodes;
   }
 
-  @override
-  Future<List<String>> schemas() async {
-    List<String> schemas = List.empty(growable: true);
-    final results = await query("show databases");
-    final rows = results.rows;
-    for (final result in rows) {
-      schemas.add(result.getString("Database") ?? "");
-    }
-    return schemas;
-  }
-
-  @override
-  Future<void> setCurrentSchema(String schema) async {
-    await query("USE `$schema`");
-    final currentSchema = await getCurrentSchema();
-    onSchemaChanged(currentSchema!);
-  }
-
-  @override
-  Future<String?> getCurrentSchema() async {
-    final results = await query("SELECT DATABASE()");
-    final rows = results.rows;
-    final currentSchema = rows.first.getString("DATABASE()");
-    return currentSchema;
-  }
-
-  static DataType getDataType(String dataType) {
-    return switch (dataType) {
+  static DataType _getDataType(String dataType) {
+    final t = dataType.toLowerCase().trim();
+    return switch (t) {
       "int" ||
       "bigint" ||
       "smallint" ||
       "tinyint" ||
       "decimal" ||
       "double" ||
-      "float" =>
+      "float" ||
+      "mediumint" ||
+      "bit" =>
         DataType.number,
-      "char" || "varchar" => DataType.char,
-      "datetime" || "time" || "timestamp" => DataType.time,
+      "char" || "varchar" || "binary" || "varbinary" => DataType.char,
+      "datetime" || "time" || "timestamp" || "date" || "year" => DataType.time,
       "text" ||
       "blob" ||
       "longblob" ||
       "longtext" ||
       "mediumblob" ||
-      "mediumtext" =>
+      "mediumtext" ||
+      "tinyblob" ||
+      "tinytext" =>
         DataType.blob,
       "json" => DataType.json,
       "set" || "enum" => DataType.dataSet,
       _ => DataType.blob,
     };
+  }
+
+  @override
+  Future<List<String>> schemas() async {
+    final results = await query("SHOW DATABASES");
+    return results.rows
+        .map((r) => r.getString("Database") ?? "")
+        .where((s) => s.isNotEmpty)
+        .toList();
+  }
+
+  @override
+  Future<void> setCurrentSchema(String schema) async {
+    final escaped = schema.replaceAll('`', '``');
+    await query("USE `$escaped`");
+    final currentSchema = await getCurrentSchema();
+    onSchemaChanged(currentSchema ?? "");
+  }
+
+  @override
+  Future<String?> getCurrentSchema() async {
+    final results = await query("SELECT DATABASE() AS current_schema");
+    return results.rows.first.getString("current_schema");
   }
 }

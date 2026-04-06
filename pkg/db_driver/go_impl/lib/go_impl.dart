@@ -61,6 +61,10 @@ final class ImplConnection {
 
   static Future<ImplConnection> openMssql(String dsn) => open(go_impl_db_type_t.GO_IMPL_DB_MSSQL, dsn);
 
+  static Future<ImplConnection> openPg(String dsn) => open(go_impl_db_type_t.GO_IMPL_DB_PG, dsn);
+
+  static Future<ImplConnection> openMysql(String dsn) => open(go_impl_db_type_t.GO_IMPL_DB_MYSQL, dsn);
+
   Stream<DbQueryEvent> streamQuery(String sql) async* {
     final port = ReceivePort();
     final sqlPtr = sql.toNativeUtf8();
