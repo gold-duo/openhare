@@ -25,6 +25,8 @@ type mysqlRows struct {
 	mc     *mysqlConn
 	rs     resultSet
 	finish func()
+	// Last OK packet rows-affected; copied from mc.result in nextResultSet/Close before mc/result is cleared.
+	rowsAffected int64
 }
 
 type binaryRows struct {
@@ -97,6 +99,13 @@ func (rows *mysqlRows) ColumnTypeScanType(i int) reflect.Type {
 	return rows.rs.columns[i].scanType()
 }
 
+func (rows *mysqlRows) syncRowsAffected() {
+	if rows.mc == nil || len(rows.mc.result.affectedRows) == 0 {
+		return
+	}
+	rows.rowsAffected = rows.mc.result.affectedRows[len(rows.mc.result.affectedRows)-1]
+}
+
 func (rows *mysqlRows) Close() (err error) {
 	if f := rows.finish; f != nil {
 		f()
@@ -116,6 +125,7 @@ func (rows *mysqlRows) Close() (err error) {
 		err = mc.readUntilEOF()
 	}
 	if err == nil {
+		rows.syncRowsAffected()
 		handleOk := mc.clearResult()
 		if err = handleOk.discardResults(); err != nil {
 			return err
@@ -150,6 +160,7 @@ func (rows *mysqlRows) nextResultSet() (int, error) {
 	}
 
 	if !rows.HasNextResultSet() {
+		rows.syncRowsAffected()
 		rows.mc = nil
 		return 0, io.EOF
 	}
@@ -230,10 +241,7 @@ func (rows *textRows) Next(dest []driver.Value) error {
 // Reason: The standard database/sql interface doesn't expose affected rows for Query(),
 // only for Exec(). This patch allows retrieving affected rows for INSERT/UPDATE/DELETE
 // statements when using Query() by accessing the underlying MySQL protocol data
-// stored in mysqlConn.result.affectedRows.
+// stored in mysqlConn.result.affectedRows, copied into rowsAffected before mc is dropped.
 func (rows *mysqlRows) RowsAffected() int64 {
-	if rows.mc == nil || len(rows.mc.result.affectedRows) == 0 {
-		return 0
-	}
-	return rows.mc.result.affectedRows[len(rows.mc.result.affectedRows)-1]
+	return rows.rowsAffected
 }

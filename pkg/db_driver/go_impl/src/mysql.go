@@ -167,7 +167,7 @@ func openMysqlConn(dsn string) (driverConn, error) {
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second) // todo: 时间可配
 	defer cancel()
 
 	if pinger, ok := conn.(driver.Pinger); ok {
