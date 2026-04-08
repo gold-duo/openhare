@@ -1,6 +1,5 @@
 import 'package:client/repositories/repo.dart';
 import 'package:client/screens/app.dart';
-import 'package:db_driver/db_driver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
@@ -20,8 +19,6 @@ void main(List<String> args) async {
   );
 
   await initObjectbox();
-
-  await ConnectionFactory.init();
 
   await windowManager.ensureInitialized();
 
