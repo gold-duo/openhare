@@ -2215,6 +2215,16 @@ func (r *SQLiteResult) RowsAffected() (int64, error) {
 	return r.changes, nil
 }
 
+// DriverChanges returns sqlite3_changes(db); same basis as SQLiteResult.RowsAffected from Exec (PATCH: sqlite3-driver-changes.patch).
+func (c *SQLiteConn) DriverChanges() int64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.db == nil {
+		return 0
+	}
+	return int64(C.sqlite3_changes(c.db))
+}
+
 // Exec execute the statement with arguments. Return result object.
 func (s *SQLiteStmt) Exec(args []driver.Value) (driver.Result, error) {
 	return s.exec(context.Background(), valueToNamedValue(args))
