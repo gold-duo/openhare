@@ -841,6 +841,7 @@ func (rc *Rows) Close() error {
 			if tok == nil {
 				return nil
 			} else {
+				rc.reader.accumulateDoneRowCount(tok)
 				// continue consuming tokens
 				continue
 			}
@@ -861,6 +862,32 @@ func (rc *Rows) Columns() (res []string) {
 		res[i] = col.ColName
 	}
 	return
+}
+
+// accumulateDoneRowCount mirrors iterateResponse DONE handling for Query/Rows paths (PATCH: mssql-rows-affected.patch).
+func (tp *tokenProcessor) accumulateDoneRowCount(tok interface{}) {
+	if tp == nil {
+		return
+	}
+	switch x := tok.(type) {
+	case doneInProcStruct:
+		d := doneStruct(x)
+		if d.Status&doneCount != 0 {
+			tp.rowCount += int64(d.RowCount)
+		}
+	case doneStruct:
+		if x.Status&doneCount != 0 {
+			tp.rowCount += int64(x.RowCount)
+		}
+	}
+}
+
+// DriverRowsAffected returns cumulative row counts from TDS DONE packets (same basis as sql.Result from Exec).
+func (rc *Rows) DriverRowsAffected() int64 {
+	if rc == nil || rc.reader == nil {
+		return 0
+	}
+	return rc.reader.rowCount
 }
 
 func (rc *Rows) Next(dest []driver.Value) error {
@@ -886,7 +913,14 @@ func (rc *Rows) Next(dest []driver.Value) error {
 						dest[i] = tokdata[i]
 					}
 					return nil
+				case doneInProcStruct:
+					rc.reader.accumulateDoneRowCount(tokdata)
+					d := doneStruct(tokdata)
+					if d.isError() {
+						return rc.stmt.c.checkBadConn(rc.reader.ctx, d.getError(), false)
+					}
 				case doneStruct:
+					rc.reader.accumulateDoneRowCount(tokdata)
 					if tokdata.isError() {
 						return rc.stmt.c.checkBadConn(rc.reader.ctx, tokdata.getError(), false)
 					}

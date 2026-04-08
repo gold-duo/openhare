@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
-	"database/sql"
+	"database/sql/driver"
+	"errors"
+	"fmt"
+	"io"
 	"time"
 
-	_ "github.com/microsoft/go-mssqldb"
+	mssql "github.com/microsoft/go-mssqldb"
 )
 
 // MSSQL 类型名称常量（来源：github.com/microsoft/go-mssqldb）
@@ -54,12 +57,13 @@ const (
 	mssqlXml = "xml"
 )
 
+// mssqlConn 直接使用 go-mssqldb 的 driver.Conn（*mssql.Conn），不经过 database/sql.DB。
 type mssqlConn struct {
-	db *sql.DB
+	conn *mssql.Conn
 }
 
 func (c *mssqlConn) Close() error {
-	return c.db.Close()
+	return c.conn.Close()
 }
 
 func mssqlDataType(typeName string) int32 {
@@ -99,27 +103,35 @@ func mssqlDataType(typeName string) int32 {
 }
 
 func (c *mssqlConn) OpenQuery(sqlText string) (rowCursor, error) {
-	rows, err := c.db.QueryContext(context.Background(), sqlText)
+	ctx := context.Background()
+	st, err := c.conn.PrepareContext(ctx, sqlText)
 	if err != nil {
 		return nil, err
+	}
+	stmt, ok := st.(*mssql.Stmt)
+	if !ok {
+		_ = st.Close()
+		return nil, fmt.Errorf("mssql: unexpected driver.Stmt type %T", st)
+	}
+	qrows, err := stmt.QueryContext(ctx, nil)
+	if err != nil {
+		_ = stmt.Close()
+		return nil, err
+	}
+	mr, ok := qrows.(*mssql.Rows)
+	if !ok {
+		_ = qrows.Close()
+		return nil, fmt.Errorf("mssql: unexpected driver.Rows type %T", qrows)
 	}
 
-	names, err := rows.Columns()
-	if err != nil {
-		_ = rows.Close()
-		return nil, err
-	}
-	colTypes, err := rows.ColumnTypes()
-	if err != nil {
-		_ = rows.Close()
-		return nil, err
-	}
-
+	names := mr.Columns()
 	columns := make([]dbQueryColumn, 0, len(names))
+	var drvRows driver.Rows = mr
+	ct, hasCT := drvRows.(driver.RowsColumnTypeDatabaseTypeName)
 	for i, name := range names {
 		dbType := ""
-		if i < len(colTypes) && colTypes[i] != nil {
-			dbType = colTypes[i].DatabaseTypeName()
+		if hasCT {
+			dbType = ct.ColumnTypeDatabaseTypeName(i)
 		}
 		columns = append(columns, dbQueryColumn{
 			name:     name,
@@ -127,11 +139,11 @@ func (c *mssqlConn) OpenQuery(sqlText string) (rowCursor, error) {
 		})
 	}
 
-	return &mssqlCur{rows: rows, columns: columns}, nil
+	return &mssqlCur{rows: mr, columns: columns}, nil
 }
 
 type mssqlCur struct {
-	rows    *sql.Rows
+	rows    *mssql.Rows
 	columns []dbQueryColumn
 }
 
@@ -139,48 +151,49 @@ func (q *mssqlCur) Close() error {
 	return q.rows.Close()
 }
 
+// Header 中 affectedRows 来自 *mssql.Rows.DriverRowsAffected()（vendor patch，TDS DONE 与 Exec 一致）。
+// 流式读未完成前 Header 里的计数可能仍不完整（首包先发 HEADER 再拉行）。
 func (q *mssqlCur) Header() *dbQueryHeader {
-	return &dbQueryHeader{columns: q.columns}
+	return &dbQueryHeader{
+		columns:      q.columns,
+		affectedRows: q.rows.DriverRowsAffected(),
+	}
 }
 
 func (q *mssqlCur) NextRow() (*dbQueryRow, bool, error) {
-	if !q.rows.Next() {
-		if err := q.rows.Err(); err != nil {
-			return nil, false, err
+	dest := make([]driver.Value, len(q.columns))
+	if err := q.rows.Next(dest); err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil, false, nil
 		}
-		return nil, false, nil
-	}
-
-	n := len(q.columns)
-	raw := make([]any, n)
-	scanArgs := make([]any, n)
-	for i := range raw {
-		scanArgs[i] = &raw[i]
-	}
-	if err := q.rows.Scan(scanArgs...); err != nil {
 		return nil, false, err
 	}
-
-	values := make([]dbQueryValue, 0, len(raw))
-	for _, value := range raw {
-		values = append(values, buildQueryValue(value))
+	values := make([]dbQueryValue, 0, len(dest))
+	for _, v := range dest {
+		values = append(values, buildQueryValue(v))
 	}
 	return &dbQueryRow{values: values}, true, nil
 }
 
 func openMssqlConn(dsn string) (driverConn, error) {
-	db, err := sql.Open("sqlserver", dsn)
+	connector, err := mssql.NewConnector(dsn)
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(4)
-	db.SetConnMaxLifetime(0)
-
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	if err := db.PingContext(ctx); err != nil {
-		_ = db.Close()
+	dc, err := connector.Connect(ctx)
+	if err != nil {
 		return nil, err
 	}
-	return &mssqlConn{db: db}, nil
+	mc, ok := dc.(*mssql.Conn)
+	if !ok {
+		_ = dc.Close()
+		return nil, fmt.Errorf("mssql: unexpected driver.Conn type %T", dc)
+	}
+	if err := mc.Ping(ctx); err != nil {
+		_ = mc.Close()
+		return nil, err
+	}
+	return &mssqlConn{conn: mc}, nil
 }
