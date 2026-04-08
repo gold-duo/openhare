@@ -302,6 +302,15 @@ func (rs *QueryResult) RowsAffected() (int64, error) {
 	return rs.rowsAffected, nil
 }
 
+// QueryRowsAffected returns rows affected after Query_; uses Summary RowsAffectedCount (CurRowNumber or successIter) (PATCH: go-ora-query-rows-affected.patch).
+func (stmt *Stmt) QueryRowsAffected() int64 {
+	session := stmt.connection.session
+	if session == nil || session.Summary == nil {
+		return 0
+	}
+	return session.Summary.RowsAffectedCount()
+}
+
 var sqlQueryReturnStatementRegexp = lazy_init.NewLazyInit(func() (interface{}, error) {
 	return regexp.Compile(`(\bRETURNING\b|\bRETURN\b)\s+.*\s+\bINTO\b`)
 })

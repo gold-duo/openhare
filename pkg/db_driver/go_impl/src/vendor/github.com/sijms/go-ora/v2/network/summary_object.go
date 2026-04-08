@@ -263,6 +263,18 @@ func NewSummary(session *Session) (*SummaryObject, error) {
 	return result, nil
 }
 
+// RowsAffectedCount returns DML rows affected. CurRowNumber is often 0 for INSERT/UPDATE/DELETE
+// with no rowset; the count may appear in successIter (PATCH: go-ora-query-rows-affected.patch).
+func (s *SummaryObject) RowsAffectedCount() int64 {
+	if s == nil {
+		return 0
+	}
+	if s.CurRowNumber > 0 {
+		return int64(s.CurRowNumber)
+	}
+	return int64(s.successIter)
+}
+
 type WarningObject struct {
 	retCode      int
 	flag         int

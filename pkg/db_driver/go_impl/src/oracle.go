@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"database/sql/driver"
+	"errors"
+	"io"
 	"time"
 
 	go_ora "github.com/sijms/go-ora/v2"
@@ -62,6 +65,7 @@ const (
 	oraRESULTSET = "RESULTSET"
 )
 
+// oraConn 直接使用 go-ora 的 *Connection，不经过 database/sql.DB。
 type oraConn struct {
 	conn *go_ora.Connection
 }
@@ -117,15 +121,20 @@ func (c *oraConn) OpenQuery(sql string) (rowCursor, error) {
 			dataType: oracleDataType(typeName),
 		})
 	}
-	return &oraCur{
+	cur := &oraCur{
 		stmt: stmt, rows: rows, columns: columns,
-	}, nil
+	}
+	// Query_ 完成后 Summary 仍有效；纯 DML（如 INSERT）往往在此即可得到行数（CurRowNumber 或 successIter）。
+	cur.affectedRows = stmt.QueryRowsAffected()
+	return cur, nil
 }
 
 type oraCur struct {
-	stmt    *go_ora.Stmt
-	rows    *go_ora.DataSet
-	columns []dbQueryColumn
+	stmt         *go_ora.Stmt
+	rows         *go_ora.DataSet
+	columns      []dbQueryColumn
+	affectedRows int64
+	done         bool
 }
 
 func (q *oraCur) Close() error {
@@ -134,6 +143,7 @@ func (q *oraCur) Close() error {
 		err = q.rows.Close()
 	}
 	if q.stmt != nil {
+		q.affectedRows = q.stmt.QueryRowsAffected()
 		if e := q.stmt.Close(); e != nil && err == nil {
 			err = e
 		}
@@ -142,29 +152,29 @@ func (q *oraCur) Close() error {
 }
 
 func (q *oraCur) Header() *dbQueryHeader {
-	return &dbQueryHeader{columns: q.columns}
+	return &dbQueryHeader{
+		columns:      q.columns,
+		affectedRows: q.affectedRows,
+	}
 }
 
 func (q *oraCur) NextRow() (*dbQueryRow, bool, error) {
-	if !q.rows.Next_() {
-		if err := q.rows.Err(); err != nil {
-			return nil, false, err
-		}
+	if q.done {
 		return nil, false, nil
 	}
-
-	raw := make([]any, len(q.columns))
-	scanArgs := make([]any, len(q.columns))
-	for i := range raw {
-		scanArgs[i] = &raw[i]
-	}
-	if err := q.rows.Scan(scanArgs...); err != nil {
+	dest := make([]driver.Value, len(q.columns))
+	if err := q.rows.Next(dest); err != nil {
+		if errors.Is(err, io.EOF) {
+			q.done = true
+			q.affectedRows = q.stmt.QueryRowsAffected()
+			return nil, false, nil
+		}
 		return nil, false, err
 	}
 
-	values := make([]dbQueryValue, 0, len(raw))
-	for _, value := range raw {
-		values = append(values, buildQueryValue(value))
+	values := make([]dbQueryValue, 0, len(dest))
+	for _, v := range dest {
+		values = append(values, buildQueryValue(v))
 	}
 	return &dbQueryRow{values: values}, true, nil
 }

@@ -1,0 +1,39 @@
+--- a/vendor/github.com/sijms/go-ora/v2/command.go
++++ b/vendor/github.com/sijms/go-ora/v2/command.go
+@@ -302,6 +302,15 @@
+ 	return rs.rowsAffected, nil
+ }
+ 
++// QueryRowsAffected returns rows affected after Query_; uses Summary RowsAffectedCount (CurRowNumber or successIter) (PATCH: go-ora-query-rows-affected.patch).
++func (stmt *Stmt) QueryRowsAffected() int64 {
++	session := stmt.connection.session
++	if session == nil || session.Summary == nil {
++		return 0
++	}
++	return session.Summary.RowsAffectedCount()
++}
++
+ var sqlQueryReturnStatementRegexp = lazy_init.NewLazyInit(func() (interface{}, error) {
+ 	return regexp.Compile(`(\bRETURNING\b|\bRETURN\b)\s+.*\s+\bINTO\b`)
+ })
+--- a/vendor/github.com/sijms/go-ora/v2/network/summary_object.go
++++ b/vendor/github.com/sijms/go-ora/v2/network/summary_object.go
+@@ -261,6 +261,18 @@
+ 		result.ErrorMessage = result.bindErrors[0].errorMsg
+ 	}
+ 	return result, nil
++}
++
++// RowsAffectedCount returns DML rows affected. CurRowNumber is often 0 for INSERT/UPDATE/DELETE
++// with no rowset; the count may appear in successIter (PATCH: go-ora-query-rows-affected.patch).
++func (s *SummaryObject) RowsAffectedCount() int64 {
++	if s == nil {
++		return 0
++	}
++	if s.CurRowNumber > 0 {
++		return int64(s.CurRowNumber)
++	}
++	return int64(s.successIter)
+ }
+ 
+ type WarningObject struct {
