@@ -151,8 +151,6 @@ func (q *mssqlCur) Close() error {
 	return q.rows.Close()
 }
 
-// Header 中 affectedRows 来自 *mssql.Rows.DriverRowsAffected()（vendor patch，TDS DONE 与 Exec 一致）。
-// 流式读未完成前 Header 里的计数可能仍不完整（首包先发 HEADER 再拉行）。
 func (q *mssqlCur) Header() *dbQueryHeader {
 	return &dbQueryHeader{
 		columns:      q.columns,

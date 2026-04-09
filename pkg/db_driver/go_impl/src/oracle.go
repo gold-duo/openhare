@@ -65,7 +65,6 @@ const (
 	oraRESULTSET = "RESULTSET"
 )
 
-// oraConn 直接使用 go-ora 的 *Connection，不经过 database/sql.DB。
 type oraConn struct {
 	conn *go_ora.Connection
 }
@@ -122,10 +121,10 @@ func (c *oraConn) OpenQuery(sql string) (rowCursor, error) {
 		})
 	}
 	cur := &oraCur{
-		stmt: stmt, rows: rows, columns: columns,
+		stmt: stmt,
+		rows: rows, columns: columns,
+		affectedRows: stmt.QueryRowsAffected(),
 	}
-	// Query_ 完成后 Summary 仍有效；纯 DML（如 INSERT）往往在此即可得到行数（CurRowNumber 或 successIter）。
-	cur.affectedRows = stmt.QueryRowsAffected()
 	return cur, nil
 }
 

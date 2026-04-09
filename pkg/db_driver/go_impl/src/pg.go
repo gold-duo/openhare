@@ -108,10 +108,23 @@ func (c *pgConn) OpenQuery(sqlText string) (rowCursor, error) {
 		})
 	}
 
+	// pgx：CommandTag 仅在 Rows 关闭后才有值；流式协议在首包就发 HEADER（impl.runStream）。
+	// 无列结果集（典型 INSERT/UPDATE/DELETE 无 RETURNING）无行可读，先读完以关闭 Rows，才能在 Header 里带上 affected rows。
+	var affectedRows int64
+	if len(fields) == 0 {
+		for rows.Next() {
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		affectedRows = rows.CommandTag().RowsAffected()
+	}
+
 	cur := &pgCur{
 		rows:         rows,
 		columns:      columns,
-		affectedRows: rows.CommandTag().RowsAffected(),
+		affectedRows: affectedRows,
 	}
 	return cur, nil
 }

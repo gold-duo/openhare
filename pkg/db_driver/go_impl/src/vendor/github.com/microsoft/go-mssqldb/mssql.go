@@ -764,6 +764,12 @@ loop:
 				case []columnStruct:
 					cols = token
 					break loop
+				case doneInProcStruct:
+					d := doneStruct(token)
+					if d.isError() {
+						cancel()
+						return nil, s.c.checkBadConn(ctx, d.getError(), false)
+					}
 				case doneStruct:
 					if token.isError() {
 						// need to cleanup cancellable context
@@ -841,7 +847,6 @@ func (rc *Rows) Close() error {
 			if tok == nil {
 				return nil
 			} else {
-				rc.reader.accumulateDoneRowCount(tok)
 				// continue consuming tokens
 				continue
 			}
@@ -864,25 +869,7 @@ func (rc *Rows) Columns() (res []string) {
 	return
 }
 
-// accumulateDoneRowCount mirrors iterateResponse DONE handling for Query/Rows paths (PATCH: mssql-rows-affected.patch).
-func (tp *tokenProcessor) accumulateDoneRowCount(tok interface{}) {
-	if tp == nil {
-		return
-	}
-	switch x := tok.(type) {
-	case doneInProcStruct:
-		d := doneStruct(x)
-		if d.Status&doneCount != 0 {
-			tp.rowCount += int64(d.RowCount)
-		}
-	case doneStruct:
-		if x.Status&doneCount != 0 {
-			tp.rowCount += int64(x.RowCount)
-		}
-	}
-}
-
-// DriverRowsAffected returns cumulative row counts from TDS DONE packets (same basis as sql.Result from Exec).
+// DriverRowsAffected returns cumulative row counts from TDS DONE packets (same basis as sql.Result from Exec; counts updated in tokenProcessor.nextToken).
 func (rc *Rows) DriverRowsAffected() int64 {
 	if rc == nil || rc.reader == nil {
 		return 0
@@ -914,13 +901,11 @@ func (rc *Rows) Next(dest []driver.Value) error {
 					}
 					return nil
 				case doneInProcStruct:
-					rc.reader.accumulateDoneRowCount(tokdata)
 					d := doneStruct(tokdata)
 					if d.isError() {
 						return rc.stmt.c.checkBadConn(rc.reader.ctx, d.getError(), false)
 					}
 				case doneStruct:
-					rc.reader.accumulateDoneRowCount(tokdata)
 					if tokdata.isError() {
 						return rc.stmt.c.checkBadConn(rc.reader.ctx, tokdata.getError(), false)
 					}

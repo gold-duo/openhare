@@ -1164,14 +1164,7 @@ func (t *tokenProcessor) iterateResponse() error {
 					t.sess.columns = token
 				case []interface{}:
 					t.lastRow = token
-				case doneInProcStruct:
-					if token.Status&doneCount != 0 {
-						t.rowCount += int64(token.RowCount)
-					}
 				case doneStruct:
-					if token.Status&doneCount != 0 {
-						t.rowCount += int64(token.RowCount)
-					}
 					if token.isError() && t.firstError == nil {
 						t.firstError = token.getError()
 					}
@@ -1191,7 +1184,25 @@ func (t *tokenProcessor) iterateResponse() error {
 	}
 }
 
-func (t tokenProcessor) nextToken() (tokenStruct, error) {
+// addDoneRowCount folds TDS DONE row counts into rowCount for any code path that reads tokens via nextToken (PATCH: mssql-rows-affected.patch).
+func (t *tokenProcessor) addDoneRowCount(tok tokenStruct) {
+	if t == nil || tok == nil {
+		return
+	}
+	switch x := tok.(type) {
+	case doneInProcStruct:
+		d := doneStruct(x)
+		if d.Status&doneCount != 0 {
+			t.rowCount += int64(d.RowCount)
+		}
+	case doneStruct:
+		if x.Status&doneCount != 0 {
+			t.rowCount += int64(x.RowCount)
+		}
+	}
+}
+
+func (t *tokenProcessor) nextToken() (tokenStruct, error) {
 	// we do this separate non-blocking check on token channel to
 	// prioritize it over cancellation channel
 	select {
@@ -1202,6 +1213,7 @@ func (t tokenProcessor) nextToken() (tokenStruct, error) {
 			// this is an error and not a token
 			return nil, err
 		} else {
+			t.addDoneRowCount(tok)
 			return tok, nil
 		}
 	default:
@@ -1215,6 +1227,7 @@ func (t tokenProcessor) nextToken() (tokenStruct, error) {
 			if ok {
 				return nil, err
 			} else {
+				t.addDoneRowCount(tok)
 				return tok, nil
 			}
 		} else {
