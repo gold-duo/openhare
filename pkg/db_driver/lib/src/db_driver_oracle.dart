@@ -130,6 +130,8 @@ class OracleConnection extends BaseConnection {
 
   @override
   Future<List<MetaDataNode>> metadata() async {
+    final schemaList = await schemas();
+
     final results = await query("""SELECT
     owner AS TABLE_SCHEMA,
     table_name AS TABLE_NAME,
@@ -143,33 +145,33 @@ ORDER BY
     column_id""");
 
     final rows = results.rows;
-    final schemaNodes = <MetaDataNode>[];
-
     final schemaRows =
         rows.groupListsBy((result) => result.getString("TABLE_SCHEMA")!);
 
-    for (final schema in schemaRows.keys) {
+    final schemaNodes = <MetaDataNode>[];
+    for (final schema in schemaList) {
       final schemaNode = MetaDataNode(MetaType.schema, schema);
       schemaNodes.add(schemaNode);
 
       final tableNodes = <MetaDataNode>[];
-      final tableRows = schemaRows[schema]!
-          .groupListsBy((result) => result.getString("TABLE_NAME")!);
+      final tableRowsForSchema = schemaRows[schema];
+      if (tableRowsForSchema != null) {
+        final byTable = tableRowsForSchema
+            .groupListsBy((result) => result.getString("TABLE_NAME")!);
+        for (final table in byTable.keys) {
+          final tableNode = MetaDataNode(MetaType.table, table);
+          tableNodes.add(tableNode);
 
-      for (final table in tableRows.keys) {
-        final tableNode = MetaDataNode(MetaType.table, table);
-        tableNodes.add(tableNode);
-
-        final columnRows = tableRows[table]!;
-        final columnNodes = columnRows
-            .map((result) =>
-                MetaDataNode(MetaType.column, result.getString("COLUMN_NAME")!)
-                  ..withProp(MetaDataPropType.dataType,
-                      _getDataType(result.getString("DATA_TYPE")!)))
-            .toList();
-        tableNode.items = columnNodes;
+          final columnRows = byTable[table]!;
+          final columnNodes = columnRows
+              .map((result) =>
+                  MetaDataNode(MetaType.column, result.getString("COLUMN_NAME")!)
+                    ..withProp(MetaDataPropType.dataType,
+                        _getDataType(result.getString("DATA_TYPE")!)))
+              .toList();
+          tableNode.items = columnNodes;
+        }
       }
-
       schemaNode.items = tableNodes;
     }
 
