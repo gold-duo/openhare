@@ -48,6 +48,27 @@ class MSSQLConnection extends BaseConnection {
 
   MSSQLConnection(this._conn, this._dsn);
 
+  static const Set<String> _mssqlSystemDatabasesLower = {
+    'tempdb',
+    'model',
+    'msdb',
+  };
+
+  static const Set<String> _mssqlSystemSchemasLower = {
+    'db_accessadmin',
+    'db_backupoperator',
+    'db_datareader',
+    'db_datawriter',
+    'db_ddladmin',
+    'db_denydatareader',
+    'db_denydatawriter',
+    'db_owner',
+    'db_securityadmin',
+    'guest',
+    'information_schema',
+    'sys',
+  };
+
   @override
   sp.SQLDefiner parser(String sql) => sp.parser(sp.DialectType.mssql, sql);
 
@@ -107,11 +128,6 @@ class MSSQLConnection extends BaseConnection {
     }
   }
 
-  String _escapeIdent(String ident) {
-    final escaped = ident.replaceAll(']', ']]');
-    return '[$escaped]';
-  }
-
   @override
   Stream<BaseQueryStreamItem> queryStreamInternal(String sql) async* {
     List<BaseQueryColumn>? columns;
@@ -149,59 +165,116 @@ class MSSQLConnection extends BaseConnection {
     return results.rows.first.getString("version") ?? "";
   }
 
-  @override
-  Future<List<MetaDataNode>> metadata() async {
-    final results = await query("""SELECT
-    t.TABLE_CATALOG AS TABLE_SCHEMA,
+  String _escapeIdent(String ident) {
+    final escaped = ident.replaceAll(']', ']]');
+    return '[$escaped]';
+  }
+
+  /// `LOWER(col) NOT IN (...)` fragment; literals come only from [_mssqlSystemSchemasLower].
+  static String _mssqlSystemSchemasNotInSql() =>
+      _mssqlSystemSchemasLower.map((s) => "N'$s'").join(', ');
+
+  /// `LOWER(col) NOT IN (...)` fragment; literals come only from [_mssqlSystemDatabasesLower].
+  static String _mssqlSystemDatabasesNotInSql() =>
+      _mssqlSystemDatabasesLower.map((s) => "N'$s'").join(', ');
+
+  /// Schemas in [catalog] (database).
+  Future<List<String>> _schemaNamesInCatalog(String catalog) async {
+    final p = _escapeIdent(catalog);
+    final r = await query(
+      'SELECT s.name AS SCHEMA_NAME FROM $p.sys.schemas s '
+      'WHERE LOWER(s.name) NOT IN (${_mssqlSystemSchemasNotInSql()}) ORDER BY s.name;',
+    );
+    return r.rows
+        .map((row) => row.getString('SCHEMA_NAME') ?? '')
+        .where((s) => s.isNotEmpty)
+        .toList();
+  }
+
+  /// Tables/columns in [catalog] via that database's `INFORMATION_SCHEMA`.
+  Future<List<QueryResultRow>> _tableColumnRowsInCatalog(String catalog) async {
+    final p = _escapeIdent(catalog);
+    final r = await query('''SELECT
+    t.TABLE_CATALOG AS TABLE_CATALOG,
+    t.TABLE_SCHEMA AS TABLE_SCHEMA,
     t.TABLE_NAME AS TABLE_NAME,
     c.COLUMN_NAME AS COLUMN_NAME,
     c.DATA_TYPE AS DATA_TYPE
-FROM
-    INFORMATION_SCHEMA.TABLES t
-JOIN
-    INFORMATION_SCHEMA.COLUMNS c
+FROM $p.INFORMATION_SCHEMA.TABLES t
+JOIN $p.INFORMATION_SCHEMA.COLUMNS c
     ON t.TABLE_CATALOG = c.TABLE_CATALOG
     AND t.TABLE_SCHEMA = c.TABLE_SCHEMA
     AND t.TABLE_NAME = c.TABLE_NAME
 WHERE
     t.TABLE_TYPE IN ('BASE TABLE', 'VIEW')
+    AND LOWER(t.TABLE_SCHEMA) NOT IN (${_mssqlSystemSchemasNotInSql()})
 ORDER BY
-    t.TABLE_CATALOG,
+    t.TABLE_SCHEMA,
     t.TABLE_NAME,
-    c.ORDINAL_POSITION;""");
+    c.ORDINAL_POSITION;''');
+    return r.rows;
+  }
 
-    final rows = results.rows;
-    final schemaNodes = <MetaDataNode>[];
+  @override
+  Future<List<MetaDataNode>> metadata() async {
+    final databaseList = await schemas();
+    if (databaseList.isEmpty) return [];
 
-    final schemaRows =
-        rows.groupListsBy((result) => result.getString("TABLE_SCHEMA")!);
-
-    for (final schema in schemaRows.keys) {
-      final schemaNode = MetaDataNode(MetaType.schema, schema);
-      schemaNodes.add(schemaNode);
-
-      final tableNodes = <MetaDataNode>[];
-      final tableRows = schemaRows[schema]!
-          .groupListsBy((result) => result.getString("TABLE_NAME")!);
-
-      for (final table in tableRows.keys) {
-        final tableNode = MetaDataNode(MetaType.table, table);
-        tableNodes.add(tableNode);
-
-        final columnRows = tableRows[table]!;
-        final columnNodes = columnRows
-            .map((result) =>
-                MetaDataNode(MetaType.column, result.getString("COLUMN_NAME")!)
-                  ..withProp(MetaDataPropType.dataType,
-                      _getDataType(result.getString("DATA_TYPE")!)))
-            .toList();
-        tableNode.items = columnNodes;
-      }
-
-      schemaNode.items = tableNodes;
+    // Single ImplConnection handle: one in-flight streamQuery at a time — no Future.wait.
+    final byCatalog = <String, List<QueryResultRow>>{};
+    final schemaByCatalog = <String, Set<String>>{};
+    for (final catalog in databaseList) {
+      byCatalog[catalog] = await _tableColumnRowsInCatalog(catalog);
+      schemaByCatalog[catalog] = (await _schemaNamesInCatalog(catalog)).toSet();
     }
 
-    return schemaNodes;
+    final databaseNodes = <MetaDataNode>[];
+    for (final catalog in databaseList) {
+      final databaseNode = MetaDataNode(MetaType.database, catalog);
+      databaseNodes.add(databaseNode);
+
+      final catalogRows = byCatalog[catalog]!;
+      final fromTables =
+          catalogRows.map((r) => r.getString('TABLE_SCHEMA')!).toSet();
+      final schemaNames = {
+        ...schemaByCatalog[catalog]!,
+        ...fromTables,
+      }.toList()
+        ..sort();
+
+      final schemaNodes = <MetaDataNode>[];
+      for (final schema in schemaNames) {
+        final schemaNode = MetaDataNode(MetaType.schema, schema);
+        schemaNodes.add(schemaNode);
+
+        final schemaTableRows = catalogRows
+            .where((r) => r.getString('TABLE_SCHEMA') == schema)
+            .toList();
+        final tableRows =
+            schemaTableRows.groupListsBy((r) => r.getString('TABLE_NAME')!);
+
+        final tableNodes = <MetaDataNode>[];
+        for (final table in tableRows.keys) {
+          final tableNode = MetaDataNode(MetaType.table, table);
+          tableNodes.add(tableNode);
+
+          final columnRows = tableRows[table]!;
+          final columnNodes = columnRows
+              .map((result) => MetaDataNode(
+                  MetaType.column, result.getString("COLUMN_NAME")!)
+                ..withProp(MetaDataPropType.dataType,
+                    _getDataType(result.getString("DATA_TYPE")!)))
+              .toList();
+          tableNode.items = columnNodes;
+        }
+
+        schemaNode.items = tableNodes;
+      }
+
+      databaseNode.items = schemaNodes;
+    }
+
+    return databaseNodes;
   }
 
   static DataType _getDataType(String dataType) {
@@ -269,7 +342,9 @@ ORDER BY
   @override
   Future<List<String>> schemas() async {
     final results = await query(
-        "SELECT name AS SCHEMA_NAME FROM sys.databases ORDER BY name;");
+      'SELECT name AS SCHEMA_NAME FROM sys.databases '
+      'WHERE LOWER(name) NOT IN (${_mssqlSystemDatabasesNotInSql()}) ORDER BY name;',
+    );
     return results.rows
         .map((r) => r.getString("SCHEMA_NAME") ?? "")
         .where((s) => s.isNotEmpty)

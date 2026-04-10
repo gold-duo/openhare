@@ -252,37 +252,15 @@ class InstanceRepoImpl extends InstanceRepo {
     return;
   }
 
-  @override
-  Future<List<String>> getSchemas(InstanceId instanceId) async {
-    final instance = _instanceBox.get(instanceId.value);
-    if (instance == null) {
-      return List.empty();
-    }
-    final model = metadataCache[instanceId];
-
-    if (model == null) {
-      return List.empty();
-    }
-    final schemas = List<String>.empty(growable: true);
-    for (final meta in model.metadata) {
-      meta.visitor((node, parent) {
-        if (node.type == MetaType.schema) {
-          schemas.add(node.value);
-        }
-        return true;
-      });
-    }
-    return schemas;
-  }
-
   Future<InstanceMetadataModel> _getMetadata(InstanceModel instance) async {
     SessionConn? conn;
     try {
       conn = SessionConn(model: instance);
       await conn.connect();
       final metadataNode = await conn.metadata();
+      final schemas = await conn.schemas();
       final version = await conn.version();
-      return InstanceMetadataModel(metadata: metadataNode, version: version);
+      return InstanceMetadataModel(metadata: metadataNode, version: version, schemas: schemas);
     } catch (e) {
       rethrow;
     } finally {
