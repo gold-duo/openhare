@@ -1,0 +1,36 @@
+# Run with `dart run ffigen --config ffigen.yaml`.
+name: NativeImpl
+description: |
+  FFI from `go tool cgo -exportheader` → `src/go_impl.h` only.
+
+  Regenerate: `cd src && go generate` (see `//go:generate` in impl.go)
+output: 'lib/go_impl_bindings_generated.dart'
+headers:
+  entry-points:
+    - 'src/go_impl.h'
+  # 使用 **/ 前缀：Clang 解析出的路径是绝对路径，与 `src/foo.h` 字面匹配会漏掉 stream_bridge。
+  include-directives:
+    - '**/go_impl.h'
+    - '**/stream_bridge.h'
+
+compiler-opts:
+  - '-Isrc'
+
+functions:
+  exclude:
+    - _GoStringLen
+    - _GoStringPtr
+    - go_impl_post_stream_message
+
+enums:
+  include:
+    - go_impl_query_value_type_t
+    - go_impl_db_type_t
+    - go_impl_stream_event_type_t
+preamble: |
+  // ignore_for_file: always_specify_types
+  // ignore_for_file: camel_case_types
+  // ignore_for_file: non_constant_identifier_names
+comments:
+  style: any
+  length: full

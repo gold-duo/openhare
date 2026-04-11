@@ -1,0 +1,36 @@
+--- a/vendor/github.com/sijms/go-ora/v2/command.go
++++ b/vendor/github.com/sijms/go-ora/v2/command.go
+@@ -302,6 +302,15 @@
+ 	return rs.rowsAffected, nil
+ }
+ 
++// QueryRowsAffected returns rows affected after Query_; uses Summary.CurRowNumber (PATCH: go-ora-query-rows-affected.patch).
++func (stmt *Stmt) QueryRowsAffected() int64 {
++	session := stmt.connection.session
++	if session == nil || session.Summary == nil {
++		return 0
++	}
++	return session.Summary.RowsAffectedCount()
++}
++
+ var sqlQueryReturnStatementRegexp = lazy_init.NewLazyInit(func() (interface{}, error) {
+ 	return regexp.Compile(`(\bRETURNING\b|\bRETURN\b)\s+.*\s+\bINTO\b`)
+ })
+--- a/vendor/github.com/sijms/go-ora/v2/network/summary_object.go
++++ b/vendor/github.com/sijms/go-ora/v2/network/summary_object.go
+@@ -263,6 +263,15 @@
+ 	return result, nil
+ }
+ 
++// RowsAffectedCount returns DML rows affected from Summary.CurRowNumber (same as Stmt.Exec path).
++// Do not use successIter: for single-statement DML it is often 1 even when zero rows changed (PATCH: go-ora-query-rows-affected.patch).
++func (s *SummaryObject) RowsAffectedCount() int64 {
++	if s == nil {
++		return 0
++	}
++	return int64(s.CurRowNumber)
++}
++
+ type WarningObject struct {
+ 	retCode      int
+ 	flag         int

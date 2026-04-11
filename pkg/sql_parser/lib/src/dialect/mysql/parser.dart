@@ -86,16 +86,21 @@ class MysqlSQLDefiner extends SQLDefiner {
   }
 
   @override
-  String wrapLimit(int limit) {
+  String wrapLimit(String sql, int limit) {
     if (Matcher(MySQLLexer(content)).match("select {*}")) {
-      // 去掉结尾的注释和分号，这样才能被子查询包裹
-      final sql = MySQLLexer(content).trimEndWhere((token) {
-        return token.id == TokenType.whitespace ||
-            token.id == TokenType.comment ||
-            (token.id == TokenType.punctuation && token.content == ";");
-      });
       return "SELECT * FROM ($sql) AS dt_1 LIMIT $limit"; // todo: 存在一些不能直接包裹的语句，需要支持
     }
-    return content;
+    return sql;
+  }
+
+  @override
+  String trimDelimiter(String sql) {
+    // 去掉结尾的注释和分号，这样才能被子查询包裹
+    final sql = MySQLLexer(content).trimEndWhere((token) {
+      return token.id == TokenType.whitespace ||
+          token.id == TokenType.comment ||
+          (token.id == TokenType.punctuation && token.content == ";");
+    });
+    return sql;
   }
 }

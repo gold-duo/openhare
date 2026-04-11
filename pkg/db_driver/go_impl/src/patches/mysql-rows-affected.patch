@@ -1,0 +1,56 @@
+--- a/vendor/github.com/go-sql-driver/mysql/rows.go
++++ b/vendor/github.com/go-sql-driver/mysql/rows.go
+@@ -25,6 +25,8 @@
+ 	mc     *mysqlConn
+ 	rs     resultSet
+ 	finish func()
++	// Last OK packet rows-affected; copied from mc.result in nextResultSet/Close before mc/result is cleared.
++	rowsAffected int64
+ }
+ 
+ type binaryRows struct {
+@@ -97,6 +99,13 @@
+ 	return rows.rs.columns[i].scanType()
+ }
+ 
++func (rows *mysqlRows) syncRowsAffected() {
++	if rows.mc == nil || len(rows.mc.result.affectedRows) == 0 {
++		return
++	}
++	rows.rowsAffected = rows.mc.result.affectedRows[len(rows.mc.result.affectedRows)-1]
++}
++
+ func (rows *mysqlRows) Close() (err error) {
+ 	if f := rows.finish; f != nil {
+ 		f()
+@@ -116,6 +125,7 @@
+ 		err = mc.readUntilEOF()
+ 	}
+ 	if err == nil {
++		rows.syncRowsAffected()
+ 		handleOk := mc.clearResult()
+ 		if err = handleOk.discardResults(); err != nil {
+ 			return err
+@@ -150,6 +160,7 @@
+ 	}
+ 
+ 	if !rows.HasNextResultSet() {
++		rows.syncRowsAffected()
+ 		rows.mc = nil
+ 		return 0, io.EOF
+ 	}
+@@ -223,3 +234,14 @@
+ 	}
+ 	return io.EOF
+ }
++
++// RowsAffected returns the number of affected rows for the current result set.
++//
++// PATCH: This method is injected via patches/mysql-rows-affected.patch
++// Reason: The standard database/sql interface doesn't expose affected rows for Query(),
++// only for Exec(). This patch allows retrieving affected rows for INSERT/UPDATE/DELETE
++// statements when using Query() by accessing the underlying MySQL protocol data
++// stored in mysqlConn.result.affectedRows, copied into rowsAffected before mc is dropped.
++func (rows *mysqlRows) RowsAffected() int64 {
++	return rows.rowsAffected
++}

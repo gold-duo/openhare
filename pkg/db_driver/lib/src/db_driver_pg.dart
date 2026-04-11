@@ -1,114 +1,62 @@
+// ignore_for_file: constant_identifier_names
+
 import 'package:collection/collection.dart';
-import 'package:pg/pg.dart';
+import 'package:go_impl/go_impl.dart' as impl;
 import 'package:sql_parser/parser.dart' as sp;
-import 'db_driver_interface.dart';
+
 import 'db_driver_conn_meta.dart';
+import 'db_driver_interface.dart';
 import 'db_driver_metadata.dart';
 
-class PGQueryValue extends BaseQueryValue {
-  final Object? _value;
-
-  PGQueryValue(this._value);
-
-  @override
-  String? getString() {
-    if (_value == null) {
-      return null;
-    }
-    return _value.toString();
-  }
-
-  @override
-  List<int> getBytes() {
-    // todo
-    return List.empty();
-  }
-}
-
-class PGQueryColumn extends BaseQueryColumn {
-  final ResultSchemaColumn _column;
-
-  PGQueryColumn(this._column);
-
-  @override
-  String get name => _column.columnName ?? "";
-
-  @override
-  DataType dataType() {
-    return switch (_column.type) {
-      Type.json || Type.jsonb || Type.jsonbArray => DataType.json, // JSON
-
-      Type.text ||
-      Type.textArray ||
-      Type.byteArray =>
-        DataType.blob, // BLOB, TINY_BLOB, MEDIUM_BLOB, LONG_BLOB
-
-      Type.character ||
-      Type.varChar ||
-      Type.varCharArray =>
-        DataType.char, // STRING, VARCHAR, VAR_STRING
-
-      Type.time ||
-      Type.timeArray ||
-      Type.timestamp ||
-      Type.timestampArray ||
-      Type.timestampRange ||
-      Type.timestampTz ||
-      Type.timestampTzArray ||
-      Type.timestampRange ||
-      Type.timestampWithTimezone ||
-      Type.timestampWithoutTimezone ||
-      Type.date ||
-      Type.dateArray ||
-      Type.dateRange =>
-        DataType.time, // DATE, DATETIME, TIMESTAMP
-
-      Type.bigInteger ||
-      Type.bigIntegerArray ||
-      Type.bigIntegerRange ||
-      Type.bigSerial ||
-      Type.integer ||
-      Type.integerArray ||
-      Type.integerRange ||
-      Type.smallInteger ||
-      Type.smallIntegerArray =>
-        DataType.number, // number
-
-      _ => DataType.char,
-    };
-  }
-}
-
-class PGConnection extends BaseConnection {
-  final PGConn _conn;
-  final ConnectValue _meta;
+class PGConnection extends GoImplConnection {
+  final String _dsn;
   int? _backendPid;
 
-  PGConnection(this._conn, this._meta);
+  PGConnection(super._conn, this._dsn);
+
+  static const Set<String> _pgSystemSchemasLower = {
+    'information_schema',
+    'pg_catalog',
+    'pg_logical',
+    'pg_toast',
+  };
+
+  static String _pgSystemSchemasNotInSql() =>
+      _pgSystemSchemasLower.map((s) => "'$s'").join(', ');
 
   @override
   sp.SQLDefiner parser(String sql) => sp.parser(sp.DialectType.pg, sql);
 
   static Future<BaseConnection> open(
       {required ConnectValue meta, String? schema}) async {
-    final conn = await PGConn.open(
-      endpoint: Endpoint(
-        host: meta.getHost(),
-        port: meta.getPort() ?? 5432,
-        password: meta.password,
-        username: meta.user,
-        database: meta.getValue("database", "postgres"),
-      ),
-      connectTimeout: Duration(seconds: meta.getIntValue("connectTimeout", 10)),
-      queryTimeout: Duration(seconds: meta.getIntValue("queryTimeout", 600)),
-    );
+    final database = meta.getValue("database", "postgres");
+    final sslmode = meta.getValue("sslmode", "disable");
+    final connectTimeout = meta.getIntValue("connectTimeout", 10);
+    final queryTimeout = meta.getIntValue("queryTimeout", 600);
 
-    final pgConn = PGConnection(conn, meta);
-    await pgConn._loadBackendPid();
-    if (schema != null) {
-      pgConn.setCurrentSchema(schema);
+    final dsn = Uri(
+      scheme: 'postgres',
+      userInfo: '${meta.user}:${Uri.encodeComponent(meta.password)}',
+      host: meta.getHost(),
+      port: meta.getPort() ?? 5432,
+      path: '/$database',
+      queryParameters: {
+        'sslmode': sslmode,
+        'connect_timeout': connectTimeout.toString(),
+      },
+    ).toString();
+
+    final conn = await impl.ImplConnection.openPg(dsn);
+    final pg = PGConnection(conn, dsn);
+
+    await pg.query("SET statement_timeout = '${queryTimeout}s'");
+    await pg._loadBackendPid();
+
+    if (schema != null && schema.isNotEmpty) {
+      await pg.setCurrentSchema(schema);
     }
-    return pgConn;
+
+    return pg;
   }
 
   Future<void> _loadBackendPid() async {
@@ -122,70 +70,56 @@ class PGConnection extends BaseConnection {
   }
 
   @override
-  Future<String> version() async {
-    final results = await query("SELECT version() AS version");
-    final rows = results.rows;
-    return rows.first.getString("version") ?? "";
-  }
-
-  @override
   Future<void> killQuery() async {
     if (_backendPid == null) return;
-    // 使用新连接取消当前连接上运行的查询
-    PGConn? tmp;
+
+    PGConnection? tmp;
     try {
-      tmp = await PGConn.open(
-        endpoint: Endpoint(
-          host: _meta.getHost(),
-          port: _meta.getPort() ?? 5432,
-          password: _meta.password,
-          username: _meta.user,
-          database: _meta.getValue("database", "postgres"),
-        ),
-        connectTimeout:
-            Duration(seconds: _meta.getIntValue("connectTimeout", 10)),
-        queryTimeout: Duration(seconds: _meta.getIntValue("queryTimeout", 600)),
-      );
-      await tmp.query(query: "SELECT pg_cancel_backend($_backendPid)");
+      final tmpConn = await impl.ImplConnection.openPg(_dsn);
+      tmp = PGConnection(tmpConn, _dsn);
+      await tmp.query("SELECT pg_cancel_backend($_backendPid)");
     } finally {
-      if (tmp != null) await tmp.close();
+      await tmp?.close();
     }
   }
 
   @override
-  Stream<BaseQueryStreamItem> queryStreamInternal(String sql) async* {
-    List<BaseQueryColumn>? columns;
-    await for (final item in _conn.queryStream(query: sql)) {
-      switch (item) {
-        case PGStreamHeader(:final schema, :final affectedRows):
-          columns = schema.columns
-              .map<PGQueryColumn>((c) => PGQueryColumn(c))
-              .toList();
-          yield QueryStreamItemHeader(
-            columns: columns,
-            affectedRows: BigInt.from(affectedRows),
-          );
-        case ResultRow row when columns != null:
-          yield QueryStreamItemRow(
-            row: QueryResultRow(
-              columns,
-              row.map((v) => PGQueryValue(v)).toList(),
-            ),
-          );
-        case ResultRow():
-          throw StateError('Received row before header');
-      }
-    }
+  Future<String> version() async {
+    final results = await query("SELECT version() AS version");
+    return results.rows.first.getString("version") ?? "";
   }
 
   @override
-  Future<void> close() async {
-    await _conn.close();
+  Future<void> setCurrentSchema(String schema) async {
+    final escaped = schema.replaceAll("'", "''");
+    await query("SET search_path TO '$escaped'");
+    final currentSchema = await getCurrentSchema();
+    onSchemaChanged(currentSchema ?? "");
+  }
+
+  @override
+  Future<String?> getCurrentSchema() async {
+    final results = await query("SELECT current_schema();");
+    return results.rows.first.getString("current_schema");
+  }
+
+  @override
+  Future<List<String>> schemas() async {
+    final results = await query(
+      'SELECT nspname FROM pg_namespace '
+      'WHERE LOWER(nspname) NOT IN (${_pgSystemSchemasNotInSql()}) '
+      'ORDER BY nspname;',
+    );
+    return results.rows
+        .map((r) => r.getString("nspname") ?? "")
+        .where((s) => s.isNotEmpty)
+        .toList();
   }
 
   @override
   Future<List<MetaDataNode>> metadata() async {
-    // ref: https://www.postgresql.org/docs/current/information-schema.html
+    final schemaList = await schemas();
+
     final results = await query("""SELECT 
     t.table_schema,
     t.table_name,
@@ -202,43 +136,45 @@ WHERE
 ORDER BY
     t.table_schema,
     t.table_name, 
-    c.ordinal_position;
-""");
+    c.ordinal_position;""");
+
     final rows = results.rows;
-    List<MetaDataNode> schemaNodes = List.empty(growable: true);
-    // group by Schema Name
     final schemaRows =
         rows.groupListsBy((result) => result.getString("table_schema")!);
 
-    for (final schema in schemaRows.keys) {
+    final schemaNodes = <MetaDataNode>[];
+    for (final schema in schemaList) {
       final schemaNode = MetaDataNode(MetaType.schema, schema);
       schemaNodes.add(schemaNode);
 
-      // group by Table Name
-      List<MetaDataNode> tableNodes = List.empty(growable: true);
-      final tableRows = schemaRows[schema]!
-          .groupListsBy((result) => result.getString("table_name")!);
-      for (final table in tableRows.keys) {
-        final tableNode = MetaDataNode(MetaType.table, table);
-        tableNodes.add(tableNode);
+      final tableNodes = <MetaDataNode>[];
+      final tableRowsForSchema = schemaRows[schema];
+      if (tableRowsForSchema != null) {
+        final byTable = tableRowsForSchema
+            .groupListsBy((result) => result.getString("table_name")!);
+        for (final table in byTable.keys) {
+          final tableNode = MetaDataNode(MetaType.table, table);
+          tableNodes.add(tableNode);
 
-        // handler columns
-        final columnRows = tableRows[table]!;
-        final columnNodes = columnRows
-            .map((result) =>
-                MetaDataNode(MetaType.column, result.getString("column_name")!)
-                  ..withProp(MetaDataPropType.dataType,
-                      _getDataType(result.getString("data_type")!)))
-            .toList();
-        tableNode.items = columnNodes;
+          final columnRows = byTable[table]!;
+          final columnNodes = columnRows
+              .map((result) => MetaDataNode(
+                  MetaType.column, result.getString("column_name")!)
+                ..withProp(MetaDataPropType.dataType,
+                    _getDataType(result.getString("data_type")!)))
+              .toList();
+          tableNode.items = columnNodes;
+        }
       }
       schemaNode.items = tableNodes;
     }
+
     return schemaNodes;
   }
 
   static DataType _getDataType(String dataType) {
-    return switch (dataType) {
+    final t = dataType.toLowerCase().trim();
+    return switch (t) {
       "integer" ||
       "bigint" ||
       "smallint" ||
@@ -270,37 +206,8 @@ ORDER BY
       "json" || "jsonb" => DataType.json,
       "boolean" => DataType.dataSet,
       "uuid" => DataType.char,
-      "array" || "USER-DEFINED" => DataType.blob,
+      "array" || "user-defined" => DataType.blob,
       _ => DataType.char,
     };
-  }
-
-  @override
-  Future<void> setCurrentSchema(String schema) async {
-    // 使用字符串字面量设置 search_path，避免空格等字符导致语法错误
-    final escaped = schema.replaceAll("'", "''");
-    await query("SET search_path TO '$escaped'");
-    final currentSchema = await getCurrentSchema();
-    onSchemaChanged(currentSchema!);
-    return;
-  }
-
-  @override
-  Future<String?> getCurrentSchema() async {
-    final results = await query("SELECT current_schema();");
-    final rows = results.rows;
-    final currentSchema = rows.first.getString("current_schema");
-    return currentSchema;
-  }
-
-  @override
-  Future<List<String>> schemas() async {
-    List<String> schemas = List.empty(growable: true);
-    final results = await query("SELECT nspname FROM pg_namespace;");
-    final rows = results.rows;
-    for (final result in rows) {
-      schemas.add(result.getString("nspname") ?? "");
-    }
-    return schemas;
   }
 }

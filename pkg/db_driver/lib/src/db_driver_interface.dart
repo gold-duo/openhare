@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:db_driver/src/db_driver_metadata.dart';
 import 'package:sql_parser/parser.dart';
 import 'package:uuid/uuid.dart';
+import 'package:go_impl/go_impl.dart' as impl;
 
 enum DataType {
   number,
@@ -148,9 +149,13 @@ abstract class BaseConnection {
 
   Stream<BaseQueryStreamItem> queryStream(String sql, {int? limit}) async* {
     final sd = parser(sql);
+    // 去掉末尾分隔符
+    sql = sd.trimDelimiter(sql);
+    // 包裹limit
     if (limit != null && limit > 0 && sd.canLimit) {
-      sql = sd.wrapLimit(limit);
+      sql = sd.wrapLimit(sql, limit);
     }
+    // 添加注释
     final queryId = Uuid().v4();
     sql = '/* call by openhare, uuid: $queryId */ $sql';
 
@@ -158,6 +163,121 @@ abstract class BaseConnection {
     if (sd.changeSchema) {
       final currentSchema = await getCurrentSchema();
       onSchemaChanged(currentSchema ?? '');
+    }
+  }
+}
+
+class GoImplQueryValue extends BaseQueryValue {
+  final impl.DbQueryValue _cell;
+
+  GoImplQueryValue(this._cell);
+
+  @override
+  String? getString() => _cell.asString();
+
+  @override
+  List<int> getBytes() => _cell.asBytes();
+}
+
+class GoImplQueryColumn extends BaseQueryColumn {
+  final impl.DbQueryColumn _column;
+
+  GoImplQueryColumn(this._column);
+
+  @override
+  String get name => _column.name;
+
+  @override
+  DataType dataType() {
+    return switch (_column.dataType) {
+      impl.DbDataType.number => DataType.number,
+      impl.DbDataType.char => DataType.char,
+      impl.DbDataType.time => DataType.time,
+      impl.DbDataType.blob => DataType.blob,
+      impl.DbDataType.json => DataType.json,
+      impl.DbDataType.dataSet => DataType.dataSet,
+    };
+  }
+}
+
+class GoImplConnection extends BaseConnection {
+  final impl.ImplConnection _conn;
+
+  GoImplConnection(this._conn);
+
+  @override
+  Future<void> ping() async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> killQuery() async {
+    throw UnimplementedError();
+  }
+
+  @override
+  SQLDefiner parser(String sql) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> setCurrentSchema(String schema) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<String?> getCurrentSchema() {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<String> version() {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<MetaDataNode>> metadata() {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<String>> schemas() {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> close() async {
+    await _conn.close();
+  }
+
+  @override
+  Stream<BaseQueryStreamItem> queryStreamInternal(String sql) async* {
+    List<BaseQueryColumn>? columns;
+
+    await for (final item in _conn.streamQuery(sql)) {
+      switch (item) {
+        case impl.DbQueryHeader():
+          columns = item.columns
+              .map<BaseQueryColumn>((c) => GoImplQueryColumn(c))
+              .toList(growable: false);
+          yield QueryStreamItemHeader(
+            columns: columns,
+            affectedRows: item.affectedRows,
+          );
+        case impl.DbQueryRow():
+          final currentColumns = columns;
+          if (currentColumns == null) {
+            throw StateError('No header received before row');
+          }
+          yield QueryStreamItemRow(
+            row: QueryResultRow(
+              currentColumns,
+              item.values
+                  .map<BaseQueryValue>((c) => GoImplQueryValue(c))
+                  .toList(growable: false),
+            ),
+          );
+      }
     }
   }
 }

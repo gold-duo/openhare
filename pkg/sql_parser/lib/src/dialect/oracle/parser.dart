@@ -73,18 +73,21 @@ class OracleSQLDefiner extends SQLDefiner {
   }
 
   @override
-  String wrapLimit(int limit) {
+  String wrapLimit(String sql, int limit) {
     if (!Matcher(OracleLexer(content)).match("select {*}")) {
-      return content;
+      return sql;
     }
+    return "SELECT * FROM ($sql) dt_1 WHERE ROWNUM <= $limit";
+  }
 
+  @override
+  String trimDelimiter(String sql) {
     // 去掉结尾空白/注释/分号后再包裹.
     final sql = OracleLexer(content).trimEndWhere((token) {
       return token.id == TokenType.whitespace ||
           token.id == TokenType.comment ||
           (token.id == TokenType.punctuation && token.content == ";");
     });
-
-    return "SELECT * FROM ($sql) dt_1 WHERE ROWNUM <= $limit";
+    return sql;
   }
 }

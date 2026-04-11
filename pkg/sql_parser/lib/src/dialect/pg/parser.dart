@@ -76,17 +76,20 @@ class PgSQLDefiner extends SQLDefiner {
   }
 
   @override
-  String wrapLimit(int limit) {
+  String wrapLimit(String sql, int limit) {
     if (!Matcher(PgLexer(content)).match("select {*}")) {
-      return content;
+      return sql;
     }
+    return "SELECT * FROM ($sql) AS dt_1 LIMIT $limit";
+  }
 
+  @override
+  String trimDelimiter(String sql) {
     final sql = PgLexer(content).trimEndWhere((token) {
       return token.id == TokenType.whitespace ||
           token.id == TokenType.comment ||
           (token.id == TokenType.punctuation && token.content == ";");
     });
-
-    return "SELECT * FROM ($sql) AS dt_1 LIMIT $limit";
+    return sql;
   }
 }

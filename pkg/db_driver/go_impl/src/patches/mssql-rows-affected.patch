@@ -1,0 +1,104 @@
+diff --git a/vendor/github.com/microsoft/go-mssqldb/token.go b/vendor/github.com/microsoft/go-mssqldb/token.go
+--- a/vendor/github.com/microsoft/go-mssqldb/token.go
++++ b/vendor/github.com/microsoft/go-mssqldb/token.go
+@@ -1164,14 +1164,7 @@ func (t *tokenProcessor) iterateResponse() error {
+ 					t.sess.columns = token
+ 				case []interface{}:
+ 					t.lastRow = token
+-				case doneInProcStruct:
+-					if token.Status&doneCount != 0 {
+-						t.rowCount += int64(token.RowCount)
+-					}
+ 				case doneStruct:
+-					if token.Status&doneCount != 0 {
+-						t.rowCount += int64(token.RowCount)
+-					}
+ 					if token.isError() && t.firstError == nil {
+ 						t.firstError = token.getError()
+ 					}
+@@ -1191,7 +1184,25 @@ func (t *tokenProcessor) iterateResponse() error {
+ 	}
+ }
+ 
+-func (t tokenProcessor) nextToken() (tokenStruct, error) {
++// addDoneRowCount folds TDS DONE row counts into rowCount for any code path that reads tokens via nextToken (PATCH: mssql-rows-affected.patch).
++func (t *tokenProcessor) addDoneRowCount(tok tokenStruct) {
++	if t == nil || tok == nil {
++		return
++	}
++	switch x := tok.(type) {
++	case doneInProcStruct:
++		d := doneStruct(x)
++		if d.Status&doneCount != 0 {
++			t.rowCount += int64(d.RowCount)
++		}
++	case doneStruct:
++		if x.Status&doneCount != 0 {
++			t.rowCount += int64(x.RowCount)
++		}
++	}
++}
++
++func (t *tokenProcessor) nextToken() (tokenStruct, error) {
+ 	// we do this separate non-blocking check on token channel to
+ 	// prioritize it over cancellation channel
+ 	select {
+@@ -1202,6 +1213,7 @@ func (t tokenProcessor) nextToken() (tokenStruct, error) {
+ 			// this is an error and not a token
+ 			return nil, err
+ 		} else {
++			t.addDoneRowCount(tok)
+ 			return tok, nil
+ 		}
+ 	default:
+@@ -1215,6 +1227,7 @@ func (t tokenProcessor) nextToken() (tokenStruct, error) {
+ 			if ok {
+ 				return nil, err
+ 			} else {
++				t.addDoneRowCount(tok)
+ 				return tok, nil
+ 			}
+ 		} else {
+diff --git a/vendor/github.com/microsoft/go-mssqldb/mssql.go b/vendor/github.com/microsoft/go-mssqldb/mssql.go
+--- a/vendor/github.com/microsoft/go-mssqldb/mssql.go
++++ b/vendor/github.com/microsoft/go-mssqldb/mssql.go
+@@ -764,6 +764,12 @@ loop:
+ 				case []columnStruct:
+ 					cols = token
+ 					break loop
++				case doneInProcStruct:
++					d := doneStruct(token)
++					if d.isError() {
++						cancel()
++						return nil, s.c.checkBadConn(ctx, d.getError(), false)
++					}
+ 				case doneStruct:
+ 					if token.isError() {
+ 						// need to cleanup cancellable context
+@@ -863,6 +869,14 @@ func (rc *Rows) Columns() (res []string) {
+ 	return
+ }
+ 
++// DriverRowsAffected returns cumulative row counts from TDS DONE packets (same basis as sql.Result from Exec; counts updated in tokenProcessor.nextToken).
++func (rc *Rows) DriverRowsAffected() int64 {
++	if rc == nil || rc.reader == nil {
++		return 0
++	}
++	return rc.reader.rowCount
++}
++
+ func (rc *Rows) Next(dest []driver.Value) error {
+ 	if !rc.stmt.c.connectionGood {
+ 		return driver.ErrBadConn
+@@ -886,6 +900,11 @@ func (rc *Rows) Next(dest []driver.Value) error {
+ 						dest[i] = tokdata[i]
+ 					}
+ 					return nil
++				case doneInProcStruct:
++					d := doneStruct(tokdata)
++					if d.isError() {
++						return rc.stmt.c.checkBadConn(rc.reader.ctx, d.getError(), false)
++					}
+ 				case doneStruct:
+ 					if tokdata.isError() {
+ 						return rc.stmt.c.checkBadConn(rc.reader.ctx, tokdata.getError(), false)

@@ -81,17 +81,21 @@ class MssqlSQLDefiner extends SQLDefiner {
   }
 
   @override
-  String wrapLimit(int limit) {
+  String wrapLimit(String sql, int limit) {
     // todo: 实现 MSSQL 分页查询, 直接包裹子查询的方式不行，内部不能用order by
     if (!Matcher(MssqlLexer(content)).match("select {*}")) {
-      return content;
+      return sql;
     }
+    return "SELECT TOP ($limit) * FROM ($sql) AS dt_1;";
+  }
 
+  @override
+  String trimDelimiter(String sql) {
     final sql = MssqlLexer(content).trimEndWhere((token) {
       return token.id == TokenType.whitespace ||
           token.id == TokenType.comment ||
           (token.id == TokenType.punctuation && token.content == ";");
     });
-    return "SELECT TOP ($limit) * FROM ($sql) AS dt_1;";
+    return sql;
   }
 }

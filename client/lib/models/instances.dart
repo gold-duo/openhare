@@ -16,7 +16,6 @@ abstract class InstanceRepo {
   List<InstanceModel> getActiveInstances(int top);
   void addActiveInstance(InstanceId id);
   void addInstanceActiveSchema(InstanceId id, String schema);
-  Future<List<String>> getSchemas(InstanceId instanceId);
   Future<InstanceMetadataModel> getMetadata(InstanceId instanceId);
   Future<void> refreshMetadata(InstanceId instanceId);
 }
@@ -84,26 +83,11 @@ abstract class PaginationInstanceListModel with _$PaginationInstanceListModel {
 }
 
 // instances metadata model
-
 @freezed
 abstract class InstanceMetadataModel with _$InstanceMetadataModel {
   const factory InstanceMetadataModel({
+    required String version,
+    required List<String> schemas,
     required List<MetaDataNode> metadata,
-    required String? version,
   }) = _InstanceMetadataModel;
-
-  const InstanceMetadataModel._();
-
-  List<String> get schemas {
-    final schemas = List<String>.empty(growable: true);
-    for (final meta in metadata) {
-      meta.visitor((node, parent) {
-        if (node.type == MetaType.schema) {
-          schemas.add(node.value);
-        }
-        return true;
-      });
-    }
-    return schemas;
-  }
 }

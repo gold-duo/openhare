@@ -109,7 +109,11 @@ abstract class SQLDefiner {
     throw Exception("Not implemented");
   }
 
-  String wrapLimit(int limit) {
+  String wrapLimit(String sql, int limit) {
+    throw Exception("Not implemented");
+  }
+
+  String trimDelimiter(String sql) {
     throw Exception("Not implemented");
   }
 }

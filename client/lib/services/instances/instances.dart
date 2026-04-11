@@ -63,11 +63,6 @@ class InstancesServices extends _$InstancesServices {
     return repo.getActiveInstances(5);
   }
 
-  Future<List<String>> getSchemas(InstanceId instanceId) async {
-    final repo = ref.read(instanceRepoProvider);
-    return await repo.getSchemas(instanceId);
-  }
-
   Future<InstanceMetadataModel> getMetadata(InstanceId instanceId) async {
     return await ref.read(instanceRepoProvider).getMetadata(instanceId);
   }

@@ -235,8 +235,12 @@ class SessionConn {
     return await conn2!.metadata();
   }
 
-  Future<String?> version() async {
+  Future<String> version() async {
     return await conn2!.version();
+  }
+
+  Future<List<String>> schemas() async {
+    return await conn2!.schemas();
   }
 }
 
