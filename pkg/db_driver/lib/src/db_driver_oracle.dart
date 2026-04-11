@@ -8,43 +8,8 @@ import 'db_driver_conn_meta.dart';
 import 'db_driver_interface.dart';
 import 'db_driver_metadata.dart';
 
-class OracleQueryValue extends BaseQueryValue {
-  final impl.DbQueryValue _cell;
-
-  OracleQueryValue(this._cell);
-
-  @override
-  String? getString() => _cell.asString();
-
-  @override
-  List<int> getBytes() => _cell.asBytes();
-}
-
-class OracleQueryColumn extends BaseQueryColumn {
-  final impl.DbQueryColumn _column;
-
-  OracleQueryColumn(this._column);
-
-  @override
-  String get name => _column.name;
-
-  @override
-  DataType dataType() {
-    return switch (_column.dataType) {
-      impl.DbDataType.number => DataType.number,
-      impl.DbDataType.char => DataType.char,
-      impl.DbDataType.time => DataType.time,
-      impl.DbDataType.blob => DataType.blob,
-      impl.DbDataType.json => DataType.json,
-      impl.DbDataType.dataSet => DataType.dataSet,
-    };
-  }
-}
-
-class OracleConnection extends BaseConnection {
-  final impl.ImplConnection _conn;
-
-  OracleConnection(this._conn);
+class OracleConnection extends GoImplConnection {
+  OracleConnection(super._conn);
 
   @override
   sp.SQLDefiner parser(String sql) => sp.parser(sp.DialectType.oracle, sql);
@@ -71,11 +36,6 @@ class OracleConnection extends BaseConnection {
   }
 
   @override
-  Future<void> close() async {
-    await _conn.close();
-  }
-
-  @override
   Future<void> ping() async {
     await query("SELECT 1 FROM dual");
   }
@@ -83,36 +43,6 @@ class OracleConnection extends BaseConnection {
   @override
   Future<void> killQuery() async {
     return;
-  }
-
-  @override
-  Stream<BaseQueryStreamItem> queryStreamInternal(String sql) async* {
-    List<BaseQueryColumn>? columns;
-    await for (final item in _conn.streamQuery(sql)) {
-      switch (item) {
-        case impl.DbQueryHeader():
-          columns = item.columns
-              .map<BaseQueryColumn>((c) => OracleQueryColumn(c))
-              .toList(growable: false);
-          yield QueryStreamItemHeader(
-            columns: columns,
-            affectedRows: item.affectedRows,
-          );
-        case impl.DbQueryRow():
-          final currentColumns = columns;
-          if (currentColumns == null) {
-            throw StateError('No header received before row');
-          }
-          yield QueryStreamItemRow(
-            row: QueryResultRow(
-              currentColumns,
-              item.values
-                  .map<BaseQueryValue>((c) => OracleQueryValue(c))
-                  .toList(growable: false),
-            ),
-          );
-      }
-    }
   }
 
   @override
@@ -126,6 +56,35 @@ class OracleConnection extends BaseConnection {
           "SELECT version AS version FROM product_component_version WHERE rownum = 1");
       return results.rows.first.getString("VERSION") ?? "";
     }
+  }
+
+  String _escapeIdent(String ident) {
+    final escaped = ident.replaceAll('"', '""');
+    return '"$escaped"';
+  }
+
+  @override
+  Future<void> setCurrentSchema(String schema) async {
+    await query("ALTER SESSION SET CURRENT_SCHEMA = ${_escapeIdent(schema)}");
+    final currentSchema = await getCurrentSchema();
+    onSchemaChanged(currentSchema ?? "");
+  }
+
+  @override
+  Future<String?> getCurrentSchema() async {
+    final results = await query(
+        "SELECT SYS_CONTEXT('USERENV','CURRENT_SCHEMA') AS CURRENT_SCHEMA FROM dual");
+    return results.rows.first.getString("CURRENT_SCHEMA");
+  }
+
+  @override
+  Future<List<String>> schemas() async {
+    final results = await query(
+        "SELECT username AS SCHEMA_NAME FROM all_users ORDER BY username");
+    return results.rows
+        .map((r) => r.getString("SCHEMA_NAME") ?? "")
+        .where((s) => s.isNotEmpty)
+        .toList();
   }
 
   @override
@@ -164,10 +123,10 @@ ORDER BY
 
           final columnRows = byTable[table]!;
           final columnNodes = columnRows
-              .map((result) =>
-                  MetaDataNode(MetaType.column, result.getString("COLUMN_NAME")!)
-                    ..withProp(MetaDataPropType.dataType,
-                        _getDataType(result.getString("DATA_TYPE")!)))
+              .map((result) => MetaDataNode(
+                  MetaType.column, result.getString("COLUMN_NAME")!)
+                ..withProp(MetaDataPropType.dataType,
+                    _getDataType(result.getString("DATA_TYPE")!)))
               .toList();
           tableNode.items = columnNodes;
         }
@@ -204,34 +163,5 @@ ORDER BY
       "JSON" => DataType.json,
       _ => DataType.char,
     };
-  }
-
-  String _escapeIdent(String ident) {
-    final escaped = ident.replaceAll('"', '""');
-    return '"$escaped"';
-  }
-
-  @override
-  Future<void> setCurrentSchema(String schema) async {
-    await query("ALTER SESSION SET CURRENT_SCHEMA = ${_escapeIdent(schema)}");
-    final currentSchema = await getCurrentSchema();
-    onSchemaChanged(currentSchema ?? "");
-  }
-
-  @override
-  Future<String?> getCurrentSchema() async {
-    final results = await query(
-        "SELECT SYS_CONTEXT('USERENV','CURRENT_SCHEMA') AS CURRENT_SCHEMA FROM dual");
-    return results.rows.first.getString("CURRENT_SCHEMA");
-  }
-
-  @override
-  Future<List<String>> schemas() async {
-    final results = await query(
-        "SELECT username AS SCHEMA_NAME FROM all_users ORDER BY username");
-    return results.rows
-        .map((r) => r.getString("SCHEMA_NAME") ?? "")
-        .where((s) => s.isNotEmpty)
-        .toList();
   }
 }

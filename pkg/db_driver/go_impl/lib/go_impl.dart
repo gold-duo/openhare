@@ -34,7 +34,7 @@ final NativeImpl _lib = () {
 
 final class ImplConnection {
   ImplConnection._(this._handle);
-  final int _handle;
+  final int _handle; // go impl 里的连接句柄指针
 
   static Future<ImplConnection> open(go_impl_db_type_t dbType, String dsn) async {
     final port = ReceivePort();
@@ -292,17 +292,6 @@ final class DbQueryValue {
     go_impl_query_value_type_t.GO_IMPL_QUERY_VALUE_FLOAT => ((value as num?)?.toDouble() ?? 0.0).toString(),
     go_impl_query_value_type_t.GO_IMPL_QUERY_VALUE_DOUBLE => ((value as num?)?.toDouble() ?? 0.0).toString(),
   };
-}
-
-final class QueryTable {
-  const QueryTable({
-    required this.columns,
-    required this.rows,
-    required this.affectedRows,
-  });
-  final List<DbQueryColumn> columns;
-  final List<List<DbQueryValue>> rows;
-  final BigInt affectedRows;
 }
 
 String _decodeUtf8(Uint8List bytes) => utf8.decode(bytes, allowMalformed: true);

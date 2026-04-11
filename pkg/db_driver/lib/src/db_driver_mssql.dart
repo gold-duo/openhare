@@ -8,45 +8,11 @@ import 'db_driver_conn_meta.dart';
 import 'db_driver_interface.dart';
 import 'db_driver_metadata.dart';
 
-class MssqlQueryValue extends BaseQueryValue {
-  final impl.DbQueryValue _cell;
-
-  MssqlQueryValue(this._cell);
-
-  @override
-  String? getString() => _cell.asString();
-
-  @override
-  List<int> getBytes() => _cell.asBytes();
-}
-
-class MssqlQueryColumn extends BaseQueryColumn {
-  final impl.DbQueryColumn _column;
-
-  MssqlQueryColumn(this._column);
-
-  @override
-  String get name => _column.name;
-
-  @override
-  DataType dataType() {
-    return switch (_column.dataType) {
-      impl.DbDataType.number => DataType.number,
-      impl.DbDataType.char => DataType.char,
-      impl.DbDataType.time => DataType.time,
-      impl.DbDataType.blob => DataType.blob,
-      impl.DbDataType.json => DataType.json,
-      impl.DbDataType.dataSet => DataType.dataSet,
-    };
-  }
-}
-
-class MSSQLConnection extends BaseConnection {
-  final impl.ImplConnection _conn;
+class MSSQLConnection extends GoImplConnection {
   final String _dsn;
   String? _spid;
 
-  MSSQLConnection(this._conn, this._dsn);
+  MSSQLConnection(super._conn, this._dsn);
 
   static const Set<String> _mssqlSystemDatabasesLower = {
     'tempdb',
@@ -105,11 +71,6 @@ class MSSQLConnection extends BaseConnection {
   }
 
   @override
-  Future<void> close() async {
-    await _conn.close();
-  }
-
-  @override
   Future<void> ping() async {
     await query("SELECT 1");
   }
@@ -129,34 +90,28 @@ class MSSQLConnection extends BaseConnection {
   }
 
   @override
-  Stream<BaseQueryStreamItem> queryStreamInternal(String sql) async* {
-    List<BaseQueryColumn>? columns;
+  Future<List<String>> schemas() async {
+    final results = await query(
+      'SELECT name AS SCHEMA_NAME FROM sys.databases '
+      'WHERE LOWER(name) NOT IN (${_mssqlSystemDatabasesNotInSql()}) ORDER BY name;',
+    );
+    return results.rows
+        .map((r) => r.getString("SCHEMA_NAME") ?? "")
+        .where((s) => s.isNotEmpty)
+        .toList();
+  }
 
-    await for (final item in _conn.streamQuery(sql)) {
-      switch (item) {
-        case impl.DbQueryHeader():
-          columns = item.columns
-              .map<BaseQueryColumn>((c) => MssqlQueryColumn(c))
-              .toList(growable: false);
-          yield QueryStreamItemHeader(
-            columns: columns,
-            affectedRows: item.affectedRows,
-          );
-        case impl.DbQueryRow():
-          final currentColumns = columns;
-          if (currentColumns == null) {
-            throw StateError('No header received before row');
-          }
-          yield QueryStreamItemRow(
-            row: QueryResultRow(
-              currentColumns,
-              item.values
-                  .map<BaseQueryValue>((c) => MssqlQueryValue(c))
-                  .toList(growable: false),
-            ),
-          );
-      }
-    }
+  @override
+  Future<void> setCurrentSchema(String schema) async {
+    await query("USE ${_escapeIdent(schema)};");
+    final currentSchema = await getCurrentSchema();
+    onSchemaChanged(currentSchema ?? "");
+  }
+
+  @override
+  Future<String?> getCurrentSchema() async {
+    final results = await query("SELECT DB_NAME() AS CURRENT_SCHEMA;");
+    return results.rows.first.getString("CURRENT_SCHEMA");
   }
 
   @override
@@ -337,30 +292,5 @@ ORDER BY
       return DataType.char;
     }
     return DataType.char;
-  }
-
-  @override
-  Future<List<String>> schemas() async {
-    final results = await query(
-      'SELECT name AS SCHEMA_NAME FROM sys.databases '
-      'WHERE LOWER(name) NOT IN (${_mssqlSystemDatabasesNotInSql()}) ORDER BY name;',
-    );
-    return results.rows
-        .map((r) => r.getString("SCHEMA_NAME") ?? "")
-        .where((s) => s.isNotEmpty)
-        .toList();
-  }
-
-  @override
-  Future<void> setCurrentSchema(String schema) async {
-    await query("USE ${_escapeIdent(schema)};");
-    final currentSchema = await getCurrentSchema();
-    onSchemaChanged(currentSchema ?? "");
-  }
-
-  @override
-  Future<String?> getCurrentSchema() async {
-    final results = await query("SELECT DB_NAME() AS CURRENT_SCHEMA;");
-    return results.rows.first.getString("CURRENT_SCHEMA");
   }
 }

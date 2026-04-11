@@ -7,45 +7,11 @@ import 'db_driver_metadata.dart';
 import 'package:sql_parser/parser.dart' as sp;
 import 'package:db_driver/src/db_driver_conn_meta.dart';
 
-class MysqlQueryValue extends BaseQueryValue {
-  final impl.DbQueryValue _cell;
-
-  MysqlQueryValue(this._cell);
-
-  @override
-  String? getString() => _cell.asString();
-
-  @override
-  List<int> getBytes() => _cell.asBytes();
-}
-
-class MysqlQueryColumn extends BaseQueryColumn {
-  final impl.DbQueryColumn _column;
-
-  MysqlQueryColumn(this._column);
-
-  @override
-  String get name => _column.name;
-
-  @override
-  DataType dataType() {
-    return switch (_column.dataType) {
-      impl.DbDataType.number => DataType.number,
-      impl.DbDataType.char => DataType.char,
-      impl.DbDataType.time => DataType.time,
-      impl.DbDataType.blob => DataType.blob,
-      impl.DbDataType.json => DataType.json,
-      impl.DbDataType.dataSet => DataType.dataSet,
-    };
-  }
-}
-
-class MySQLConnection extends BaseConnection {
-  final impl.ImplConnection _conn;
+class MySQLConnection extends GoImplConnection {
   final String _dsn;
   String? _sessionId;
 
-  MySQLConnection(this._conn, this._dsn);
+  MySQLConnection(super._conn, this._dsn);
 
   @override
   sp.SQLDefiner parser(String sql) => sp.parser(sp.DialectType.mysql, sql);
@@ -64,11 +30,6 @@ class MySQLConnection extends BaseConnection {
     final mc = MySQLConnection(conn, dsn);
     await mc._loadSessionId();
     return mc;
-  }
-
-  @override
-  Future<void> close() async {
-    await _conn.close();
   }
 
   @override
@@ -96,40 +57,32 @@ class MySQLConnection extends BaseConnection {
   }
 
   @override
-  Stream<BaseQueryStreamItem> queryStreamInternal(String sql) async* {
-    List<BaseQueryColumn>? columns;
-
-    await for (final item in _conn.streamQuery(sql)) {
-      switch (item) {
-        case impl.DbQueryHeader():
-          columns = item.columns
-              .map<BaseQueryColumn>((c) => MysqlQueryColumn(c))
-              .toList(growable: false);
-          yield QueryStreamItemHeader(
-            columns: columns,
-            affectedRows: item.affectedRows,
-          );
-        case impl.DbQueryRow():
-          final currentColumns = columns;
-          if (currentColumns == null) {
-            throw StateError('No header received before row');
-          }
-          yield QueryStreamItemRow(
-            row: QueryResultRow(
-              currentColumns,
-              item.values
-                  .map<BaseQueryValue>((c) => MysqlQueryValue(c))
-                  .toList(growable: false),
-            ),
-          );
-      }
-    }
-  }
-
-  @override
   Future<String> version() async {
     final results = await query("SELECT VERSION() AS version");
     return results.rows.first.getString("version") ?? "";
+  }
+
+  @override
+  Future<List<String>> schemas() async {
+    final results = await query("SHOW DATABASES");
+    return results.rows
+        .map((r) => r.getString("Database") ?? "")
+        .where((s) => s.isNotEmpty)
+        .toList();
+  }
+
+  @override
+  Future<void> setCurrentSchema(String schema) async {
+    final escaped = schema.replaceAll('`', '``');
+    await query("USE `$escaped`");
+    final currentSchema = await getCurrentSchema();
+    onSchemaChanged(currentSchema ?? "");
+  }
+
+  @override
+  Future<String?> getCurrentSchema() async {
+    final results = await query("SELECT DATABASE() AS current_schema");
+    return results.rows.first.getString("current_schema");
   }
 
   @override
@@ -215,28 +168,5 @@ ORDER BY
       "set" || "enum" => DataType.dataSet,
       _ => DataType.blob,
     };
-  }
-
-  @override
-  Future<List<String>> schemas() async {
-    final results = await query("SHOW DATABASES");
-    return results.rows
-        .map((r) => r.getString("Database") ?? "")
-        .where((s) => s.isNotEmpty)
-        .toList();
-  }
-
-  @override
-  Future<void> setCurrentSchema(String schema) async {
-    final escaped = schema.replaceAll('`', '``');
-    await query("USE `$escaped`");
-    final currentSchema = await getCurrentSchema();
-    onSchemaChanged(currentSchema ?? "");
-  }
-
-  @override
-  Future<String?> getCurrentSchema() async {
-    final results = await query("SELECT DATABASE() AS current_schema");
-    return results.rows.first.getString("current_schema");
   }
 }

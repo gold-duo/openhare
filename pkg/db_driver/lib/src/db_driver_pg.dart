@@ -8,45 +8,11 @@ import 'db_driver_conn_meta.dart';
 import 'db_driver_interface.dart';
 import 'db_driver_metadata.dart';
 
-class PGQueryValue extends BaseQueryValue {
-  final impl.DbQueryValue _cell;
-
-  PGQueryValue(this._cell);
-
-  @override
-  String? getString() => _cell.asString();
-
-  @override
-  List<int> getBytes() => _cell.asBytes();
-}
-
-class PGQueryColumn extends BaseQueryColumn {
-  final impl.DbQueryColumn _column;
-
-  PGQueryColumn(this._column);
-
-  @override
-  String get name => _column.name;
-
-  @override
-  DataType dataType() {
-    return switch (_column.dataType) {
-      impl.DbDataType.number => DataType.number,
-      impl.DbDataType.char => DataType.char,
-      impl.DbDataType.time => DataType.time,
-      impl.DbDataType.blob => DataType.blob,
-      impl.DbDataType.json => DataType.json,
-      impl.DbDataType.dataSet => DataType.dataSet,
-    };
-  }
-}
-
-class PGConnection extends BaseConnection {
-  final impl.ImplConnection _conn;
+class PGConnection extends GoImplConnection {
   final String _dsn;
   int? _backendPid;
 
-  PGConnection(this._conn, this._dsn);
+  PGConnection(super._conn, this._dsn);
 
   static const Set<String> _pgSystemSchemasLower = {
     'information_schema',
@@ -99,11 +65,6 @@ class PGConnection extends BaseConnection {
   }
 
   @override
-  Future<void> close() async {
-    await _conn.close();
-  }
-
-  @override
   Future<void> ping() async {
     await query("SELECT 1");
   }
@@ -123,40 +84,36 @@ class PGConnection extends BaseConnection {
   }
 
   @override
-  Stream<BaseQueryStreamItem> queryStreamInternal(String sql) async* {
-    List<BaseQueryColumn>? columns;
-
-    await for (final item in _conn.streamQuery(sql)) {
-      switch (item) {
-        case impl.DbQueryHeader():
-          columns = item.columns
-              .map<BaseQueryColumn>((c) => PGQueryColumn(c))
-              .toList(growable: false);
-          yield QueryStreamItemHeader(
-            columns: columns,
-            affectedRows: item.affectedRows,
-          );
-        case impl.DbQueryRow():
-          final currentColumns = columns;
-          if (currentColumns == null) {
-            throw StateError('No header received before row');
-          }
-          yield QueryStreamItemRow(
-            row: QueryResultRow(
-              currentColumns,
-              item.values
-                  .map<BaseQueryValue>((c) => PGQueryValue(c))
-                  .toList(growable: false),
-            ),
-          );
-      }
-    }
-  }
-
-  @override
   Future<String> version() async {
     final results = await query("SELECT version() AS version");
     return results.rows.first.getString("version") ?? "";
+  }
+
+  @override
+  Future<void> setCurrentSchema(String schema) async {
+    final escaped = schema.replaceAll("'", "''");
+    await query("SET search_path TO '$escaped'");
+    final currentSchema = await getCurrentSchema();
+    onSchemaChanged(currentSchema ?? "");
+  }
+
+  @override
+  Future<String?> getCurrentSchema() async {
+    final results = await query("SELECT current_schema();");
+    return results.rows.first.getString("current_schema");
+  }
+
+  @override
+  Future<List<String>> schemas() async {
+    final results = await query(
+      'SELECT nspname FROM pg_namespace '
+      'WHERE LOWER(nspname) NOT IN (${_pgSystemSchemasNotInSql()}) '
+      'ORDER BY nspname;',
+    );
+    return results.rows
+        .map((r) => r.getString("nspname") ?? "")
+        .where((s) => s.isNotEmpty)
+        .toList();
   }
 
   @override
@@ -252,32 +209,5 @@ ORDER BY
       "array" || "user-defined" => DataType.blob,
       _ => DataType.char,
     };
-  }
-
-  @override
-  Future<void> setCurrentSchema(String schema) async {
-    final escaped = schema.replaceAll("'", "''");
-    await query("SET search_path TO '$escaped'");
-    final currentSchema = await getCurrentSchema();
-    onSchemaChanged(currentSchema ?? "");
-  }
-
-  @override
-  Future<String?> getCurrentSchema() async {
-    final results = await query("SELECT current_schema();");
-    return results.rows.first.getString("current_schema");
-  }
-
-  @override
-  Future<List<String>> schemas() async {
-    final results = await query(
-      'SELECT nspname FROM pg_namespace '
-      'WHERE LOWER(nspname) NOT IN (${_pgSystemSchemasNotInSql()}) '
-      'ORDER BY nspname;',
-    );
-    return results.rows
-        .map((r) => r.getString("nspname") ?? "")
-        .where((s) => s.isNotEmpty)
-        .toList();
   }
 }
