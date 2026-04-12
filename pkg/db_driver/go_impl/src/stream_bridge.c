@@ -2,7 +2,10 @@
 #include "dart-sdk-include/dart_api_dl.c"
 #include "dart_api_dl.h"
 
-#if defined(__GNUC__) || defined(__clang__)
+#if defined(_WIN32) || defined(_WIN64)
+/* MSVC (and MinGW) need explicit exports for symbols used via dart:ffi. */
+#define GO_IMPL_C_EXPORT __declspec(dllexport)
+#elif defined(__GNUC__) || defined(__clang__)
 #define GO_IMPL_C_EXPORT __attribute__((visibility("default")))
 #else
 #define GO_IMPL_C_EXPORT
