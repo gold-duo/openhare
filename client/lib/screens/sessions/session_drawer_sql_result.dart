@@ -40,7 +40,12 @@ class SessionDrawerSqlResult extends ConsumerWidget {
       }
     }
     if (dataType == DataType.json) {
-      return ValueDisplayField(data: formatJson(result.getString() ?? "{}"), language: "json");
+      final raw = result.getString() ?? "{}";
+      try {
+        return ValueDisplayField(data: formatJson(raw), language: "json");
+      } on FormatException {
+        return ValueDisplayField(data: raw, language: null);
+      }
     } else {
       return ValueDisplayField(data: result.getString() ?? "");
     }
@@ -86,7 +91,7 @@ class ValueDisplayField extends StatelessWidget {
 }
 
 String formatJson(String jsonString) {
-  var jsonMap = jsonDecode(jsonString);
-  var encoder = const JsonEncoder.withIndent('  ');
+  final jsonMap = jsonDecode(jsonString);
+  const encoder = JsonEncoder.withIndent('  ');
   return encoder.convert(jsonMap);
 }

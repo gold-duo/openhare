@@ -523,7 +523,6 @@ class AddInstanceForm extends StatelessWidget {
       label: AppLocalizations.of(context)!.db_instance_user,
       controller: user.ctrl,
       state: user.state,
-      validator: validatorFn(context, user, validatorValueRequired(context)),
     );
   }
 
@@ -537,7 +536,6 @@ class AddInstanceForm extends StatelessWidget {
       controller: password.ctrl,
       state: password.state,
       obscureText: true,
-      validator: validatorFn(context, password, validatorValueRequired(context)),
     );
   }
 
@@ -991,6 +989,7 @@ class AddInstanceController extends ChangeNotifier {
     } catch (e) {
       isDatabaseConnectable = false;
       databaseConnectError = e.toString();
+      print(e);
     } finally {
       isDatabasePingDoing = false;
       notifyListeners();
