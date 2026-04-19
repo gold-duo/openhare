@@ -1,5 +1,6 @@
 import 'package:client/screens/page_skeleton.dart';
 import 'package:client/services/instances/instances.dart';
+import 'package:client/screens/instances/instance_add.dart';
 import 'package:client/screens/instances/instance_tables.dart';
 import 'package:client/services/sessions/sessions.dart';
 import 'package:client/widgets/button.dart';
@@ -9,7 +10,6 @@ import 'package:client/widgets/empty.dart';
 import 'package:client/widgets/paginated_bar.dart';
 import 'package:db_driver/db_driver.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:client/l10n/app_localizations.dart';
 
@@ -37,7 +37,7 @@ class AddSession extends HookConsumerWidget {
             LinkButton(
               text: AppLocalizations.of(context)!.display_no_instance_and_add_instance_button,
               onPressed: () {
-                GoRouter.of(context).go('/instances/add');
+                showAddInstanceDialog(context);
               },
             ),
           ],

@@ -1,196 +1,12 @@
 import 'package:client/models/instances.dart';
 import 'package:client/services/instances/instances.dart';
-import 'package:client/widgets/const.dart';
-import 'package:client/widgets/button.dart';
+import 'package:client/widgets/dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:db_driver/db_driver.dart';
 import 'package:client/screens/instances/instance_add.dart';
-import 'package:client/screens/page_skeleton.dart';
-import 'package:go_router/go_router.dart';
 import 'package:client/l10n/app_localizations.dart';
-
-class UpdateInstancePage extends StatefulWidget {
-  const UpdateInstancePage({super.key});
-
-  @override
-  State<UpdateInstancePage> createState() => _UpdateInstancePageState();
-}
-
-class _UpdateInstancePageState extends State<UpdateInstancePage> {
-  @override
-  void initState() {
-    super.initState();
-    updateInstanceController.addListener(() => mounted ? setState(() {}) : null);
-  }
-
-  @override
-  void dispose() {
-    updateInstanceController.removeListener(() {});
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return PageSkeleton(
-      topBar: Row(
-        children: [
-          SizedBox(width: kSpacingMedium),
-          RectangleIconButton.medium(
-            icon: Icons.arrow_back,
-            iconColor: Theme.of(context).colorScheme.onSurfaceVariant, // 更新数据源页面返回按钮颜色
-            onPressed: () => GoRouter.of(context).go('/instances/list'),
-          ),
-        ],
-      ),
-      bottomBar: AddInstanceBottomBar(
-        isDatabasePingDoing: updateInstanceController.isDatabasePingDoing,
-        isDatabaseConnectable: updateInstanceController.isDatabaseConnectable,
-        databaseConnectError: updateInstanceController.databaseConnectError,
-      ),
-      child: const UpdateInstance(),
-    );
-  }
-}
-
-class UpdateInstance extends ConsumerStatefulWidget {
-  const UpdateInstance({super.key});
-
-  @override
-  ConsumerState<UpdateInstance> createState() => _UpdateInstanceState();
-}
-
-class _UpdateInstanceState extends ConsumerState<UpdateInstance> {
-  @override
-  void initState() {
-    super.initState();
-    updateInstanceController.addListener(() => mounted ? setState(() {}) : null);
-  }
-
-  @override
-  void dispose() {
-    updateInstanceController.removeListener(() {});
-    super.dispose();
-  }
-
-  Color? selectedColor(AddInstanceController updateInstanceController) {
-    if (updateInstanceController.isDatabasePingDoing) {
-      return null;
-    }
-    if (updateInstanceController.isDatabaseConnectable == null) {
-      return null;
-    }
-    if (updateInstanceController.isDatabaseConnectable == true) {
-      return Colors.green;
-    } else {
-      return Colors.red;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return BodyPageSkeleton(
-      header: Row(
-        children: [
-          Text(
-            AppLocalizations.of(context)!.update_db_instance,
-            style: Theme.of(context).textTheme.titleLarge,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const Spacer(),
-          TextButton(
-            onPressed: updateInstanceController.isDatabasePingDoing
-                ? null
-                : () {
-                    updateInstanceController.databasePing();
-                  },
-            child: Text(AppLocalizations.of(context)!.db_instance_test),
-          ),
-          TextButton(
-            onPressed: () {
-              if (updateInstanceController.validate()) {
-                ref
-                    .read(instancesServicesProvider.notifier)
-                    .updateInstance(
-                      updateInstanceController.getInstanceModel(),
-                    );
-                updateInstanceController.clear();
-                GoRouter.of(context).go('/instances/list');
-              }
-            },
-            child: Text(AppLocalizations.of(context)!.submit),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Expanded(
-            child: SizedBox(
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(0, kSpacingSmall, 0, 0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    DatabaseTypeCardList(
-                      connectionMetas: [connectionMetaMap[updateInstanceController.selectedDatabaseType]!],
-                      selectedColor: selectedColor(updateInstanceController),
-                    ),
-                    const SizedBox(height: kSpacingMedium),
-                    Expanded(
-                      child: UpdateInstanceForm(
-                        infos: updateInstanceController.dbInfos,
-                        selectedGroup: updateInstanceController.selectedGroup,
-                        onValid: (info, isValid) {
-                          updateInstanceController.updateValidState(info, isValid);
-                        },
-                        onGroupChange: (group) {
-                          updateInstanceController.onGroupChange(group);
-                        },
-                        codeController: updateInstanceController.initQueryCodeController,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class UpdateInstanceForm extends AddInstanceForm {
-  const UpdateInstanceForm({
-    super.key,
-    required super.infos,
-    required super.selectedGroup,
-    super.onGroupChange,
-    super.onValid,
-    required super.codeController,
-  });
-  @override
-  FormFieldValidator validatorName(BuildContext context) {
-    return (value) {
-      if (value == null || value.isEmpty) {
-        return AppLocalizations.of(context)!.field_val_msg_value_reqiured;
-      }
-      return null;
-    };
-  }
-
-  @override
-  Widget buildNameField(BuildContext context) {
-    FormInfo name = infos[settingMetaNameName]!;
-    return CommonFormField(
-      readOnly: true,
-      state: name.state,
-      label: AppLocalizations.of(context)!.db_instance_name,
-      controller: name.ctrl,
-      validator: validatorFn(context, name, validatorName(context)),
-    );
-  }
-}
+import 'package:hugeicons/hugeicons.dart';
 
 class UpdateInstanceController extends AddInstanceController {
   InstanceModel? instance;
@@ -206,33 +22,35 @@ class UpdateInstanceController extends AddInstanceController {
   UpdateInstanceController() : super();
 
   void loadFromMeta(ConnectValue connectValue) {
-    for (final info in infos[selectedDatabaseType]!.values) {
-      if (info.dbType == selectedDatabaseType) {
-        switch (info.meta) {
-          case NameMeta():
-            info.ctrl.text = connectValue.name;
-          case TargetNetworkHostMeta():
-            info.ctrl.text = connectValue.getHost();
-          case TargetDBFileMeta():
-            info.ctrl.text = connectValue.getDbFile();
-          case TargetNetworkPortMeta():
-            info.ctrl.text = connectValue.getPort()?.toString() ?? "";
-          case UserMeta():
-            info.ctrl.text = connectValue.user;
-          case PasswordMeta():
-            info.ctrl.text = connectValue.password;
-          case DescMeta():
-            info.ctrl.text = connectValue.desc;
-          case CustomMeta():
-            info.ctrl.text = connectValue.getValue(info.meta.name);
-        }
+    final db = selectedDatabaseType;
+    for (final meta in connectionMetaMap[db]?.connMeta ?? const <SettingMeta>[]) {
+      switch (meta) {
+        case NameMeta():
+          fieldTextController(db, meta.name).text = connectValue.name;
+        case TargetNetworkMeta():
+          fieldTextController(db, settingMetaNameTargetNetworkHost).text = connectValue.getHost();
+          fieldTextController(db, settingMetaNameTargetNetworkPort).text = connectValue.getPort()?.toString() ?? "";
+        case TargetDBFileMeta():
+          fieldTextController(db, meta.name).text = connectValue.getDbFile();
+        case UserMeta():
+          fieldTextController(db, meta.name).text = connectValue.user;
+        case PasswordMeta():
+          fieldTextController(db, meta.name).text = connectValue.password;
+        case DescMeta():
+          fieldTextController(db, meta.name).text = connectValue.desc;
+        case CustomMeta():
+          fieldTextController(db, meta.name).text = connectValue.getValue(meta.name);
       }
     }
     initQueryCodeController.text = connectValue.initQueryText();
   }
 
   void tryUpdateInstance(InstanceModel instance) {
+    isDatabaseConnectable = null;
+    databaseConnectError = null;
+    isDatabasePingDoing = false;
     this.instance = instance;
+    syncConnectFormDatabaseType();
     loadFromMeta(instance.connectValue);
     notifyListeners();
   }
@@ -258,3 +76,95 @@ class UpdateInstanceController extends AddInstanceController {
 }
 
 UpdateInstanceController updateInstanceController = UpdateInstanceController();
+
+/// 编辑数据源：仅连接配置（与新建向导第二步一致的 Tab + 表单）。
+Future<void> showUpdateInstanceDialog(
+  BuildContext context,
+  WidgetRef ref,
+  InstanceModel instance,
+) async {
+  updateInstanceController.tryUpdateInstance(instance);
+  await showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) => const _UpdateInstanceDialog(),
+  );
+}
+
+class _UpdateInstanceDialog extends ConsumerStatefulWidget {
+  const _UpdateInstanceDialog();
+
+  @override
+  ConsumerState<_UpdateInstanceDialog> createState() => _UpdateInstanceDialogState();
+}
+
+class _UpdateInstanceDialogState extends ConsumerState<_UpdateInstanceDialog> {
+  @override
+  void initState() {
+    super.initState();
+    updateInstanceController.addListener(_onCtrl);
+  }
+
+  @override
+  void dispose() {
+    updateInstanceController.removeListener(_onCtrl);
+    super.dispose();
+  }
+
+  void _onCtrl() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _submit() {
+    if (!updateInstanceController.validateForm()) {
+      return;
+    }
+    ref.read(instancesServicesProvider.notifier).updateInstance(updateInstanceController.getInstanceModel());
+    updateInstanceController.clear();
+    ref.read(instancesProvider.notifier).changePage("");
+    if (!mounted) {
+      return;
+    }
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return CustomDialog(
+      title: l10n.update_db_instance,
+      titleIcon: HugeIcon(
+        icon: HugeIcons.strokeRoundedDatabase,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+      subtitle: '连接配置',
+      maxWidth: 960,
+      maxHeight: 720,
+      footerLeading: DbInstanceConnectionTestWidget(
+        isDatabasePingDoing: updateInstanceController.isDatabasePingDoing,
+        isDatabaseConnectable: updateInstanceController.isDatabaseConnectable,
+        databaseConnectError: updateInstanceController.databaseConnectError,
+        onTestConnection: () => updateInstanceController.databasePing(),
+      ),
+      content: ListenableBuilder(
+        listenable: updateInstanceController,
+        builder: (context, _) => ListenableBuilder(
+          listenable: updateInstanceController.connectForm,
+          builder: (context, _) => InstanceFormWidget(
+            controller: updateInstanceController,
+            codeController: updateInstanceController.initQueryCodeController,
+            nameReadOnly: true,
+          ),
+        ),
+      ),
+      actions: [
+        FilledButton(
+          onPressed: _submit,
+          child: Text(l10n.submit),
+        ),
+      ],
+    );
+  }
+}

@@ -1,7 +1,5 @@
 import 'package:client/models/sessions.dart';
-import 'package:client/screens/instances/instance_add.dart';
 import 'package:client/screens/instances/instance_tables.dart';
-import 'package:client/screens/instances/instance_update.dart';
 import 'package:client/screens/page_skeleton.dart';
 import 'package:client/screens/settings/settings.dart';
 import 'package:client/screens/about/about.dart';
@@ -56,6 +54,9 @@ class App extends HookConsumerWidget {
           GoRoute(
             path: "/instances",
             redirect: (context, state) {
+              if (lastInstancePage == '/instances/add') {
+                return '/instances/list';
+              }
               return lastInstancePage;
             },
           ),
@@ -64,20 +65,6 @@ class App extends HookConsumerWidget {
             pageBuilder: (context, state) {
               lastInstancePage = '/instances/list';
               return const NoTransitionPage<void>(child: InstancesPage());
-            },
-          ),
-          GoRoute(
-            path: '/instances/add',
-            pageBuilder: (context, state) {
-              lastInstancePage = '/instances/add';
-              return const NoTransitionPage<void>(child: AddInstancePage());
-            },
-          ),
-          GoRoute(
-            path: '/instances/update',
-            pageBuilder: (context, state) {
-              lastInstancePage = '/instances/update';
-              return const NoTransitionPage<void>(child: UpdateInstancePage());
             },
           ),
         ],

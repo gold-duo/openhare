@@ -99,6 +99,22 @@
   "@db_instance_test": {
     "description": "DB instance test connection"
   },
+  "add_instance_wizard_step1_subtitle": "Step 1/2: Select data source",
+  "@add_instance_wizard_step1_subtitle": {
+    "description": "Add instance wizard step 1 subtitle"
+  },
+  "add_instance_wizard_step2_subtitle": "Step 2/2: Connection settings",
+  "@add_instance_wizard_step2_subtitle": {
+    "description": "Add instance wizard step 2 subtitle"
+  },
+  "wizard_next": "Next",
+  "@wizard_next": {
+    "description": "Wizard next step button"
+  },
+  "wizard_previous": "Previous",
+  "@wizard_previous": {
+    "description": "Wizard previous step button"
+  },
   "testing": "Testing",
   "@testing": {
     "description": "Testing"

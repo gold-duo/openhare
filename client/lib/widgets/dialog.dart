@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:client/l10n/app_localizations.dart';
+import 'package:client/widgets/button.dart';
 import 'package:client/widgets/const.dart';
 
 // 二次确认的对话框，确认后执行onConfirm, 点击取消或关闭对话框则不执行
@@ -86,93 +87,137 @@ class CustomDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: maxWidth ?? 640,
-          maxHeight:
-              maxHeight ??
-              min(
-                MediaQuery.of(context).size.height - tabbarHeight - bottomBarHeight - 10,
-                800,
-              ), // 高度不能超出屏幕高度，且不能覆盖顶部和底部状态栏
+      child: CustomDialogWidget(
+        title: title,
+        subtitle: subtitle,
+        titleIcon: titleIcon,
+        footerLeading: footerLeading,
+        body: content,
+        actions: actions,
+        maxWidth: maxWidth ?? 640,
+        maxHeight: maxHeight,
+      ),
+    );
+  }
+}
+
+class CustomDialogWidget extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final Widget? titleIcon;
+  final Widget? footerLeading;
+  final Widget body;
+
+  final List<Widget> actions;
+  final double maxWidth;
+
+  /// 为 null 时：不超出视口并避开顶底栏，且不超过 800。
+  final double? maxHeight;
+
+  const CustomDialogWidget({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.titleIcon,
+    this.footerLeading,
+    required this.body,
+    required this.actions,
+    required this.maxWidth,
+    this.maxHeight,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final resolvedMaxHeight =
+        maxHeight ??
+        min(
+          MediaQuery.of(context).size.height - tabbarHeight - bottomBarHeight - 10,
+          800,
+        ); // 高度不能超出屏幕高度，且不能覆盖顶部和底部状态栏
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: resolvedMaxHeight),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerLowest, // 对话框默认背景色
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerLowest, // 对话框默认背景色
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.fromLTRB(
-            kSpacingMedium,
-            kSpacingMedium,
-            kSpacingMedium,
-            kSpacingMedium,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Builder(
-                builder: (context) {
-                  final theme = Theme.of(context);
-                  final cs = theme.colorScheme;
-                  final textTheme = theme.textTheme;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: kSpacingSmall, right: kSpacingSmall),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        if (titleIcon != null) ...[
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: cs.primaryContainer,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(kSpacingSmall),
-                              child: titleIcon!,
-                            ),
+        padding: const EdgeInsets.fromLTRB(
+          kSpacingMedium,
+          kSpacingMedium,
+          kSpacingMedium,
+          kSpacingMedium,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Builder(
+              builder: (context) {
+                final theme = Theme.of(context);
+                final cs = theme.colorScheme;
+                final textTheme = theme.textTheme;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: kSpacingSmall, right: 0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (titleIcon != null) ...[
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: cs.primaryContainer,
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          const SizedBox(width: kSpacingSmall),
-                        ],
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(title, style: textTheme.titleMedium),
-                              if (subtitle != null && subtitle!.isNotEmpty)
-                                Text(
-                                  subtitle!,
-                                  style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                                ),
-                            ],
+                          child: Padding(
+                            padding: const EdgeInsets.all(kSpacingSmall),
+                            child: titleIcon!,
                           ),
                         ),
+                        const SizedBox(width: kSpacingSmall),
                       ],
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: kSpacingMedium),
-              Expanded(child: content),
-              const SizedBox(height: kSpacingMedium),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: footerLeading == null ? MainAxisAlignment.end : MainAxisAlignment.start,
-                children: [
-                  if (footerLeading != null)
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: footerLeading!,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(title, style: textTheme.titleMedium),
+                            if (subtitle != null && subtitle!.isNotEmpty)
+                              Text(
+                                subtitle!,
+                                style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                              ),
+                          ],
+                        ),
                       ),
-                    ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: actions,
+                      RectangleIconButton.medium(
+                        tooltip: AppLocalizations.of(context)!.close,
+                        icon: Icons.close,
+                        iconColor: cs.onSurfaceVariant,
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ],
-          ),
+                );
+              },
+            ),
+            const SizedBox(height: kSpacingMedium),
+            Expanded(child: body),
+            const SizedBox(height: kSpacingMedium),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: footerLeading == null ? MainAxisAlignment.end : MainAxisAlignment.start,
+              children: [
+                if (footerLeading != null)
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: footerLeading!,
+                    ),
+                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: actions,
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:client/models/instances.dart';
+import 'package:client/screens/instances/instance_add.dart';
 import 'package:client/screens/instances/instance_update.dart';
 import 'package:client/services/instances/instances.dart';
 import 'package:client/widgets/button.dart';
@@ -8,7 +9,6 @@ import 'package:client/widgets/paginated_bar.dart';
 import 'package:db_driver/db_driver.dart';
 import 'package:flutter/material.dart';
 import 'package:client/screens/page_skeleton.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:client/l10n/app_localizations.dart';
 
@@ -61,8 +61,7 @@ class _InstanceTableState extends ConsumerState<InstanceTable> {
               RectangleIconButton.small(
                 icon: Icons.edit,
                 onPressed: () {
-                  updateInstanceController.tryUpdateInstance(instance);
-                  GoRouter.of(context).go('/instances/update');
+                  showUpdateInstanceDialog(context, ref, instance);
                 },
               ),
               RectangleIconButton.small(
@@ -137,7 +136,7 @@ class _InstanceTableState extends ConsumerState<InstanceTable> {
                   height: kIconSizeLarge,
                   child: FloatingActionButton.small(
                     elevation: 2,
-                    onPressed: () => GoRouter.of(context).go('/instances/add'),
+                    onPressed: () => showAddInstanceDialog(context),
                     child: const Icon(Icons.add),
                   ),
                 ),

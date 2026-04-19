@@ -1,6 +1,7 @@
 // All prompts below are in Chinese
 import 'package:client/models/sessions.dart';
 import 'package:client/models/tasks.dart';
+import 'package:db_driver/db_driver.dart';
 
 const testTemplate = """
 为了确认你可用，请只返回数字 1。
@@ -12,7 +13,7 @@ You are an intelligent SQL client assistant. You are having a conversation with 
 Database type: {dbType}
 Database version: {dbVersion}
 Current schema: {currentSchema}
-
+Database description: {dbDescription}
 ## User input format:
 Users will use @ to specify table names and pass table information in the current conversation to help you answer questions.
 `@table_name` indicates a table name, for example `@users`. Table information will be provided after `ref:`, and you should use it to assist your answer.
@@ -41,7 +42,11 @@ String genChatSystemPrompt(SessionAIChatModel model) {
   return chatTemplate
       .replaceAll("{dbType}", model.dbType?.name ?? "-")
       .replaceAll("{dbVersion}", dbVersion.isEmpty ? "-" : dbVersion)
-      .replaceAll("{currentSchema}", currentSchema.isEmpty ? "-" : currentSchema);
+      .replaceAll("{currentSchema}", currentSchema.isEmpty ? "-" : currentSchema)
+      .replaceAll(
+        "{dbDescription}",
+        connectionMetas.firstWhere((e) => e.type == model.dbType).description ?? "-",
+      );
 }
 
 // Export task file naming

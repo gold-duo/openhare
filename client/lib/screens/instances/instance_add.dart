@@ -5,7 +5,6 @@ import 'package:client/widgets/button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:db_driver/db_driver.dart';
-import 'package:client/screens/page_skeleton.dart';
 import 'package:collection/collection.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sql_editor/re_editor.dart';
@@ -13,767 +12,84 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:sql_parser/parser.dart';
 import 'package:client/widgets/sql_highlight.dart';
 import 'package:client/l10n/app_localizations.dart';
+import 'package:client/widgets/dialog.dart';
 import 'package:client/widgets/loading.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:path/path.dart' as p;
+import 'package:hugeicons/hugeicons.dart';
+import 'package:client/widgets/form.dart';
 
-class AddInstancePage extends StatefulWidget {
-  const AddInstancePage({super.key});
-
-  @override
-  State<AddInstancePage> createState() => _AddInstancePageState();
-}
-
-class _AddInstancePageState extends State<AddInstancePage> {
-  @override
-  void initState() {
-    super.initState();
-    addInstanceController.addListener(() => mounted ? setState(() {}) : null);
-  }
-
-  @override
-  void dispose() {
-    addInstanceController.removeListener(() {});
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return PageSkeleton(
-      topBar: Row(
-        children: [
-          SizedBox(width: kSpacingMedium),
-          RectangleIconButton.medium(
-            icon: Icons.arrow_back,
-            iconColor: Theme.of(context).colorScheme.onSurfaceVariant, // 新建数据源页面返回按钮颜色
-            onPressed: () => GoRouter.of(context).go('/instances/list'),
-          ),
-        ],
-      ),
-      bottomBar: AddInstanceBottomBar(
-        isDatabasePingDoing: addInstanceController.isDatabasePingDoing,
-        isDatabaseConnectable: addInstanceController.isDatabaseConnectable,
-        databaseConnectError: addInstanceController.databaseConnectError,
-      ),
-      child: const AddInstance(),
-    );
-  }
-}
-
-class AddInstance extends ConsumerStatefulWidget {
-  const AddInstance({super.key});
-
-  @override
-  ConsumerState<AddInstance> createState() => _AddInstanceState();
-}
-
-class _AddInstanceState extends ConsumerState<AddInstance> {
-  @override
-  void initState() {
-    super.initState();
-    addInstanceController.addListener(() => mounted ? setState(() {}) : null);
-  }
-
-  @override
-  void dispose() {
-    addInstanceController.removeListener(() {});
-    super.dispose();
-  }
-
-  Color? selectedColor(AddInstanceController addInstanceController) {
-    if (addInstanceController.isDatabasePingDoing) {
-      return null;
-    }
-    if (addInstanceController.isDatabaseConnectable == null) {
-      return null;
-    }
-    if (addInstanceController.isDatabaseConnectable == true) {
-      return Colors.green;
-    } else {
-      return Colors.red;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return BodyPageSkeleton(
-      header: Row(
-        children: [
-          Text(
-            AppLocalizations.of(context)!.add_db_instance,
-            style: Theme.of(context).textTheme.titleLarge,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const Spacer(),
-          TextButton(
-            onPressed: addInstanceController.isDatabasePingDoing
-                ? null
-                : () {
-                    addInstanceController.databasePing();
-                  },
-            child: Text(AppLocalizations.of(context)!.db_instance_test),
-          ),
-          TextButton(
-            onPressed: () async {
-              if (addInstanceController.validate()) {
-                ref.read(instancesServicesProvider.notifier).addInstance(addInstanceController.getInstanceModel());
-
-                addInstanceController.clear();
-
-                ref.read(instancesProvider.notifier).changePage("");
-              }
-            },
-            child: Text(AppLocalizations.of(context)!.submit_and_continue),
-          ),
-          TextButton(
-            onPressed: () async {
-              if (addInstanceController.validate()) {
-                ref.read(instancesServicesProvider.notifier).addInstance(addInstanceController.getInstanceModel());
-
-                addInstanceController.clear();
-
-                ref.read(instancesProvider.notifier).changePage("");
-
-                GoRouter.of(context).go('/instances/list');
-              }
-            },
-            child: Text(AppLocalizations.of(context)!.submit),
-          ),
-        ],
-      ),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(0, kSpacingSmall, 0, 0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            DatabaseTypeCardList(
-              connectionMetas: connectionMetas,
-              selectedDatabaseType: addInstanceController.selectedDatabaseType,
-              onDatabaseTypeChange: (type) {
-                addInstanceController.onDatabaseTypeChange(type);
-              },
-              selectedColor: selectedColor(addInstanceController),
-            ),
-            const SizedBox(height: kSpacingMedium),
-            Expanded(
-              child: AddInstanceForm(
-                infos: addInstanceController.dbInfos,
-                selectedGroup: addInstanceController.selectedGroup,
-                onValid: (info, isValid) {
-                  addInstanceController.updateValidState(info, isValid);
-                },
-                onGroupChange: (group) {
-                  addInstanceController.onGroupChange(group);
-                },
-                codeController: addInstanceController.initQueryCodeController,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class DatabaseTypeCard extends StatelessWidget {
-  final DatabaseType type;
-  final String name;
-  final String logoPath;
-  final bool selected;
-  final Color? selectedColor;
-  final Function(DatabaseType type)? onTap;
-
-  const DatabaseTypeCard({
-    super.key,
-    required this.type,
-    required this.name,
-    required this.logoPath,
-    this.selected = false,
-    this.selectedColor,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 80, minWidth: 100),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        color: selected
-            ? Theme.of(context)
-                  .colorScheme
-                  .primaryContainer // db type card selected color
-            : null,
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: () {
-          if (!selected && onTap != null) {
-            onTap!(type);
-          }
-        },
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: kSpacingSmall),
-              child: Image.asset(logoPath),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(0, kSpacingTiny, 0, kSpacingSmall),
-              child: Text(name),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class DatabaseTypeCardList extends StatelessWidget {
-  final List<ConnectionMeta> connectionMetas;
-  final Function(DatabaseType type)? onDatabaseTypeChange;
-  final DatabaseType? _selectedDatabaseType;
-  final Color? selectedColor;
-
-  const DatabaseTypeCardList({
-    super.key,
-    required this.connectionMetas,
-    this.onDatabaseTypeChange,
-    DatabaseType? selectedDatabaseType,
-    this.selectedColor,
-  }) : _selectedDatabaseType = selectedDatabaseType;
-
-  DatabaseType? get selectedDatabaseType => _selectedDatabaseType ?? connectionMetas.first.type;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final connMeta in connectionMetas) ...[
-                  DatabaseTypeCard(
-                    name: connMeta.displayName,
-                    type: connMeta.type,
-                    logoPath: connMeta.logoAssertPath,
-                    selected: connMeta.type == selectedDatabaseType,
-                    selectedColor: selectedColor,
-                    onTap: (type) => onDatabaseTypeChange?.call(type),
-                  ),
-                  const SizedBox(width: kSpacingTiny),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class CommonFormField extends StatefulWidget {
-  final String label;
-  final TextEditingController controller;
-  final FormFieldValidator? validator;
-  final bool readOnly;
-  final GlobalKey<FormFieldState>? state;
-  final bool obscureText;
-
-  const CommonFormField({
-    super.key,
-    required this.label,
-    required this.controller,
-    this.state,
-    this.validator,
-    this.readOnly = false,
-    this.obscureText = false,
-  });
-
-  @override
-  State<CommonFormField> createState() => _CommonFormFieldState();
-}
-
-class _CommonFormFieldState extends State<CommonFormField> {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 80),
-      child: TextFormField(
-        key: widget.state,
-        readOnly: widget.readOnly,
-        obscureText: widget.obscureText,
-        autovalidateMode: AutovalidateMode.onUnfocus,
-        controller: widget.controller,
-        validator: widget.validator,
-        decoration: InputDecoration(
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(5)),
-          labelText: widget.label,
-          contentPadding: const EdgeInsets.all(10),
-        ),
-      ),
-    );
-  }
-}
-
-class DescFormField extends StatelessWidget {
-  final TextEditingController controller;
-  final GlobalKey<FormFieldState>? state;
-
-  const DescFormField({
-    super.key,
-    required this.controller,
-    this.state,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 120),
-      child: TextFormField(
-        key: state,
-        controller: controller,
-        maxLength: 50,
-        maxLines: 4,
-        decoration: InputDecoration(
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(5)),
-          labelText: AppLocalizations.of(context)!.db_instance_desc,
-          contentPadding: const EdgeInsets.all(10),
-        ),
-      ),
-    );
-  }
-}
-
-class AddInstanceForm extends StatelessWidget {
-  final String? selectedGroup;
-  final Map<String, FormInfo> infos;
-  final Function(FormInfo info, bool isValid)? onValid;
-  final Function(String group)? onGroupChange;
-  final CodeLineEditingController codeController;
-
-  const AddInstanceForm({
-    super.key,
-    required this.infos,
-    this.onValid,
-    this.onGroupChange,
-    this.selectedGroup,
-    required this.codeController,
-  });
-
-  FormFieldValidator validatorFn(BuildContext context, FormInfo info, FormFieldValidator validate) {
-    return (value) {
-      final result = validate(value);
-      if (result == null) {
-        onValid?.call(info, true);
-      } else {
-        onValid?.call(info, false);
-      }
-      return result;
-    };
-  }
-
-  FormFieldValidator validatorName(BuildContext context) {
-    return (value) {
-      if (value == null || value.isEmpty) {
-        return AppLocalizations.of(context)!.field_val_msg_value_reqiured;
-      }
-      return null;
-    };
-  }
-
-  FormFieldValidator validatorValueRequired(BuildContext context) {
-    return (value) {
-      if (value == null || value.isEmpty) {
-        return AppLocalizations.of(context)!.field_val_msg_value_reqiured;
-      }
-      return null;
-    };
-  }
-
-  bool hasField(String fieldName) => infos.containsKey(fieldName);
-
-  Future<void> selectDBFile(BuildContext context, FormInfo addr) async {
-    final currentPath = addr.ctrl.text.trim();
-    final result = await FilePicker.platform.pickFiles(
-      initialDirectory: currentPath.isNotEmpty ? p.dirname(currentPath) : null,
-      type: FileType.custom,
-      allowedExtensions: const ["db", "sqlite", "sqlite3"],
-    );
-    final filePath = result?.files.single.path;
-    if (filePath != null && filePath.isNotEmpty) {
-      addr.ctrl.text = filePath;
-      addr.state.currentState?.validate();
-    }
-  }
-
-  int get selectedGroupIndex {
-    if (selectedGroup == null) {
-      return 0;
-    }
-    return groups.indexOf(selectedGroup!);
-  }
-
-  List<String> get groups {
-    final groups = infos.values
-        .groupListsBy((info) => info.meta.group)
-        .keys
-        .whereNot((e) => e == settingMetaGroupBase)
-        .toList();
-    groups.add("initize");
-    return groups;
-  }
-
-  Widget buildNameField(BuildContext context) {
-    FormInfo name = infos[settingMetaNameName]!;
-    return CommonFormField(
-      state: name.state,
-      label: AppLocalizations.of(context)!.db_instance_name,
-      controller: name.ctrl,
-      validator: validatorFn(context, name, validatorName(context)),
-    );
-  }
-
-  Widget buildAddressField(BuildContext context) {
-    final addr = infos[settingMetaNameTargetNetworkHost];
-    if (addr == null) {
-      return const SizedBox.shrink();
-    }
-    final hasPort = hasField(settingMetaNameTargetNetworkPort);
-    final FormInfo? port = hasPort ? infos[settingMetaNameTargetNetworkPort] : null;
-    final addressLabel = AppLocalizations.of(context)!.db_instance_host;
-
-    if (!hasPort || port == null) {
-      return CommonFormField(
-        label: addressLabel,
-        controller: addr.ctrl,
-        state: addr.state,
-        validator: validatorFn(context, addr, validatorValueRequired(context)),
-      );
-    }
-
-    return Container(
-      constraints: const BoxConstraints(minHeight: 80),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: CommonFormField(
-              label: addressLabel,
-              controller: addr.ctrl,
-              state: addr.state,
-              validator: validatorFn(context, addr, validatorValueRequired(context)),
-            ),
-          ),
-          const SizedBox(
-            width: kSpacingTiny,
-          ),
-          Container(
-            constraints: const BoxConstraints(maxWidth: 120),
-            child: CommonFormField(
-              label: AppLocalizations.of(context)!.db_instance_port,
-              controller: port.ctrl,
-              state: port.state,
-              validator: validatorFn(context, port, validatorValueRequired(context)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildDBFileField(BuildContext context) {
-    final dbFile = infos[settingMetaNameTargetDBFile];
-    if (dbFile == null) {
-      return const SizedBox.shrink();
-    }
-    return Container(
-      constraints: const BoxConstraints(minHeight: 80),
-      child: TextFormField(
-        key: dbFile.state,
-        autovalidateMode: AutovalidateMode.onUnfocus,
-        controller: dbFile.ctrl,
-        validator: validatorFn(context, dbFile, validatorValueRequired(context)),
-        decoration: InputDecoration(
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(5)),
-          labelText: "Path",
-          contentPadding: const EdgeInsets.all(10),
-          suffixIcon: Padding(
-            padding: const EdgeInsets.only(right: 5),
-            child: RectangleIconButton.medium(
-              icon: Icons.folder_open,
-              tooltip: AppLocalizations.of(context)!.tooltip_select_directory,
-              iconColor: Theme.of(context).colorScheme.primary, // file 按钮颜色
-              onPressed: () => selectDBFile(context, dbFile),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget buildUserField(BuildContext context) {
-    final user = infos[settingMetaNameUser];
-    if (user == null) {
-      return const SizedBox.shrink();
-    }
-    return CommonFormField(
-      label: AppLocalizations.of(context)!.db_instance_user,
-      controller: user.ctrl,
-      state: user.state,
-    );
-  }
-
-  Widget buildPasswordField(BuildContext context) {
-    final password = infos[settingMetaNamePassword];
-    if (password == null) {
-      return const SizedBox.shrink();
-    }
-    return CommonFormField(
-      label: AppLocalizations.of(context)!.db_instance_password,
-      controller: password.ctrl,
-      state: password.state,
-      obscureText: true,
-    );
-  }
-
-  Widget buildDescField(BuildContext context) {
-    FormInfo desc = infos[settingMetaNameDesc]!;
-    return DescFormField(
-      controller: desc.ctrl,
-      state: desc.state,
-    );
-  }
-
-  Widget buildCustomField(BuildContext context, String group) {
-    if (group == "initize") {
-      return Container(
-        constraints: const BoxConstraints(maxHeight: 430),
-        child: CodeEditor(
-          borderRadius: BorderRadius.circular(10),
-          style: CodeEditorStyle(
-            backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow, // SQL 编辑器背景色
-            textStyle: GoogleFonts.robotoMono(
-              color: Theme.of(context).colorScheme.onSurface, // SQL 编辑器文字颜色
-            ),
-          ),
-          indicatorBuilder: (context, editingController, chunkController, notifier) {
-            return Row(
-              children: [
-                DefaultCodeLineNumber(
-                  controller: editingController,
-                  notifier: notifier,
-                ),
-                DefaultCodeChunkIndicator(width: 20, controller: chunkController, notifier: notifier),
-              ],
-            );
-          },
-          controller: codeController,
-          wordWrap: false,
-        ),
-      );
-    }
-    return ListView(
-      children: [
-        for (final info in infos.values)
-          if (info.meta.group == group && info.meta is CustomMeta)
-            CommonFormField(
-              state: info.state,
-              label: info.meta.name,
-              controller: info.ctrl,
-              validator: validatorFn(
-                context,
-                info,
-                validatorValueRequired(context),
-              ),
-            ),
-      ],
-    );
-  }
-
-  bool isGroupValid(String group) {
-    for (final info in infos.values) {
-      if (info.meta.group == group) {
-        if (!info.isValid) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          constraints: const BoxConstraints(maxWidth: 500),
-          child: Column(
-            children: [
-              Container(
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.fromLTRB(0, kSpacingTiny, 0, kSpacingTiny),
-                child: Text(
-                  AppLocalizations.of(context)!.db_base_config,
-                  textAlign: TextAlign.left,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-              const SizedBox(height: kSpacingSmall),
-              Expanded(
-                child: ListView(
-                  children: [
-                    if (hasField(settingMetaNameName)) buildNameField(context),
-                    if (hasField(settingMetaNameTargetNetworkHost)) buildAddressField(context),
-                    if (hasField(settingMetaNameTargetDBFile)) buildDBFileField(context),
-                    if (hasField(settingMetaNameUser)) buildUserField(context),
-                    if (hasField(settingMetaNamePassword)) buildPasswordField(context),
-                    if (hasField(settingMetaNameDesc)) buildDescField(context),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(
-          width: kSpacingLarge,
-        ),
-        Expanded(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 500),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    for (var group in groups)
-                      TextButton(
-                        onPressed: () {
-                          onGroupChange?.call(group);
-                        },
-                        style: TextButton.styleFrom(
-                          backgroundColor: group == selectedGroup
-                              ? Theme.of(context)
-                                    .colorScheme
-                                    .primaryContainer // custom config tab selected color
-                              : null,
-                        ),
-                        child: Text(
-                          group,
-                          textAlign: TextAlign.left,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.titleMedium!.merge(TextStyle(color: !isGroupValid(group) ? Colors.red : null)),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: kSpacingSmall),
-                Expanded(
-                  child: IndexedStack(
-                    index: selectedGroupIndex,
-                    children: [
-                      for (final group in groups) buildCustomField(context, group),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class AddInstanceBottomBar extends StatelessWidget {
-  final bool? isDatabaseConnectable;
-  final String? databaseConnectError;
-  final bool isDatabasePingDoing;
-
-  const AddInstanceBottomBar({
-    super.key,
-    this.databaseConnectError,
-    required this.isDatabasePingDoing,
-    this.isDatabaseConnectable,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    Widget msg;
-    Widget status;
-
-    if (isDatabasePingDoing) {
-      msg = Text(AppLocalizations.of(context)!.testing);
-      status = const Loading.medium();
-    } else if (isDatabaseConnectable == null) {
-      msg = const Text("");
-      status = const SizedBox.shrink();
-    } else if (isDatabaseConnectable == true) {
-      msg = Text(AppLocalizations.of(context)!.test_success);
-      status = const Icon(
-        Icons.check_circle,
-        size: kIconSizeSmall,
-        color: Colors.green,
-      );
-    } else {
-      msg = Text(databaseConnectError ?? "", overflow: TextOverflow.ellipsis);
-      status = const Icon(
-        Icons.error,
-        size: kIconSizeSmall,
-        color: Colors.red,
-      );
-    }
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(kSpacingSmall, 0, kSpacingSmall, 0),
-          child: status,
-        ),
-        Expanded(child: msg),
-      ],
-    );
-  }
-}
-
-class FormInfo {
-  DatabaseType dbType;
-  final SettingMeta meta;
-  TextEditingController ctrl;
-  GlobalKey<FormFieldState> state = GlobalKey<FormFieldState>();
-  bool isValid = true;
-
-  FormInfo(this.dbType, this.meta) : ctrl = TextEditingController(text: meta.defaultValue);
-}
+const String initQueryTabId = 'initize';
 
 class AddInstanceController extends ChangeNotifier {
-  final Map<DatabaseType, Map<String, FormInfo>> infos = {};
-
-  final Map<DatabaseType, CodeLineEditingController> initQueryCodeControllers = {};
+  final Map<DatabaseType, Map<String, TextEditingController>> _fieldControllers = {};
 
   DatabaseType selectedDatabaseType = DatabaseType.mysql;
-  String? _selectedGroup;
+
+  /// 每种 [DatabaseType] 一套 [GlobalKey] 与校验态；Tab/分组由各 [Tracked*] 的 [groupId] 声明，与 controller 无业务耦合。
+  final Map<DatabaseType, TrackedFormController> _connectForms = {
+    for (final t in allDatabaseType) t: TrackedFormController(),
+  };
+
+  /// 当前 [selectedDatabaseType] 对应的表单控制器（与 [TrackedForm] / [Tracked*] 共用）。
+  TrackedFormController get connectForm => _connectForms[selectedDatabaseType]!;
+
+  /// 编辑页在载入实例后曾用于对齐表单与 [selectedDatabaseType]；现为每类型独立 controller，无需再同步。
+  void syncConnectFormDatabaseType() {}
+
+  /// 提交前校验当前库类型下全部连接字段（与 [Tracked*] 共用同一套 [GlobalKey]）。
+  bool validateForm() {
+    return connectForm.validate();
+  }
+
+  @override
+  void dispose() {
+    for (final c in _connectForms.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  final Map<DatabaseType, CodeLineEditingController> initQueryCodeControllers = {};
 
   bool? isDatabaseConnectable;
   bool isDatabasePingDoing = false;
   String? databaseConnectError;
 
+  int _wizardStep = 0;
+
+  int get wizardStep => _wizardStep;
+
+  void setWizardStep(int step) {
+    final s = step.clamp(0, 1);
+    if (_wizardStep == s) {
+      return;
+    }
+    _wizardStep = s;
+    notifyListeners();
+  }
+
   CodeLineEditingController get initQueryCodeController {
     return initQueryCodeControllers[selectedDatabaseType]!;
   }
 
+  List<SettingMeta> get _connMetaList {
+    return connectionMetaMap[selectedDatabaseType]?.connMeta ?? const <SettingMeta>[];
+  }
+
+  List<SettingMeta> get connectionMetasSelected => List<SettingMeta>.unmodifiable(_connMetaList);
+
   AddInstanceController() {
-    for (var connMeta in connectionMetas) {
-      final dbInfos = infos.putIfAbsent(connMeta.type, () => {});
-      for (var meta in connMeta.connMeta) {
-        dbInfos[meta.name] = FormInfo(connMeta.type, meta);
+    for (final connMeta in connectionMetas) {
+      final ctrls = _fieldControllers.putIfAbsent(connMeta.type, () => {});
+      for (final meta in connMeta.connMeta) {
+        if (meta is TargetNetworkMeta) {
+          ctrls[settingMetaNameTargetNetworkHost] = TextEditingController(text: meta.defaultValue ?? "");
+          ctrls[settingMetaNameTargetNetworkPort] = TextEditingController(text: meta.defaultPort ?? "");
+        } else {
+          ctrls[meta.name] = TextEditingController(text: meta.defaultValue ?? "");
+        }
       }
     }
-    // 为每个数据库类型都初始化init query, 切换数据库时要同步改变
-    for (var connMeta in connectionMetas) {
+    for (final connMeta in connectionMetas) {
       final codeController = CodeLineEditingController(
         spanBuilder: ({required codeLines, required context, required style}) {
           return getSQLHighlightTextSpan(
@@ -788,32 +104,52 @@ class AddInstanceController extends ChangeNotifier {
     }
   }
 
+  SettingMeta? _metaFor(DatabaseType db, String fieldName) {
+    for (final m in connectionMetaMap[db]?.connMeta ?? const <SettingMeta>[]) {
+      if (m.name == fieldName) {
+        return m;
+      }
+      if (m is TargetNetworkMeta && fieldName == settingMetaNameTargetNetworkPort) {
+        return m;
+      }
+    }
+    return null;
+  }
+
+  TextEditingController fieldTextController(DatabaseType db, String fieldName) {
+    return _fieldControllers[db]![fieldName]!;
+  }
+
+  TextEditingController fieldText(String fieldName) => fieldTextController(selectedDatabaseType, fieldName);
+
+  SettingMeta fieldMeta(String fieldName) {
+    final m = _metaFor(selectedDatabaseType, fieldName);
+    if (m == null) {
+      throw StateError('Unknown field $fieldName for $selectedDatabaseType');
+    }
+    return m;
+  }
+
   String _fieldText(DatabaseType dbType, String fieldName) {
-    return infos[dbType]?[fieldName]?.ctrl.text ?? "";
+    return _fieldControllers[dbType]?[fieldName]?.text ?? "";
   }
 
   String _addressFieldText(DatabaseType dbType) {
-    final dbInfos = infos[dbType];
-    if (dbInfos == null) {
-      return "";
-    }
-    return dbInfos[settingMetaNameTargetNetworkHost]?.ctrl.text ??
-        dbInfos[settingMetaNameTargetDBFile]?.ctrl.text ??
+    return _fieldControllers[dbType]?[settingMetaNameTargetNetworkHost]?.text ??
+        _fieldControllers[dbType]?[settingMetaNameTargetDBFile]?.text ??
         "";
   }
 
   void _setFieldText(DatabaseType dbType, String fieldName, String value) {
-    final field = infos[dbType]?[fieldName];
-    if (field != null) {
-      field.ctrl.text = value;
-    }
+    _fieldControllers[dbType]?[fieldName]?.text = value;
   }
 
   void onDatabaseTypeChange(DatabaseType type) {
     final sourceType = selectedDatabaseType;
-    final sourcePortField = infos[sourceType]?[settingMetaNameTargetNetworkPort];
-    final sourceDefaultPort = sourcePortField?.meta.defaultValue ?? "";
-    final isPortChanged = sourcePortField != null && sourcePortField.ctrl.text != sourceDefaultPort;
+    final sourcePortCtrl = _fieldControllers[sourceType]?[settingMetaNameTargetNetworkPort];
+    final sourceNetMeta = _metaFor(sourceType, settingMetaNameTargetNetworkHost);
+    final sourceDefaultPort = sourceNetMeta is TargetNetworkMeta ? (sourceNetMeta.defaultPort ?? "") : "";
+    final isPortChanged = sourcePortCtrl != null && sourcePortCtrl.text != sourceDefaultPort;
     final name = _fieldText(sourceType, settingMetaNameName);
     final desc = _fieldText(sourceType, settingMetaNameDesc);
     final addr = _addressFieldText(sourceType);
@@ -821,7 +157,9 @@ class AddInstanceController extends ChangeNotifier {
     final password = _fieldText(sourceType, settingMetaNamePassword);
 
     selectedDatabaseType = type;
-    _selectedGroup = null;
+    isDatabasePingDoing = false;
+    isDatabaseConnectable = null;
+    databaseConnectError = null;
 
     _setFieldText(type, settingMetaNameName, name);
     _setFieldText(type, settingMetaNameDesc, desc);
@@ -829,102 +167,41 @@ class AddInstanceController extends ChangeNotifier {
     _setFieldText(type, settingMetaNameTargetDBFile, addr);
     _setFieldText(type, settingMetaNameUser, user);
     _setFieldText(type, settingMetaNamePassword, password);
-    // 数据库切换则port 默认值要切换，除非用户自己编辑了特殊端口
-    if (!isPortChanged && infos[type]?.containsKey(settingMetaNameTargetNetworkPort) == true) {
+    if (!isPortChanged && _fieldControllers[type]?.containsKey(settingMetaNameTargetNetworkPort) == true) {
       port = defaultPort;
     }
     notifyListeners();
   }
 
   void clear() {
-    for (final dbInfos in infos.values) {
-      for (final info in dbInfos.values) {
-        info.ctrl.text = info.meta.defaultValue ?? "";
+    for (final e in _fieldControllers.entries) {
+      final db = e.key;
+      for (final meta in connectionMetaMap[db]?.connMeta ?? const <SettingMeta>[]) {
+        if (meta is TargetNetworkMeta) {
+          e.value[settingMetaNameTargetNetworkHost]?.text = meta.defaultValue ?? "";
+          e.value[settingMetaNameTargetNetworkPort]?.text = meta.defaultPort ?? "";
+        } else {
+          e.value[meta.name]?.text = meta.defaultValue ?? "";
+        }
       }
     }
-  }
-
-  Map<String, FormInfo> get dbInfos {
-    return infos[selectedDatabaseType]!;
+    _wizardStep = 0;
+    isDatabasePingDoing = false;
+    isDatabaseConnectable = null;
+    databaseConnectError = null;
+    for (final c in _connectForms.values) {
+      c.resetInvalidGroups();
+    }
+    notifyListeners();
   }
 
   String get defaultPort {
-    return infos[selectedDatabaseType]?[settingMetaNameTargetNetworkPort]?.meta.defaultValue ?? "";
+    final m = _metaFor(selectedDatabaseType, settingMetaNameTargetNetworkHost);
+    return m is TargetNetworkMeta ? (m.defaultPort ?? "") : "";
   }
 
   set port(String port) {
-    final portField = infos[selectedDatabaseType]?[settingMetaNameTargetNetworkPort];
-    if (portField != null) {
-      portField.ctrl.text = port;
-    }
-  }
-
-  bool isGroupValid(String group) {
-    for (final info in infos[selectedDatabaseType]!.values) {
-      if (info.dbType == selectedDatabaseType && info.meta.group == group) {
-        if (!info.isValid) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
-  bool validate() {
-    var isValid = true;
-    for (final info in infos[selectedDatabaseType]!.values) {
-      if (info.dbType == selectedDatabaseType) {
-        if (!info.state.currentState!.validate()) {
-          isValid = false;
-        }
-      }
-    }
-    return isValid;
-  }
-
-  void updateValidState(FormInfo info, bool isValid) {
-    if (info.isValid == isValid) {
-      return;
-    }
-    info.isValid = isValid;
-    notifyListeners();
-  }
-
-  List<String> get customSettingGroup {
-    final connMeta = connectionMetaMap[selectedDatabaseType]?.connMeta;
-    if (connMeta == null) {
-      return [];
-    }
-    return connMeta
-        .groupFoldBy<String, List<String>>(
-          (meta) => meta.group,
-          (previous, meta) => (previous ?? [])..add(meta.group),
-        )
-        .keys
-        .whereNot((e) => e == settingMetaGroupBase)
-        .toList();
-  }
-
-  String? get selectedGroup {
-    return _selectedGroup;
-  }
-
-  void onGroupChange(String group) {
-    _selectedGroup = group;
-    notifyListeners();
-  }
-
-  List<SettingMeta> getSettingMeta(String group) {
-    final connMeta = connectionMetaMap[selectedDatabaseType]?.connMeta;
-    if (connMeta == null) {
-      return [];
-    }
-    return connMeta
-        .groupListsBy((meta) => meta.group)
-        .entries
-        .where((entry) => entry.key == group)
-        .expand((entry) => entry.value)
-        .toList();
+    _fieldControllers[selectedDatabaseType]?[settingMetaNameTargetNetworkPort]?.text = port;
   }
 
   ConnectValue getConnectValue() {
@@ -937,25 +214,26 @@ class AddInstanceController extends ChangeNotifier {
     String desc = "";
     Map<String, String> custom = {};
 
-    for (final info in infos[selectedDatabaseType]!.values) {
-      switch (info.meta) {
+    final db = selectedDatabaseType;
+    for (final meta in _connMetaList) {
+      switch (meta) {
         case NameMeta():
-          name = info.ctrl.text;
-        case TargetNetworkHostMeta():
-          addr = info.ctrl.text;
+          name = _fieldControllers[db]![meta.name]!.text;
+        case TargetNetworkMeta():
+          addr = _fieldControllers[db]![settingMetaNameTargetNetworkHost]!.text;
+          port = int.tryParse(_fieldControllers[db]![settingMetaNameTargetNetworkPort]!.text.trim());
         case TargetDBFileMeta():
-          dbFile = info.ctrl.text;
+          final text = _fieldControllers[db]![meta.name]!.text;
+          dbFile = text;
           addr = dbFile;
-        case TargetNetworkPortMeta():
-          port = int.tryParse(info.ctrl.text);
         case UserMeta():
-          user = info.ctrl.text;
+          user = _fieldControllers[db]![meta.name]!.text;
         case PasswordMeta():
-          password = info.ctrl.text;
+          password = _fieldControllers[db]![meta.name]!.text;
         case DescMeta():
-          desc = info.ctrl.text;
+          desc = _fieldControllers[db]![meta.name]!.text;
         case CustomMeta():
-          custom[(info.meta as CustomMeta).name] = info.ctrl.text;
+          custom[meta.name] = _fieldControllers[db]![meta.name]!.text;
       }
     }
     List<String> querys = splitSQL(
@@ -1013,6 +291,466 @@ class AddInstanceController extends ChangeNotifier {
       latestOpenAt: DateTime.now(),
     );
   }
+
+  Color? get pingIndicatorColor {
+    if (isDatabasePingDoing) {
+      return null;
+    }
+    if (isDatabaseConnectable == null) {
+      return null;
+    }
+    if (isDatabaseConnectable == true) {
+      return Colors.green;
+    }
+    return Colors.red;
+  }
 }
 
 AddInstanceController addInstanceController = AddInstanceController();
+
+Future<void> showAddInstanceDialog(BuildContext context) async {
+  addInstanceController.clear();
+  await showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) => _AddInstanceWizardDialog(),
+  );
+}
+
+void _addInstanceWizardSubmitAndClose(WidgetRef ref, BuildContext context, {required bool closeToList}) {
+  if (!addInstanceController.validateForm()) {
+    return;
+  }
+  ref.read(instancesServicesProvider.notifier).addInstance(addInstanceController.getInstanceModel());
+  addInstanceController.clear();
+  ref.read(instancesProvider.notifier).changePage("");
+  if (!context.mounted) {
+    return;
+  }
+  Navigator.of(context).pop();
+  if (closeToList && context.mounted) {
+    GoRouter.of(context).go('/instances/list');
+  }
+}
+
+class _AddInstanceWizardDialog extends ConsumerStatefulWidget {
+  const _AddInstanceWizardDialog();
+
+  @override
+  ConsumerState<_AddInstanceWizardDialog> createState() => _AddInstanceWizardDialogState();
+}
+
+class _AddInstanceWizardDialogState extends ConsumerState<_AddInstanceWizardDialog> {
+  @override
+  void initState() {
+    super.initState();
+    addInstanceController.addListener(_onCtrl);
+  }
+
+  @override
+  void dispose() {
+    addInstanceController.removeListener(_onCtrl);
+    super.dispose();
+  }
+
+  void _onCtrl() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final step = addInstanceController.wizardStep;
+    return Dialog(
+      child: step == 0 ? _AddInstanceWizardStep1() : _AddInstanceWizardStep2(),
+    );
+  }
+}
+
+/// 向导弹窗步骤 1：选择数据源
+class _AddInstanceWizardStep1 extends StatelessWidget {
+  static const double _tileWidth = 104;
+  static const double _tileHeight = 92;
+
+  const _AddInstanceWizardStep1();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final selected = addInstanceController.selectedDatabaseType;
+    final selectedColor = addInstanceController.pingIndicatorColor;
+    return CustomDialogWidget(
+      title: l10n.add_db_instance,
+      titleIcon: HugeIcon(
+        icon: HugeIcons.strokeRoundedDatabase,
+        color: Theme.of(context).colorScheme.onSurfaceVariant, // navigation rail 默认icon颜色
+      ),
+      subtitle: l10n.add_instance_wizard_step1_subtitle,
+      maxWidth: 960,
+      maxHeight: 720,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: kSpacingSmall),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.zero,
+              child: Wrap(
+                spacing: kSpacingTiny,
+                runSpacing: kSpacingTiny,
+                children: [
+                  for (final meta in connectionMetas)
+                    SizedBox(
+                      width: _tileWidth,
+                      height: _tileHeight,
+                      child: DatabaseTypeCard(
+                        name: meta.displayName,
+                        type: meta.type,
+                        logoPath: meta.logoAssertPath,
+                        selected: meta.type == selected,
+                        selectedColor: selectedColor,
+                        onTap: addInstanceController.onDatabaseTypeChange,
+                        onDoubleTap: () {
+                          addInstanceController.onDatabaseTypeChange(meta.type);
+                          addInstanceController.setWizardStep(1);
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        FilledButton(
+          onPressed: () => addInstanceController.setWizardStep(1),
+          child: Text(l10n.wizard_next),
+        ),
+      ],
+    );
+  }
+}
+
+class _AddInstanceWizardStep2 extends ConsumerWidget {
+  const _AddInstanceWizardStep2();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    return CustomDialogWidget(
+      title: l10n.add_db_instance,
+      titleIcon: Image.asset(
+        connectionMetaMap[addInstanceController.selectedDatabaseType]!.logoAssertPath,
+        width: kIconSizeMedium,
+        height: kIconSizeMedium,
+      ),
+      subtitle: l10n.add_instance_wizard_step2_subtitle,
+      maxWidth: 960,
+      maxHeight: 720,
+      footerLeading: DbInstanceConnectionTestWidget(
+        isDatabasePingDoing: addInstanceController.isDatabasePingDoing,
+        isDatabaseConnectable: addInstanceController.isDatabaseConnectable,
+        databaseConnectError: addInstanceController.databaseConnectError,
+        onTestConnection: () => addInstanceController.databasePing(),
+      ),
+      body: ListenableBuilder(
+        listenable: addInstanceController,
+        builder: (context, _) => ListenableBuilder(
+          listenable: addInstanceController.connectForm,
+          builder: (context, _) => InstanceFormWidget.forAddInstanceWizard(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => addInstanceController.setWizardStep(0),
+          child: Text(l10n.wizard_previous),
+        ),
+        SizedBox(width: kSpacingSmall),
+        FilledButton(
+          onPressed: () => _addInstanceWizardSubmitAndClose(ref, context, closeToList: true),
+          child: Text(l10n.submit),
+        ),
+      ],
+    );
+  }
+}
+
+class DatabaseTypeCard extends StatelessWidget {
+  final DatabaseType type;
+  final String name;
+  final String logoPath;
+  final bool selected;
+  final Color? selectedColor;
+  final Function(DatabaseType type)? onTap;
+  final VoidCallback? onDoubleTap;
+
+  const DatabaseTypeCard({
+    super.key,
+    required this.type,
+    required this.name,
+    required this.logoPath,
+    this.selected = false,
+    this.selectedColor,
+    this.onTap,
+    this.onDoubleTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 84, minWidth: 100),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: selected
+            ? Theme.of(context)
+                  .colorScheme
+                  .primaryContainer // db type card selected color
+            : null,
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () {
+          if (!selected && onTap != null) {
+            onTap!(type);
+          }
+        },
+        onDoubleTap: onDoubleTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(kSpacingTiny, kSpacingSmall, kSpacingTiny, kSpacingTiny),
+              child: Image.asset(logoPath),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(kSpacingTiny, kSpacingTiny, kSpacingTiny, kSpacingSmall),
+              child: Text(name),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class InstanceFormWidget extends StatelessWidget {
+  final AddInstanceController controller;
+  final CodeLineEditingController codeController;
+
+  final bool nameReadOnly;
+
+  const InstanceFormWidget({
+    super.key,
+    required this.controller,
+    required this.codeController,
+    this.nameReadOnly = false,
+  });
+
+  factory InstanceFormWidget.forAddInstanceWizard() {
+    final c = addInstanceController;
+    return InstanceFormWidget(
+      controller: c,
+      codeController: c.initQueryCodeController,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final c = controller;
+    // Tab 顺序由 [groupId] 首次出现顺序决定；每个 meta 一行；初始化 SQL 固定追加在末尾。
+    final children = <Widget>[];
+    for (final meta in c.connectionMetasSelected) {
+      switch (meta) {
+        case NameMeta():
+          children.add(
+            TrackedTextFormField(
+              fieldName: settingMetaNameName,
+              groupId: meta.group,
+              label: l10n.db_instance_name,
+              isRequired: true,
+              controller: c.fieldText(settingMetaNameName),
+              readOnly: nameReadOnly,
+            ),
+          );
+        case TargetNetworkMeta():
+          children.add(
+            TrackedHostPortFields(
+              groupId: meta.group,
+              hostFieldName: settingMetaNameTargetNetworkHost,
+              hostController: c.fieldText(settingMetaNameTargetNetworkHost),
+              hostLabel: l10n.db_instance_host,
+              hostRequired: true,
+              portFieldName: settingMetaNameTargetNetworkPort,
+              portController: c.fieldText(settingMetaNameTargetNetworkPort),
+              portLabel: l10n.db_instance_port,
+              portRequired: true,
+            ),
+          );
+        case TargetDBFileMeta():
+          children.add(
+            TrackedFilePathFormField(
+              fieldName: settingMetaNameTargetDBFile,
+              groupId: meta.group,
+              isRequired: true,
+              label: 'Path',
+              controller: c.fieldText(settingMetaNameTargetDBFile),
+              pickTooltip: l10n.tooltip_select_directory,
+            ),
+          );
+        case UserMeta():
+          children.add(
+            TrackedTextFormField(
+              fieldName: settingMetaNameUser,
+              groupId: meta.group,
+              label: l10n.db_instance_user,
+              controller: c.fieldText(settingMetaNameUser),
+            ),
+          );
+        case PasswordMeta():
+          children.add(
+            TrackedPasswordFormField(
+              fieldName: settingMetaNamePassword,
+              groupId: meta.group,
+              label: l10n.db_instance_password,
+              controller: c.fieldText(settingMetaNamePassword),
+            ),
+          );
+        case DescMeta():
+          children.add(
+            TrackedDescFormField(
+              fieldName: settingMetaNameDesc,
+              groupId: meta.group,
+              label: l10n.db_instance_desc,
+              controller: c.fieldText(settingMetaNameDesc),
+            ),
+          );
+        case CustomMeta():
+          final useEnum =
+              meta.type == SettingMetaType.enumValue && meta.enumValues != null && meta.enumValues!.isNotEmpty;
+          children.add(
+            useEnum
+                ? TrackedEnumFormField(
+                    fieldName: meta.name,
+                    groupId: meta.group,
+                    isRequired: meta.isRequired,
+                    label: meta.name,
+                    controller: c.fieldText(meta.name),
+                    enumValues: meta.enumValues!,
+                    defaultValue: meta.defaultValue,
+                    helperText: meta.comment,
+                  )
+                : TrackedTextFormField(
+                    fieldName: meta.name,
+                    groupId: meta.group,
+                    isRequired: meta.isRequired,
+                    label: meta.name,
+                    controller: c.fieldText(meta.name),
+                  ),
+          );
+      }
+    }
+    children.add(
+      TrackedCodeEditorFormField(
+        fieldName: initQueryTabId,
+        groupId: initQueryTabId,
+        codeController: codeController,
+        child: Padding(
+          padding: const EdgeInsets.all(kSpacingSmall),
+          child: SizedBox(
+            height: 420,
+            child: Container(
+              constraints: const BoxConstraints(maxHeight: 430),
+              child: CodeEditor(
+                borderRadius: BorderRadius.circular(10),
+                style: CodeEditorStyle(
+                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+                  textStyle: GoogleFonts.robotoMono(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                indicatorBuilder: (context, editingController, chunkController, notifier) {
+                  return Row(
+                    children: [
+                      DefaultCodeLineNumber(
+                        controller: editingController,
+                        notifier: notifier,
+                      ),
+                      DefaultCodeChunkIndicator(width: 20, controller: chunkController, notifier: notifier),
+                    ],
+                  );
+                },
+                controller: codeController,
+                wordWrap: false,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    return TrackedForm.tabbed(
+      controller: c.connectForm,
+      tabLabels: {settingMetaGroupBase: l10n.db_base_config},
+      children: children,
+    );
+  }
+}
+
+/// 数据源对话框底部：「测试连接」按钮与右侧状态（loading / 成功图标 / 失败图标+文案）。
+class DbInstanceConnectionTestWidget extends StatelessWidget {
+  final bool isDatabasePingDoing;
+  final bool? isDatabaseConnectable;
+  final String? databaseConnectError;
+  final VoidCallback onTestConnection;
+
+  const DbInstanceConnectionTestWidget({
+    super.key,
+    required this.isDatabasePingDoing,
+    required this.isDatabaseConnectable,
+    this.databaseConnectError,
+    required this.onTestConnection,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        LinkButton(
+          text: l10n.db_instance_test,
+          onPressed: isDatabasePingDoing ? null : onTestConnection,
+        ),
+        const SizedBox(width: kSpacingSmall),
+        if (isDatabasePingDoing)
+          const Loading.medium()
+        else if (isDatabaseConnectable == true)
+          Icon(
+            Icons.check_circle,
+            size: kIconSizeSmall,
+            color: Colors.green,
+          )
+        else if (isDatabaseConnectable == false) ...[
+          Icon(
+            Icons.error,
+            size: kIconSizeSmall,
+            color: cs.error,
+          ),
+          const SizedBox(width: kSpacingTiny),
+          Expanded(
+            child: Text(
+              databaseConnectError ?? '',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.error),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
