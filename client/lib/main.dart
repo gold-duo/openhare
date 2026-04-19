@@ -1,5 +1,6 @@
 import 'package:client/repositories/repo.dart';
 import 'package:client/screens/app.dart';
+import 'package:client/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
@@ -11,29 +12,47 @@ void main(List<String> args) async {
   // to store the database in.
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 确保应用只运行一个实例
-  await WindowsSingleInstance.ensureSingleInstance(
-    args,
-    "openhare",
-    onSecondWindow: (args) {},
-  );
+  await bootLogger.init();
+  log.i('flutter binding initialized, args=$args');
 
-  await initObjectbox();
+  try {
+    log.i('single instance ensuring');
+    await WindowsSingleInstance.ensureSingleInstance(
+      args,
+      "openhare",
+      onSecondWindow: (args) {
+        log.i('second instance signaled, args=$args');
+      },
+    );
+    log.i('single instance ensured');
 
-  await windowManager.ensureInitialized();
+    log.i('objectbox initializing');
+    await initObjectbox();
+    log.i('objectbox initialized');
 
-  runApp(
-    ProviderScope(
-      retry: (retryCount, error) => null,
-      child: App(),
-    ),
-  );
+    log.i('window manager initializing');
+    await windowManager.ensureInitialized();
+    log.i('window manager initialized');
 
-  doWhenWindowReady(() {
-    const initialSize = Size(1400, 1000);
-    appWindow.minSize = const Size(950, 600);
-    appWindow.size = initialSize;
-    appWindow.alignment = Alignment.center;
-    appWindow.show();
-  });
+    log.i('app running');
+    runApp(
+      ProviderScope(
+        retry: (retryCount, error) => null,
+        child: App(),
+      ),
+    );
+
+    doWhenWindowReady(() {
+      log.i('window initializing');
+      const initialSize = Size(1400, 1000);
+      appWindow.minSize = const Size(950, 600);
+      appWindow.size = initialSize;
+      appWindow.alignment = Alignment.center;
+      appWindow.show();
+      log.i('window shown');
+    });
+  } catch (e, st) {
+    log.e('startup failed', error: e, stackTrace: st);
+    rethrow;
+  }
 }
