@@ -1,22 +1,18 @@
 import 'package:client/l10n/app_localizations.dart';
 import 'package:client/widgets/button.dart';
 import 'package:client/widgets/const.dart';
+import 'package:client/widgets/menu.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:sql_editor/re_editor.dart';
 
-
 abstract final class FormFieldValidators {
-  static String? requiredValue(AppLocalizations l10n, String? value) {
+  static String? requiredValue(BuildContext context, String? value) {
     if (value == null || value.isEmpty) {
-      return l10n.field_val_msg_value_reqiured;
+      return AppLocalizations.of(context)!.field_val_msg_value_reqiured;
     }
     return null;
-  }
-
-  static FormFieldValidator required(AppLocalizations l10n) {
-    return (value) => requiredValue(l10n, value);
   }
 }
 
@@ -46,7 +42,6 @@ class TrackedFormController extends ChangeNotifier {
 
   bool _isGroupValid(String groupId) => !_invalidFieldGroups.containsValue(groupId);
 
-  /// 提交前校验：对已登记 [GlobalKey] 的全部字段逐项 [validate]。
   bool validate() {
     var ok = true;
     for (final key in _lazyFormFieldKeys.values) {
@@ -66,7 +61,7 @@ class TrackedFormController extends ChangeNotifier {
   }
 }
 
-/// 向子树注入 [TrackedFormController]；[Tracked*] 在 build 内通过 [TrackedFormScope.of](context) 取得同一实例。
+/// 向子树注入 [TrackedFormController]
 class TrackedFormScope extends InheritedWidget {
   const TrackedFormScope({
     super.key,
@@ -241,17 +236,15 @@ class _TrackedFormTabbedLayoutState extends State<_TrackedFormTabbedLayout> {
             ],
           ),
         ),
-        const SizedBox(height: kSpacingSmall),
+        const SizedBox(height: kSpacingMedium),
         Expanded(
           child: IndexedStack(
             index: index,
             children: [
               for (final g in order)
                 SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: kSpacingSmall, vertical: kSpacingTiny),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    spacing: kSpacingSmall,
                     children: byGroup[g] ?? const <Widget>[],
                   ),
                 ),
@@ -265,55 +258,87 @@ class _TrackedFormTabbedLayoutState extends State<_TrackedFormTabbedLayout> {
 
 /// 与 [TrackedFormController] 联动的表单字段基类（依赖 [TrackedFormScope] 祖先）。
 abstract class TrackedFormField extends StatefulWidget {
-  /// 与业务 meta 名一致。
-  final String fieldName;
-  final FormFieldValidator? validator;
-
   /// 若为空，Tab 分组与校验汇总由控制器按 [fieldName] 回退。
   final String? groupId;
+
+  /// 与业务 meta 名一致。
+  final String fieldName;
+
+  /// 为 true 时标签显示必填星号，且在校验链**最前**内置非空校验（与 [validator] 串行，先必填再自定义）。
+  final bool isRequired;
+
+  /// 自定义校验器。
+  final FormFieldValidator? validator;
 
   const TrackedFormField({
     super.key,
     required this.fieldName,
     this.validator,
+    this.isRequired = false,
     this.groupId,
   });
 
   /// [TrackedForm.tabbed] 用于合并到同一 Tab 的分组 id。
   String resolveGroupId(TrackedFormController controller) => groupId ?? controller._groupIdForFieldName(fieldName);
 
-  /// 包装 [validator]：校验后向 [TrackedFormController] 回报结果，驱动 Tab 标红。
   FormFieldValidator? resolveValidator(BuildContext context) {
+    FormFieldValidator? chain;
+    if (isRequired) {
+      chain = (value) => FormFieldValidators.requiredValue(context, value);
+    }
     final inner = validator;
-    if (inner == null) {
+    if (inner != null) {
+      final prev = chain;
+      chain = (value) {
+        if (prev != null) {
+          final e = prev(value);
+          if (e != null) {
+            return e;
+          }
+        }
+        return inner(value);
+      };
+    }
+    final combined = chain;
+    if (combined == null) {
       return null;
     }
     final form = TrackedFormScope.of(context);
     return (value) {
-      final err = inner(value);
+      final err = combined(value);
       form._reportField(fieldName, err == null, groupId: groupId);
       return err;
     };
   }
 
-  /// 描边样式的 [InputDecoration]；子类共用。
   static InputDecoration outlineDecoration({
+    required BuildContext context,
     required String label,
+    bool isRequired = false,
     EdgeInsetsGeometry? contentPadding,
     String? helperText,
     Widget? suffixIcon,
   }) {
+    final theme = Theme.of(context);
     return InputDecoration(
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(5)),
-      labelText: label,
-      contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      label: isRequired
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(label),
+                Text('*', style: TextStyle(color: theme.colorScheme.error)),
+              ],
+            )
+          : null,
+      labelText: isRequired ? null : label,
+      contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: kSpacingSmall, vertical: kSpacingSmall),
       helperText: helperText,
       suffixIcon: suffixIcon,
     );
   }
 }
 
-/// 标准单行文本，带描边样式；可选 [suffixIconBuilder] 在 [build] 中取 [Theme]。
 class TrackedTextFormField extends TrackedFormField {
   final String label;
   final TextEditingController controller;
@@ -328,6 +353,7 @@ class TrackedTextFormField extends TrackedFormField {
     super.key,
     required super.fieldName,
     super.validator,
+    super.isRequired,
     super.groupId,
     required this.label,
     required this.controller,
@@ -358,7 +384,9 @@ class _TrackedTextFormFieldState extends State<TrackedTextFormField> {
         controller: widget.controller,
         validator: widget.resolveValidator(context),
         decoration: TrackedFormField.outlineDecoration(
+          context: context,
           label: widget.label,
+          isRequired: widget.isRequired,
           contentPadding: widget.contentPadding,
           suffixIcon: suffix,
         ),
@@ -367,12 +395,12 @@ class _TrackedTextFormFieldState extends State<TrackedTextFormField> {
   }
 }
 
-/// 本地文件路径：单行输入 + 文件夹按钮；点击用 [FilePicker] 选文件并写入 [controller]，再触发表单校验。
 class TrackedFilePathFormField extends TrackedFormField {
   const TrackedFilePathFormField({
     super.key,
     required super.fieldName,
     super.validator,
+    super.isRequired,
     super.groupId,
     required this.label,
     required this.controller,
@@ -417,6 +445,7 @@ class _TrackedFilePathFormFieldState extends State<TrackedFilePathFormField> {
       fieldName: widget.fieldName,
       validator: widget.validator,
       groupId: widget.groupId,
+      isRequired: widget.isRequired,
       label: widget.label,
       controller: widget.controller,
       contentPadding: const EdgeInsets.all(kSpacingSmall),
@@ -434,12 +463,12 @@ class _TrackedFilePathFormFieldState extends State<TrackedFilePathFormField> {
   }
 }
 
-/// [CodeLineEditingController] + 自定义 [child]（通常为 [CodeEditor]），与其它 [Tracked*] 一样参与 [validate] 与 Tab 分组；[fieldName] / [groupId] 由业务页约定。
 class TrackedCodeEditorFormField extends TrackedFormField {
   const TrackedCodeEditorFormField({
     super.key,
     required super.fieldName,
     super.validator,
+    super.isRequired,
     super.groupId,
     required this.codeController,
     required this.child,
@@ -479,10 +508,7 @@ class _TrackedCodeEditorFormFieldState extends State<TrackedCodeEditorFormField>
     if (!mounted) {
       return;
     }
-    TrackedFormScope.of(context)
-        ._formFieldKey(widget.fieldName)
-        .currentState
-        ?.didChange(widget.codeController.text);
+    TrackedFormScope.of(context)._formFieldKey(widget.fieldName).currentState?.didChange(widget.codeController.text);
   }
 
   @override
@@ -498,34 +524,37 @@ class _TrackedCodeEditorFormFieldState extends State<TrackedCodeEditorFormField>
   }
 }
 
-/// 主机 + 可选端口同一组件；端口相关参数须**整组提供或整组省略**（省略时仅显示主机）。
+/// multi field, 主机 + 端口
 class TrackedHostPortFields extends StatelessWidget {
   const TrackedHostPortFields({
     super.key,
     required this.hostFieldName,
     required this.hostController,
-    required this.hostValidator,
+    this.hostValidator,
     required this.hostLabel,
+    this.hostRequired = false,
     this.portFieldName,
     this.portController,
     this.portValidator,
     this.portLabel,
+    this.portRequired = false,
     this.groupId,
   }) : assert(
-         (portFieldName == null) == (portController == null && portValidator == null && portLabel == null),
+         (portFieldName == null) == (portController == null && portLabel == null),
        );
 
-  /// 若为空，[TrackedForm.tabbed] 对主机字段按 [hostFieldName] 向控制器回退分组。
   final String? groupId;
 
   final String hostFieldName;
   final TextEditingController hostController;
-  final FormFieldValidator hostValidator;
+  final FormFieldValidator? hostValidator;
   final String hostLabel;
+  final bool hostRequired;
   final String? portFieldName;
   final TextEditingController? portController;
   final FormFieldValidator? portValidator;
   final String? portLabel;
+  final bool portRequired;
 
   @override
   Widget build(BuildContext context) {
@@ -534,6 +563,7 @@ class TrackedHostPortFields extends StatelessWidget {
       validator: hostValidator,
       groupId: groupId,
       label: hostLabel,
+      isRequired: hostRequired,
       controller: hostController,
     );
     final pk = portFieldName;
@@ -554,9 +584,10 @@ class TrackedHostPortFields extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: 132),
             child: TrackedTextFormField(
               fieldName: pk,
-              validator: pv!,
+              validator: pv,
               groupId: groupId,
               label: pl!,
+              isRequired: portRequired,
               controller: pc!,
             ),
           ),
@@ -566,7 +597,6 @@ class TrackedHostPortFields extends StatelessWidget {
   }
 }
 
-/// 密码单行输入；与 [TrackedTextFormField] 相同，但 [obscureText] 恒为 true。
 class TrackedPasswordFormField extends TrackedTextFormField {
   const TrackedPasswordFormField({
     super.key,
@@ -574,6 +604,7 @@ class TrackedPasswordFormField extends TrackedTextFormField {
     super.validator,
     super.groupId,
     required super.label,
+    super.isRequired,
     required super.controller,
     super.suffixIcon,
     super.suffixIconBuilder,
@@ -585,7 +616,6 @@ class TrackedPasswordFormField extends TrackedTextFormField {
        );
 }
 
-/// 多行文本（描述、备注等）。
 class TrackedMultilineFormField extends TrackedFormField {
   final String label;
   final TextEditingController controller;
@@ -598,6 +628,7 @@ class TrackedMultilineFormField extends TrackedFormField {
     super.key,
     required super.fieldName,
     super.validator,
+    super.isRequired,
     super.groupId,
     required this.label,
     required this.controller,
@@ -625,7 +656,9 @@ class _TrackedMultilineFormFieldState extends State<TrackedMultilineFormField> {
         autovalidateMode: AutovalidateMode.onUnfocus,
         validator: widget.resolveValidator(context),
         decoration: TrackedFormField.outlineDecoration(
+          context: context,
           label: widget.label,
+          isRequired: widget.isRequired,
           contentPadding: widget.contentPadding ?? const EdgeInsets.all(12),
         ),
       ),
@@ -633,7 +666,6 @@ class _TrackedMultilineFormFieldState extends State<TrackedMultilineFormField> {
   }
 }
 
-/// 多行描述/备注；默认内边距为 [kSpacingSmall]，其余与 [TrackedMultilineFormField] 一致。
 class TrackedDescFormField extends TrackedMultilineFormField {
   const TrackedDescFormField({
     super.key,
@@ -641,6 +673,7 @@ class TrackedDescFormField extends TrackedMultilineFormField {
     super.validator,
     super.groupId,
     required super.label,
+    super.isRequired,
     required super.controller,
     super.maxLength = 50,
     super.maxLines = 4,
@@ -650,9 +683,6 @@ class TrackedDescFormField extends TrackedMultilineFormField {
        );
 }
 
-/// 与 [TrackedTextFormField] 视觉一致的下拉框；选中值写入 [controller]。
-///
-/// 使用 [DropdownButtonFormField] 的 [initialValue]（Flutter 3.33+），以便外部改写 [controller] 时通过重建同步。
 class TrackedEnumFormField extends TrackedFormField {
   final String label;
   final TextEditingController controller;
@@ -664,6 +694,7 @@ class TrackedEnumFormField extends TrackedFormField {
     super.key,
     required super.fieldName,
     super.validator,
+    super.isRequired,
     super.groupId,
     required this.label,
     required this.controller,
@@ -694,6 +725,29 @@ class _TrackedEnumFormFieldState extends State<TrackedEnumFormField> {
     return opts.first;
   }
 
+  InputDecoration _decorationForState(BuildContext context, FormFieldState<String> fieldState) {
+    final base = TrackedFormField.outlineDecoration(
+      context: context,
+      label: widget.label,
+      isRequired: widget.isRequired,
+      helperText: widget.helperText,
+    );
+    if (!fieldState.hasError) {
+      return base;
+    }
+    final cs = Theme.of(context).colorScheme;
+    final errBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(5),
+      borderSide: BorderSide(color: cs.error),
+    );
+    return base.copyWith(
+      errorText: fieldState.errorText,
+      errorBorder: errBorder,
+      focusedErrorBorder: errBorder,
+      border: errBorder,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final opts = widget.enumValues;
@@ -703,6 +757,7 @@ class _TrackedEnumFormFieldState extends State<TrackedEnumFormField> {
         validator: widget.validator,
         groupId: widget.groupId,
         label: widget.label,
+        isRequired: widget.isRequired,
         controller: widget.controller,
       );
     }
@@ -719,31 +774,90 @@ class _TrackedEnumFormFieldState extends State<TrackedEnumFormField> {
       });
     }
     final form = TrackedFormScope.of(context);
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    final itemHeight = 40.0;
+    final menuMaxHeight = opts.length * itemHeight + kSpacingSmall * 2;
+    final cappedMenuHeight = menuMaxHeight > 280 ? 280.0 : menuMaxHeight;
+
     return Container(
       constraints: const BoxConstraints(minHeight: 80),
-      child: DropdownButtonFormField<String>(
+      child: FormField<String>(
         key: form._formFieldKey(widget.fieldName),
-        autovalidateMode: AutovalidateMode.onUnfocus,
-        isExpanded: true,
-        decoration: TrackedFormField.outlineDecoration(
-          label: widget.label,
-          helperText: widget.helperText,
-        ),
         initialValue: effective,
-        items: opts
-            .map(
-              (e) => DropdownMenuItem<String>(
-                value: e,
-                child: Text(e, overflow: TextOverflow.ellipsis),
-              ),
-            )
-            .toList(),
-        onChanged: (v) {
-          if (v != null) {
-            widget.controller.text = v;
-          }
-        },
+        autovalidateMode: AutovalidateMode.onUnfocus,
         validator: widget.resolveValidator(context),
+        builder: (fieldState) {
+          final display = _effectiveValue(opts, widget.controller.text, widget.defaultValue);
+          if (fieldState.value != display) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                fieldState.didChange(display);
+              }
+            });
+          }
+
+          return InputDecorator(
+            decoration: _decorationForState(context, fieldState),
+            isEmpty: false,
+            child: OverlayMenu(
+              anchorAlignmentInset: const EdgeInsets.symmetric(horizontal: kSpacingSmall, vertical: kSpacingSmall),
+              maxWidth: 400,
+              maxHeight: cappedMenuHeight,
+              spacing: kSpacingTiny,
+              header: OverlayMenuHeader(height: kSpacingSmall, child: SizedBox.shrink()),
+              footer: OverlayMenuFooter(height: kSpacingSmall, child: SizedBox.shrink()),
+              tabs: [
+                for (final e in opts)
+                  OverlayMenuItem(
+                    height: itemHeight,
+                    onTabSelected: () {
+                      widget.controller.text = e;
+                      fieldState.didChange(e);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: kSpacingSmall),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              e,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontWeight: e == display ? FontWeight.w600 : FontWeight.normal,
+                                color: e == display ? cs.primary : null,
+                              ),
+                            ),
+                          ),
+                          if (e == display) Icon(Icons.check, size: 18, color: cs.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 24,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          display,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyLarge,
+                        ),
+                      ),
+                      Icon(Icons.expand_more, color: cs.onSurfaceVariant),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

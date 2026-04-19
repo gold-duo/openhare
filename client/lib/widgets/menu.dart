@@ -10,13 +10,18 @@ class OverlayMenu extends StatefulWidget {
   final OverlayMenuHeader? header;
   final OverlayMenuFooter? footer;
   final Widget child;
-  // 支持设置弹窗的位置。在上方或者下方。默认在下方
+
+  /// 支持设置弹窗的位置。在上方或者下方。默认在下方
   final bool isAbove;
-  // 支持设置弹窗的间距。默认0
+
+  /// 支持设置弹窗的间距。默认0
   final double spacing;
 
-  // 支持设置点击菜单项后是否关闭菜单。默认关闭
+  /// 支持设置点击菜单项后是否关闭菜单。默认关闭
   final bool closeOnSelectItem;
+
+  /// 把弹出菜单对齐到比 [child] 更大一圈的矩形时常用（例如与带 [InputDecoration.contentPadding] 的输入框外框对齐）。
+  final EdgeInsetsGeometry anchorAlignmentInset;
 
   const OverlayMenu({
     super.key,
@@ -29,6 +34,7 @@ class OverlayMenu extends StatefulWidget {
     this.isAbove = false,
     this.spacing = 0,
     this.closeOnSelectItem = true,
+    this.anchorAlignmentInset = EdgeInsets.zero,
   });
 
   @override
@@ -65,9 +71,9 @@ class _OverlayMenuState extends State<OverlayMenu> {
     }
   }
 
-  Widget _buildMenu(BuildContext context, double maxHeight) {
-    return Container(
-      constraints: BoxConstraints(maxWidth: widget.maxWidth, maxHeight: maxHeight),
+  Widget _buildMenu(BuildContext context, double maxHeight, {double? fixedWidth}) {
+    final box = Container(
+      constraints: BoxConstraints(maxWidth: fixedWidth ?? widget.maxWidth, maxHeight: maxHeight),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerLowest, // 菜单库默认背景色
         border: Border.all(color: Theme.of(context).colorScheme.outline),
@@ -110,6 +116,10 @@ class _OverlayMenuState extends State<OverlayMenu> {
         ],
       ),
     );
+    if (fixedWidth != null) {
+      return SizedBox(width: fixedWidth, child: box);
+    }
+    return box;
   }
 
   @override
@@ -128,9 +138,7 @@ class _OverlayMenuState extends State<OverlayMenu> {
               final Size screenSize = MediaQuery.of(context).size; // 屏幕大小
               final Offset position = _childPosition ?? Offset.zero; // 按钮位置
               final Size childSize = _childSize ?? const Size(40, 40);
-
-              double top = 0;
-              double left = position.dx;
+              final outset = widget.anchorAlignmentInset.resolve(Directionality.of(context));
 
               // 计算弹窗的总height
               double menuHeight = 0;
@@ -146,18 +154,35 @@ class _OverlayMenuState extends State<OverlayMenu> {
               // 限制菜单高度
               menuHeight = (menuHeight > widget.maxHeight) ? widget.maxHeight : menuHeight;
 
+              var left = position.dx - outset.left;
+              final double top;
               if (widget.isAbove) {
-                top = position.dy - menuHeight - widget.spacing;
+                top = position.dy - outset.top - menuHeight - widget.spacing;
               } else {
-                top = position.dy + childSize.height + widget.spacing;
+                top = position.dy + childSize.height + outset.bottom + widget.spacing;
               }
 
-              // 限制菜单不超出屏幕
-              final double menuWidth = widget.maxWidth;
-              if (left + menuWidth > screenSize.width) {
-                left = screenSize.width - menuWidth - 8;
+              double? menuFixedWidth;
+              var menuWidth = widget.maxWidth;
+              if (outset.horizontal > 0 && childSize.width > 0) {
+                menuFixedWidth = childSize.width + outset.left + outset.right;
+                menuWidth = menuFixedWidth;
               }
-              if (left < 8) left = 8;
+              const screenPad = 8.0;
+              final maxPanel = screenSize.width - screenPad * 2;
+              if (menuWidth > maxPanel) {
+                menuWidth = maxPanel;
+                if (menuFixedWidth != null) {
+                  menuFixedWidth = menuWidth;
+                }
+              }
+
+              if (left + menuWidth > screenSize.width) {
+                left = screenSize.width - menuWidth - screenPad;
+              }
+              if (left < screenPad) {
+                left = screenPad;
+              }
 
               return Stack(
                 children: [
@@ -176,7 +201,10 @@ class _OverlayMenuState extends State<OverlayMenu> {
                   Positioned(
                     left: left,
                     top: top,
-                    child: Material(color: Colors.transparent, child: _buildMenu(context, menuHeight)),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: _buildMenu(context, menuHeight, fixedWidth: menuFixedWidth),
+                    ),
                   ),
                 ],
               );

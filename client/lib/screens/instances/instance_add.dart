@@ -15,7 +15,7 @@ import 'package:client/l10n/app_localizations.dart';
 import 'package:client/widgets/dialog.dart';
 import 'package:client/widgets/loading.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:client/widgets/field.dart';
+import 'package:client/widgets/form.dart';
 
 const String initQueryTabId = 'initize';
 
@@ -368,7 +368,7 @@ class _AddInstanceWizardDialogState extends ConsumerState<_AddInstanceWizardDial
   }
 }
 
-/// 向导弹窗步骤 1：[CustomDialogWidget] + 选择数据源（固定卡片尺寸 + [Wrap]）。
+/// 向导弹窗步骤 1：选择数据源
 class _AddInstanceWizardStep1 extends StatelessWidget {
   static const double _tileWidth = 104;
   static const double _tileHeight = 92;
@@ -386,7 +386,7 @@ class _AddInstanceWizardStep1 extends StatelessWidget {
         icon: HugeIcons.strokeRoundedDatabase,
         color: Theme.of(context).colorScheme.onSurfaceVariant, // navigation rail 默认icon颜色
       ),
-      subtitle: '步骤 1/2：选择数据源',
+      subtitle: l10n.add_instance_wizard_step1_subtitle,
       maxWidth: 960,
       maxHeight: 720,
       body: Column(
@@ -411,6 +411,10 @@ class _AddInstanceWizardStep1 extends StatelessWidget {
                         selected: meta.type == selected,
                         selectedColor: selectedColor,
                         onTap: addInstanceController.onDatabaseTypeChange,
+                        onDoubleTap: () {
+                          addInstanceController.onDatabaseTypeChange(meta.type);
+                          addInstanceController.setWizardStep(1);
+                        },
                       ),
                     ),
                 ],
@@ -422,7 +426,7 @@ class _AddInstanceWizardStep1 extends StatelessWidget {
       actions: [
         FilledButton(
           onPressed: () => addInstanceController.setWizardStep(1),
-          child: const Text('下一步'),
+          child: Text(l10n.wizard_next),
         ),
       ],
     );
@@ -437,11 +441,12 @@ class _AddInstanceWizardStep2 extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     return CustomDialogWidget(
       title: l10n.add_db_instance,
-      titleIcon: HugeIcon(
-        icon: HugeIcons.strokeRoundedDatabase,
-        color: Theme.of(context).colorScheme.onSurfaceVariant, // navigation rail 默认icon颜色
+      titleIcon: Image.asset(
+        connectionMetaMap[addInstanceController.selectedDatabaseType]!.logoAssertPath,
+        width: kIconSizeMedium,
+        height: kIconSizeMedium,
       ),
-      subtitle: '步骤 2/2：连接配置',
+      subtitle: l10n.add_instance_wizard_step2_subtitle,
       maxWidth: 960,
       maxHeight: 720,
       footerLeading: DbInstanceConnectionTestWidget(
@@ -460,8 +465,9 @@ class _AddInstanceWizardStep2 extends ConsumerWidget {
       actions: [
         TextButton(
           onPressed: () => addInstanceController.setWizardStep(0),
-          child: const Text('上一步'),
+          child: Text(l10n.wizard_previous),
         ),
+        SizedBox(width: kSpacingSmall),
         FilledButton(
           onPressed: () => _addInstanceWizardSubmitAndClose(ref, context, closeToList: true),
           child: Text(l10n.submit),
@@ -478,6 +484,7 @@ class DatabaseTypeCard extends StatelessWidget {
   final bool selected;
   final Color? selectedColor;
   final Function(DatabaseType type)? onTap;
+  final VoidCallback? onDoubleTap;
 
   const DatabaseTypeCard({
     super.key,
@@ -487,6 +494,7 @@ class DatabaseTypeCard extends StatelessWidget {
     this.selected = false,
     this.selectedColor,
     this.onTap,
+    this.onDoubleTap,
   });
 
   @override
@@ -508,6 +516,7 @@ class DatabaseTypeCard extends StatelessWidget {
             onTap!(type);
           }
         },
+        onDoubleTap: onDoubleTap,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -550,7 +559,6 @@ class InstanceFormWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final required = FormFieldValidators.required(l10n);
     final c = controller;
     // Tab 顺序由 [groupId] 首次出现顺序决定；每个 meta 一行；初始化 SQL 固定追加在末尾。
     final children = <Widget>[];
@@ -562,7 +570,7 @@ class InstanceFormWidget extends StatelessWidget {
               fieldName: settingMetaNameName,
               groupId: meta.group,
               label: l10n.db_instance_name,
-              validator: required,
+              isRequired: true,
               controller: c.fieldText(settingMetaNameName),
               readOnly: nameReadOnly,
             ),
@@ -573,12 +581,12 @@ class InstanceFormWidget extends StatelessWidget {
               groupId: meta.group,
               hostFieldName: settingMetaNameTargetNetworkHost,
               hostController: c.fieldText(settingMetaNameTargetNetworkHost),
-              hostValidator: required,
               hostLabel: l10n.db_instance_host,
+              hostRequired: true,
               portFieldName: settingMetaNameTargetNetworkPort,
               portController: c.fieldText(settingMetaNameTargetNetworkPort),
-              portValidator: required,
               portLabel: l10n.db_instance_port,
+              portRequired: true,
             ),
           );
         case TargetDBFileMeta():
@@ -586,7 +594,7 @@ class InstanceFormWidget extends StatelessWidget {
             TrackedFilePathFormField(
               fieldName: settingMetaNameTargetDBFile,
               groupId: meta.group,
-              validator: required,
+              isRequired: true,
               label: 'Path',
               controller: c.fieldText(settingMetaNameTargetDBFile),
               pickTooltip: l10n.tooltip_select_directory,
@@ -627,7 +635,7 @@ class InstanceFormWidget extends StatelessWidget {
                 ? TrackedEnumFormField(
                     fieldName: meta.name,
                     groupId: meta.group,
-                    validator: required,
+                    isRequired: meta.isRequired,
                     label: meta.name,
                     controller: c.fieldText(meta.name),
                     enumValues: meta.enumValues!,
@@ -637,7 +645,7 @@ class InstanceFormWidget extends StatelessWidget {
                 : TrackedTextFormField(
                     fieldName: meta.name,
                     groupId: meta.group,
-                    validator: required,
+                    isRequired: meta.isRequired,
                     label: meta.name,
                     controller: c.fieldText(meta.name),
                   ),
