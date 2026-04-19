@@ -32,12 +32,6 @@ openhare is an AI-powered, cross-platform desktop SQL client with multi-database
 - **Simple & Intuitive UI**: Modern interface focused on ease of use and productivity.
 - **Multi-Database Support**: Effortlessly connect to and manage various SQL databases.
 
-## Framework
-1. Application: [Flutter](https://flutter.dev/)
-2. State Management: [Riverpod](https://riverpod.dev/), [GoRouter](https://pub.dev/packages/go_router)
-3. UI: [SQL Editor](https://github.com/reqable/re-editor), [HugeIcons](https://github.com/hugeicons/hugeicons-flutter), [Window Manager](https://github.com/leanflutter/window_manager)
-4. Storage: [ObjectBox](https://objectbox.io/)
-
 ## Database
 
 Database drivers are implemented in [`pkg/db_driver/go_impl`](./pkg/db_driver/go_impl) and invoked from the Flutter client through Dart FFI.
@@ -53,6 +47,12 @@ Database drivers are implemented in [`pkg/db_driver/go_impl`](./pkg/db_driver/go
 | <img src="./client/assets/icons/redis_icon.png" width="28" alt="Redis"> | Redis | [redis/go-redis](https://github.com/redis/go-redis) |
 
 **Note:** MongoDB syntax is intended to be mongosh-compatible; for what is actually supported, refer to [gomongo](https://github.com/bytebase/gomongo).
+
+## Framework
+1. Application: [Flutter](https://flutter.dev/)
+2. State Management: [Riverpod](https://riverpod.dev/), [GoRouter](https://pub.dev/packages/go_router)
+3. UI: [SQL Editor](https://github.com/reqable/re-editor), [HugeIcons](https://github.com/hugeicons/hugeicons-flutter), [Window Manager](https://github.com/leanflutter/window_manager)
+4. Storage: [ObjectBox](https://objectbox.io/)
 
 ## Star History
 [![Star History Chart](https://api.star-history.com/svg?repos=sjjian/openhare&type=date&legend=top-left)](https://www.star-history.com/#sjjian/openhare&type=date&legend=top-left)
