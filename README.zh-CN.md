@@ -32,17 +32,27 @@ openhare 是一款 AI 驱动的跨平台桌面 SQL 客户端，支持多数据�
 - **简洁直观的界面**：现代化 UI，聚焦效率与易用性。
 - **多数据库支持**：轻松连接并管理多种 SQL 数据库。
 
+## 数据库
+
+数据库驱动均在 [`pkg/db_driver/go_impl`](./pkg/db_driver/go_impl) 中实现，并由 Flutter 客户端通过 Dart FFI 调用。
+
+| 图标 | 数据库 | Go 驱动 |
+| --- | --- | --- |
+| <img src="./client/assets/icons/mysql_icon.png" width="28" alt="MySQL"> | MySQL | [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql) |
+| <img src="./client/assets/icons/pg_icon.png" width="28" alt="PostgreSQL"> | PostgreSQL | [jackc/pgx](https://github.com/jackc/pgx) |
+| <img src="./client/assets/icons/mssql_icon.png" width="28" alt="SQL Server"> | SQL Server | [microsoft/go-mssqldb](https://github.com/microsoft/go-mssqldb) |
+| <img src="./client/assets/icons/sqlite_icon.png" width="28" alt="SQLite"> | SQLite | [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3) |
+| <img src="./client/assets/icons/oracle_icon.png" width="28" alt="Oracle"> | Oracle | [sijms/go-ora](https://github.com/sijms/go-ora) |
+| <img src="./client/assets/icons/mongodb_icon.png" width="28" alt="MongoDB"> | MongoDB | [bytebase/gomongo](https://github.com/bytebase/gomongo), [mongodb/mongo-go-driver](https://github.com/mongodb/mongo-go-driver) |
+| <img src="./client/assets/icons/redis_icon.png" width="28" alt="Redis"> | Redis | [redis/go-redis](https://github.com/redis/go-redis) |
+
+**注：** MongoDB 语法以与 mongosh 兼容为目标；具体支持程度请参考 [gomongo](https://github.com/bytebase/gomongo)。
+
 ## 技术框架
-1. 应用层： [Flutter](https://flutter.dev/), [flutter_rust_bridge](https://github.com/fzyzcjy/flutter_rust_bridge)
+1. 应用层： [Flutter](https://flutter.dev/)
 2. 状态管理： [Riverpod](https://riverpod.dev/), [GoRouter](https://pub.dev/packages/go_router)
 3. UI： [SQL Editor](https://github.com/reqable/re-editor), [HugeIcons](https://github.com/hugeicons/hugeicons-flutter), [Window Manager](https://github.com/leanflutter/window_manager)
 4. 存储： [ObjectBox](https://objectbox.io/)
-5. 数据库驱动：
-   - [MySQL](https://github.com/blackbeam/mysql_async)，基于 Rust + flutter_rust_bridge；
-   - [Postgresql](https://github.com/isoos/postgresql-dart)，纯 Dart 实现；
-   - [SQL Server](https://github.com/prisma/tiberius)，基于 Rust + flutter_rust_bridge；
-   - [SQLite](https://github.com/rusqlite/rusqlite)，基于 Rust + flutter_rust_bridge；
-   - [Oracle](https://github.com/sijms/go-ora)，基于 Go + Flutter FFI 插件。
 
 ## Star 历史
 [![Star History Chart](https://api.star-history.com/svg?repos=sjjian/openhare&type=date&legend=top-left)](https://www.star-history.com/#sjjian/openhare&type=date&legend=top-left)

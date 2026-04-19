@@ -32,17 +32,27 @@ openhare is an AI-powered, cross-platform desktop SQL client with multi-database
 - **Simple & Intuitive UI**: Modern interface focused on ease of use and productivity.
 - **Multi-Database Support**: Effortlessly connect to and manage various SQL databases.
 
+## Database
+
+Database drivers are implemented in [`pkg/db_driver/go_impl`](./pkg/db_driver/go_impl) and invoked from the Flutter client through Dart FFI.
+
+| Icon | Database | Go driver |
+| --- | --- | --- |
+| <img src="./client/assets/icons/mysql_icon.png" width="28" alt="MySQL"> | MySQL | [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql) |
+| <img src="./client/assets/icons/pg_icon.png" width="28" alt="PostgreSQL"> | PostgreSQL | [jackc/pgx](https://github.com/jackc/pgx) |
+| <img src="./client/assets/icons/mssql_icon.png" width="28" alt="SQL Server"> | SQL Server | [microsoft/go-mssqldb](https://github.com/microsoft/go-mssqldb) |
+| <img src="./client/assets/icons/sqlite_icon.png" width="28" alt="SQLite"> | SQLite | [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3) |
+| <img src="./client/assets/icons/oracle_icon.png" width="28" alt="Oracle"> | Oracle | [sijms/go-ora](https://github.com/sijms/go-ora) |
+| <img src="./client/assets/icons/mongodb_icon.png" width="28" alt="MongoDB"> | MongoDB | [bytebase/gomongo](https://github.com/bytebase/gomongo), [mongodb/mongo-go-driver](https://github.com/mongodb/mongo-go-driver) |
+| <img src="./client/assets/icons/redis_icon.png" width="28" alt="Redis"> | Redis | [redis/go-redis](https://github.com/redis/go-redis) |
+
+**Note:** MongoDB syntax is intended to be mongosh-compatible; for what is actually supported, refer to [gomongo](https://github.com/bytebase/gomongo).
+
 ## Framework
-1. Application: [Flutter](https://flutter.dev/), [flutter_rust_bridge](https://github.com/fzyzcjy/flutter_rust_bridge)
+1. Application: [Flutter](https://flutter.dev/)
 2. State Management: [Riverpod](https://riverpod.dev/), [GoRouter](https://pub.dev/packages/go_router)
 3. UI: [SQL Editor](https://github.com/reqable/re-editor), [HugeIcons](https://github.com/hugeicons/hugeicons-flutter), [Window Manager](https://github.com/leanflutter/window_manager)
 4. Storage: [ObjectBox](https://objectbox.io/)
-5. DB Driver:
-   - [MySQL](https://github.com/blackbeam/mysql_async), dev on rust with flutter_rust_bridge;
-   - [Postgresql](https://github.com/isoos/postgresql-dart), dart pure;
-   - [SQL Server](https://github.com/prisma/tiberius), dev on rust with flutter_rust_bridge;
-   - [SQLite](https://github.com/rusqlite/rusqlite), dev on rust with flutter_rust_bridge;
-   - [Oracle](https://github.com/sijms/go-ora), dev on go with flutter ffi plugin.
 
 ## Star History
 [![Star History Chart](https://api.star-history.com/svg?repos=sjjian/openhare&type=date&legend=top-left)](https://www.star-history.com/#sjjian/openhare&type=date&legend=top-left)
