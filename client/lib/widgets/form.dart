@@ -675,9 +675,9 @@ class TrackedDescFormField extends TrackedMultilineFormField {
     required super.label,
     super.isRequired,
     required super.controller,
-    super.maxLength = 50,
-    super.maxLines = 4,
-    super.minHeight = 120,
+    super.maxLength = 100,
+    super.maxLines = 2,
+    super.minHeight = 100,
   }) : super(
          contentPadding: const EdgeInsets.all(kSpacingSmall),
        );

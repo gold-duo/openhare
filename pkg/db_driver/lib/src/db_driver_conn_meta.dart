@@ -56,6 +56,7 @@ abstract class ConnectTarget with _$ConnectTarget {
 }
 
 const String settingMetaGroupBase = "base";
+const String settingMetaGroupVariables = "variables";
 
 const String settingMetaNameName = "name";
 const String settingMetaNameUser = "user";
