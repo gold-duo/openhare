@@ -439,13 +439,10 @@ class InstanceFormWidget extends StatelessWidget {
   final AddInstanceController controller;
   final CodeLineEditingController codeController;
 
-  final bool nameReadOnly;
-
   const InstanceFormWidget({
     super.key,
     required this.controller,
     required this.codeController,
-    this.nameReadOnly = false,
   });
 
   factory InstanceFormWidget.forAddInstanceWizard() {
@@ -472,7 +469,6 @@ class InstanceFormWidget extends StatelessWidget {
               label: l10n.db_instance_name,
               isRequired: true,
               controller: c.selectedDatabaseFormController.fieldControllers[settingMetaNameName]!,
-              readOnly: nameReadOnly,
             ),
           );
         case TargetNetworkMeta():

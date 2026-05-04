@@ -156,7 +156,6 @@ class _UpdateInstanceDialogState extends ConsumerState<_UpdateInstanceDialog> {
           builder: (context, _) => InstanceFormWidget(
             controller: updateInstanceController,
             codeController: updateInstanceController.selectedDatabaseFormController.initQueryCodeController,
-            nameReadOnly: true,
           ),
         ),
       ),
