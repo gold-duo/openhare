@@ -361,35 +361,45 @@ class _SchemaBarState extends ConsumerState<SchemaBar> {
   }
 
   Widget _schemaBarTriggerContent(BuildContext context) {
-    final color = (isEnter && !widget.disable)
-        ? Theme.of(context).colorScheme.primary
-        : Theme.of(context).colorScheme.onSurface; // schema 框鼠标移入的颜色
-
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 5),
+      padding: const EdgeInsets.all(kSpacingTiny),
       child: MouseRegion(
         onEnter: (_) => setState(() => isEnter = true),
         onExit: (_) => setState(() => isEnter = false),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(0, kSpacingTiny, 0, kSpacingTiny),
+          padding: const EdgeInsets.fromLTRB(kSpacingTiny, 0, kSpacingTiny, 0),
+          decoration: BoxDecoration(
+            color: isEnter ? Theme.of(context).colorScheme.surfaceContainerLow : null, // schema 框鼠标移入的颜色
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+          ),
           child: Row(
             children: [
               HugeIcon(
                 icon: HugeIcons.strokeRoundedDatabase,
-                color: color,
+                color: Theme.of(context).colorScheme.onSurface, // schema bar icon 颜色
                 size: kIconSizeSmall,
               ),
-              Container(
-                padding: const EdgeInsets.only(left: kSpacingTiny),
-                width: 120,
-                child: Align(
-                  alignment: Alignment.centerLeft,
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 120, maxWidth: 180),
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    left: kSpacingTiny,
+                    right: kSpacingTiny,
+                    bottom: 2, // 为了字体和icon在视觉上对齐, 这是一个我觉得协调的值.
+                  ),
                   child: Text(
                     widget.currentSchema?.toString() ?? "",
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: color),
+                    // style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: color),
                   ),
                 ),
+              ),
+              Icon(
+                Icons.expand_more,
+                size: kIconSizeSmall,
               ),
             ],
           ),
