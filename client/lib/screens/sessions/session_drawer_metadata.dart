@@ -24,7 +24,11 @@ class SessionDrawerMetadata extends ConsumerWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(Icons.error, color: Theme.of(context).colorScheme.error),
+        Icon(
+          Icons.error,
+          size: 48, // todo: 使用统一图标大小
+          color: Theme.of(context).colorScheme.errorContainer,
+        ),
         const SizedBox(height: kSpacingSmall),
         Text(error),
         RectangleIconButton.medium(

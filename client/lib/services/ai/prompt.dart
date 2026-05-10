@@ -12,7 +12,6 @@ You are an intelligent SQL client assistant. You are having a conversation with 
 ## Basic information about the current database connection:
 Database type: {dbType}
 Database version: {dbVersion}
-Current schema: {currentSchema}
 Database description: {dbDescription}
 ## User input format:
 Users will use @ to specify table names and pass table information in the current conversation to help you answer questions.
@@ -38,11 +37,9 @@ SELECT `id`, `name`, `age` FROM `users` LIMIT 10;
 
 String genChatSystemPrompt(SessionAIChatModel model) {
   final dbVersion = (model.metadata?.version ?? "").trim();
-  final currentSchema = (model.currentSchema ?? "").trim();
   return chatTemplate
       .replaceAll("{dbType}", model.dbType?.name ?? "-")
       .replaceAll("{dbVersion}", dbVersion.isEmpty ? "-" : dbVersion)
-      .replaceAll("{currentSchema}", currentSchema.isEmpty ? "-" : currentSchema)
       .replaceAll(
         "{dbDescription}",
         connectionMetas.firstWhere((e) => e.type == model.dbType).description ?? "-",

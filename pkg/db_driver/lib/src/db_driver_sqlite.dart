@@ -10,10 +10,14 @@ class SQLiteConnection extends GoImplConnection {
   SQLiteConnection(super._conn);
 
   @override
+  Future<DatabaseModeType> getDatabaseMode() async =>
+      DatabaseModeType.singleMode;
+
+  @override
   sp.SQLDefiner parser(String sql) => sp.parser(sp.DialectType.sqlite, sql);
 
   static Future<BaseConnection> open(
-      {required ConnectValue meta, String? schema}) async {
+      {required ConnectValue meta, DatabaseRef? schema}) async {
     var dsn = meta.getDbFile();
     if (dsn.startsWith("file://")) {
       dsn = Uri.parse(dsn).toFilePath();
@@ -41,17 +45,17 @@ class SQLiteConnection extends GoImplConnection {
   }
 
   @override
-  Future<List<String>> schemas() async {
+  Future<List<DatabaseRef>> schemas() async {
     return [];
   }
 
   @override
-  Future<void> setCurrentSchema(String schema) async {
-    onSchemaChanged("");
+  Future<void> setCurrentSchema(DatabaseRef schema) async {
+    return;
   }
 
   @override
-  Future<String?> getCurrentSchema() async {
+  Future<DatabaseRef?> getCurrentSchema() async {
     return null;
   }
 

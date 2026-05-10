@@ -186,11 +186,19 @@ class CustomDialogWidget extends StatelessWidget {
                           ],
                         ),
                       ),
-                      RectangleIconButton.medium(
-                        tooltip: AppLocalizations.of(context)!.close,
-                        icon: Icons.close,
-                        iconColor: cs.onSurfaceVariant,
-                        onPressed: () => Navigator.of(context).pop(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          RectangleIconButton(
+                            size: kIconButtonSizeMedium - 8, // 减去 padding 的宽度, 实际按钮大小和RectangleIconButton.medium一致
+                            iconSize: kIconSizeMedium,
+                            padding: 0,
+                            tooltip: AppLocalizations.of(context)!.close,
+                            icon: Icons.close,
+                            iconColor: cs.onSurfaceVariant,
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ],
                       ),
                     ],
                   ),

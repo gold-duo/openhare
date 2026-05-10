@@ -28,7 +28,7 @@ DataNode buildDataNode(MetaDataNode node) {
 
 DataNode buildDataValueNode(MetaDataNode node) {
   return switch (node.type) {
-    MetaType.database => SchemaValueNode(node.value),
+    MetaType.database => DatabaseValueNode(node.value),
     MetaType.table => TableValueNode(node.value),
     MetaType.column => ColumnValueNode(node.value, node.getProp(MetaDataPropType.dataType)),
     _ => SchemaValueNode(node.value),
@@ -206,8 +206,8 @@ class DataValueNode extends RootNode {
   }
 }
 
-class SchemaValueNode extends DataValueNode {
-  SchemaValueNode(super.name);
+class DatabaseValueNode extends DataValueNode {
+  DatabaseValueNode(super.name);
 
   @override
   Widget openIcons(BuildContext context) {
@@ -223,7 +223,29 @@ class SchemaValueNode extends DataValueNode {
     return HugeIcon(
       size: kIconSizeSmall,
       icon: HugeIcons.strokeRoundedDatabase,
-      color: Theme.of(context).colorScheme.onSurface,
+      color: Colors.orangeAccent[100]!,
+    );
+  }
+}
+
+class SchemaValueNode extends DataValueNode {
+  SchemaValueNode(super.name);
+
+  @override
+  Widget openIcons(BuildContext context) {
+    return HugeIcon(
+      size: kIconSizeSmall,
+      icon: HugeIcons.strokeRoundedFolder02,
+      color: Theme.of(context).colorScheme.primary,
+    );
+  }
+
+  @override
+  Widget closeIcons(BuildContext context) {
+    return HugeIcon(
+      size: kIconSizeSmall,
+      icon: HugeIcons.strokeRoundedFolder01,
+      color: Colors.orangeAccent[100]!,
     );
   }
 }
@@ -245,7 +267,7 @@ class TableValueNode extends DataValueNode {
     return HugeIcon(
       size: kIconSizeSmall,
       icon: HugeIcons.strokeRoundedTable,
-      color: Theme.of(context).colorScheme.onSurface,
+      color: Colors.green[200]!,
     );
   }
 }

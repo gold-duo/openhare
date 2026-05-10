@@ -1,6 +1,7 @@
 import 'package:client/models/instances.dart';
 import 'package:client/repositories/instances/instances.dart';
 import 'package:client/services/sessions/sessions.dart';
+import 'package:db_driver/db_driver.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'instances.g.dart';
@@ -50,7 +51,7 @@ class InstancesServices extends _$InstancesServices {
     return repo.isntances(key, pageNumber: pageNumber, pageSize: pageSize);
   }
 
-  void addActiveInstance(InstanceId instanceId, {String? schema}) async {
+  void addActiveInstance(InstanceId instanceId, {DatabaseRef? schema}) async {
     ref.read(instanceRepoProvider).addActiveInstance(instanceId);
     if (schema != null) {
       ref.read(instanceRepoProvider).addInstanceActiveSchema(instanceId, schema);

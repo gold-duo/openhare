@@ -34,6 +34,33 @@ class _AIMessageState extends State<AIMessage> {
     );
   }
 
+  Widget _buildWaitApiResponce(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const SizedBox(width: kSpacingTiny),
+        Text(
+          AppLocalizations.of(context)!.ai_chat_waiting_api,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+        const SizedBox(width: kSpacingSmall),
+        SizedBox(
+          width: 10,
+          height: 10,
+          child: CircularProgressIndicator(
+            strokeWidth: 1,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildThinking(BuildContext context, bool isThinking) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -48,18 +75,6 @@ class _AIMessageState extends State<AIMessage> {
                 color: Theme.of(context).colorScheme.onSurface, // 思考过程下拉按钮的颜色
               ),
               const SizedBox(width: kSpacingTiny),
-              if (isThinking && !_isThinkingExpanded)
-                SizedBox(
-                  width: 12,
-                  height: 12,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Theme.of(context).colorScheme.onSurfaceVariant, // 思考过程 loading 颜色
-                    ),
-                  ),
-                ),
-              if (isThinking && !_isThinkingExpanded) const SizedBox(width: kSpacingTiny),
               Text(
                 isThinking
                     ? AppLocalizations.of(context)!.ai_chat_thinking
@@ -69,6 +84,19 @@ class _AIMessageState extends State<AIMessage> {
                   fontStyle: FontStyle.italic,
                 ),
               ),
+              if (isThinking && !_isThinkingExpanded) ...[
+                const SizedBox(width: kSpacingSmall),
+                SizedBox(
+                  width: 10,
+                  height: 10,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.onSurfaceVariant, // 思考过程 loading 颜色
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -127,18 +155,22 @@ class _AIMessageState extends State<AIMessage> {
     final hasThinking = widget.message.thinking != null && widget.message.thinking!.isNotEmpty;
     // 当 content 有值时，思考结束
     final isThinking = !widget.message.isThinkingCompleted;
+    final hasError = widget.message.error != null;
+    final hasContent = content.isNotEmpty && content.trim() != "";
 
     return Padding(
       padding: const EdgeInsets.only(bottom: kSpacingMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (widget.message.error != null) _buildError(context),
+          if (hasError) _buildError(context),
           if (hasThinking) _buildThinking(context, isThinking),
-          if (content.isNotEmpty && content.trim() != "") ...[
+          if (hasContent) ...[
             SizedBox(height: kSpacingSmall),
             _buildContent(context, content),
           ],
+          // no result, display waitting.
+          if (!hasContent && !hasThinking && !hasError) _buildWaitApiResponce(context),
         ],
       ),
     );

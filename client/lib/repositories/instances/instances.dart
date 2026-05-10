@@ -99,7 +99,7 @@ class InstanceStorage {
       desc = model.desc,
       customJson = jsonEncode(model.custom),
       initQuerys = model.initQuerys,
-      activeSchemas = ActiveSet<String>(model.activeSchemas),
+      activeSchemas = ActiveSet<String>(model.activeSchemas.map((e) => e.toString()).toList()),
       createdAt = model.createdAt,
       latestOpenAt = model.latestOpenAt;
 
@@ -130,7 +130,7 @@ class InstanceStorage {
       desc: desc,
       custom: custom,
       initQuerys: initQuerys,
-      activeSchemas: activeSchemas.toList(),
+      activeSchemas: activeSchemas.toList().map((e) => DatabaseRef.fromString(e)).toList(),
       createdAt: createdAt,
       latestOpenAt: latestOpenAt,
     );
@@ -242,12 +242,12 @@ class InstanceRepoImpl extends InstanceRepo {
   }
 
   @override
-  void addInstanceActiveSchema(InstanceId id, String schema) {
+  void addInstanceActiveSchema(InstanceId id, DatabaseRef schema) {
     final instance = _instanceBox.get(id.value);
     if (instance == null) {
       return;
     }
-    instance.activeSchemas.add(schema);
+    instance.activeSchemas.add(schema.toString());
     _instanceBox.put(instance);
     return;
   }
@@ -260,7 +260,13 @@ class InstanceRepoImpl extends InstanceRepo {
       final metadataNode = await conn.metadata();
       final schemas = await conn.schemas();
       final version = await conn.version();
-      return InstanceMetadataModel(metadata: metadataNode, version: version, schemas: schemas);
+      final databaseMode = await conn.getDatabaseMode();
+      return InstanceMetadataModel(
+        metadata: metadataNode,
+        version: version,
+        schemas: schemas,
+        databaseMode: databaseMode,
+      );
     } catch (e) {
       rethrow;
     } finally {

@@ -42,8 +42,11 @@ class SessionConnRepoImpl extends SessionConnRepo {
   }
 
   @override
-  SessionConnModel createConn(InstanceModel model, {String? currentSchema}) {
-    SessionConn conn = SessionConn(model: model, currentSchema: currentSchema);
+  SessionConnModel createConn(InstanceModel model, {DatabaseRef? currentSchema}) {
+    SessionConn conn = SessionConn(
+      model: model,
+      currentSchema: currentSchema,
+    );
     final id = getConnId();
     conns[id] = conn;
     return SessionConnModel(
@@ -61,7 +64,7 @@ class SessionConnRepoImpl extends SessionConnRepo {
   Future<void> connect(
     ConnId connId, {
     Function()? onStateChangedCallback,
-    Function(String)? onSchemaChangedCallback,
+    Function(DatabaseRef)? onSchemaChangedCallback,
   }) {
     return conns[connId.value]!.connect(
       onStateChangedCallback: onStateChangedCallback,
@@ -75,7 +78,7 @@ class SessionConnRepoImpl extends SessionConnRepo {
   }
 
   @override
-  Future<void> setCurrentSchema(ConnId connId, String schema) async {
+  Future<void> setCurrentSchema(ConnId connId, DatabaseRef schema) async {
     await conns[connId.value]!.setCurrentSchema(schema);
   }
 
@@ -107,7 +110,7 @@ class SessionConn {
   BaseConnection? conn2;
   SQLConnectState state = SQLConnectState.disconnected;
   String? errorMsg;
-  String? currentSchema;
+  DatabaseRef? currentSchema;
   Timer? _timer;
   Function()? _onStateChangedCallback;
 
@@ -121,7 +124,10 @@ class SessionConn {
     _onStateChangedCallback?.call();
   }
 
-  Future<void> connect({Function()? onStateChangedCallback, Function(String)? onSchemaChangedCallback}) async {
+  Future<void> connect({
+    Function()? onStateChangedCallback,
+    Function(DatabaseRef)? onSchemaChangedCallback,
+  }) async {
     try {
       _onStateChangedCallback = onStateChangedCallback;
       if (conn2 != null) {
@@ -226,9 +232,9 @@ class SessionConn {
     }
   }
 
-  Future<void> setCurrentSchema(String schema) async {
+  Future<void> setCurrentSchema(DatabaseRef schema) async {
     await conn2!.setCurrentSchema(schema);
-    currentSchema = schema;
+    currentSchema = await conn2!.getCurrentSchema() ?? schema;
   }
 
   Future<List<MetaDataNode>> metadata() async {
@@ -239,8 +245,12 @@ class SessionConn {
     return await conn2!.version();
   }
 
-  Future<List<String>> schemas() async {
+  Future<List<DatabaseRef>> schemas() async {
     return await conn2!.schemas();
+  }
+
+  Future<DatabaseModeType> getDatabaseMode() async {
+    return await conn2!.getDatabaseMode();
   }
 }
 

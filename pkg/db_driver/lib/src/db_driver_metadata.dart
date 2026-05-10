@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:db_driver/db_driver.dart';
+
 enum MetaType {
   instance,
   database,
@@ -39,15 +41,36 @@ class MetaDataNode {
     return props[name]?.value as T?;
   }
 
-  List<MetaDataNode> getChildren(MetaType type, String value) {
-    List<MetaDataNode> children = [];
-    visitor((node, parent) {
-      if (node.type == type && node.value == value) {
-        children.addAll(node.items?.map((e) => e) ?? []);
+  List<MetaDataNode> getChildren(MetaType type) {
+    if (items == null) {
+      return [];
+    }
+    return [
+      for (final node in items!)
+        if (node.type == type) node,
+    ];
+  }
+
+  MetaDataNode? getNode(MetaType type, String value) {
+    MetaDataNode? node;
+    visitor((n, parent) {
+      if (n.type == type && n.value == value) {
+        node = n;
+        return false;
       }
       return true;
     });
-    return children;
+    return node;
+  }
+
+  MetaDataNode? getNodeByDatabaseRef(DatabaseRef ref) {
+    switch (ref) {
+      case SchemaMode(:final database, :final schema):
+        return getNode(MetaType.database, database)
+            ?.getNode(MetaType.schema, schema);
+      case DatabaseMode():
+        return getNode(MetaType.database, ref.databaseName());
+    }
   }
 
   @override
@@ -55,7 +78,9 @@ class MetaDataNode {
     return jsonEncode({
       "type": type.toString(),
       "value": value,
-      "props": props.map((key, value) => MapEntry(key.name, value.value.toString())),
+      "props": props.map(
+        (key, value) => MapEntry(key.name, value.value.toString()),
+      ),
       "children": items?.map((e) => e.toString()).toList(),
     });
   }
@@ -74,4 +99,9 @@ class MetaDataProp {
   Object value;
 
   MetaDataProp(this.name, this.value);
+}
+
+MetaDataNode? getNodeByDatabaseRef(List<MetaDataNode> nodes, DatabaseRef ref) {
+  return MetaDataNode(MetaType.instance, "", items: nodes)
+      .getNodeByDatabaseRef(ref);
 }

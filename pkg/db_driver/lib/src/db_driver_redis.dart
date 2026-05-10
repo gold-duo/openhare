@@ -13,6 +13,10 @@ class RedisConnection extends GoImplConnection {
   int _dbIndex;
 
   @override
+  Future<DatabaseModeType> getDatabaseMode() async =>
+      DatabaseModeType.databaseMode;
+
+  @override
   sp.SQLDefiner parser(String sql) => sp.parser(sp.DialectType.redis, sql);
 
   @override
@@ -25,7 +29,7 @@ class RedisConnection extends GoImplConnection {
     yield* queryStreamInternal(sql);
     if (sd.changeSchema) {
       final currentSchema = await getCurrentSchema();
-      onSchemaChanged(currentSchema ?? '');
+      onSchemaChanged(currentSchema ?? DatabaseMode(database: ''));
     }
   }
 
@@ -93,7 +97,7 @@ class RedisConnection extends GoImplConnection {
   }
 
   static Future<BaseConnection> open(
-      {required ConnectValue meta, String? schema}) async {
+      {required ConnectValue meta, DatabaseRef? schema}) async {
     final db = meta.getIntValue('db', 0);
     final tls = meta.getValue('tls', 'false').toLowerCase() == 'true' ||
         meta.getValue('ssl', 'false').toLowerCase() == 'true';
@@ -116,8 +120,8 @@ class RedisConnection extends GoImplConnection {
     );
     final conn = await impl.ImplConnection.openRedis(uri.toString());
     final r = RedisConnection(conn, db);
-    if (schema != null && schema.isNotEmpty) {
-      final n = int.tryParse(schema.trim());
+    if (schema != null && schema.databaseName().isNotEmpty) {
+      final n = int.tryParse(schema.databaseName().trim());
       if (n != null && n >= 0) {
         await r.query('SELECT $n');
         r._dbIndex = n;
@@ -162,7 +166,7 @@ class RedisConnection extends GoImplConnection {
 
   /// 逻辑库数量来自 `CONFIG GET databases`；失败时按默认 16 个库处理。
   @override
-  Future<List<String>> schemas() async {
+  Future<List<DatabaseRef>> schemas() async {
     var count = 16;
     try {
       final r = await query('CONFIG GET databases');
@@ -187,28 +191,31 @@ class RedisConnection extends GoImplConnection {
     } catch (_) {
       // CONFIG 可能被禁用或拒绝。
     }
-    return List<String>.generate(count, (i) => '$i');
+    return List<DatabaseRef>.generate(
+        count, (i) => DatabaseMode(database: '$i'));
   }
 
   @override
-  Future<void> setCurrentSchema(String schema) async {
-    final n = int.tryParse(schema.trim());
+  Future<void> setCurrentSchema(DatabaseRef schema) async {
+    final n = int.tryParse(schema.databaseName().trim());
     if (n == null || n < 0) {
       return;
     }
     await query('SELECT $n');
     _dbIndex = n;
-    onSchemaChanged('$n');
+    onSchemaChanged(schema);
   }
 
   @override
-  Future<String?> getCurrentSchema() async => '$_dbIndex';
+  Future<DatabaseRef?> getCurrentSchema() async =>
+      DatabaseMode(database: '$_dbIndex');
 
   @override
   Future<List<MetaDataNode>> metadata() async {
     final names = await schemas();
     return names
-        .map((n) => MetaDataNode(MetaType.database, n)..items = [])
+        .map((n) =>
+            MetaDataNode(MetaType.database, n.databaseName())..items = [])
         .toList();
   }
 }

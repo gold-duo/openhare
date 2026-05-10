@@ -104,40 +104,22 @@ class _SessionChatInputCardState extends ConsumerState<SessionChatInputCard> {
     );
   }
 
-  MetaDataNode? _findSchemaNode(SessionAIChatModel chatModel) {
-    if (chatModel.metadata == null || chatModel.currentSchema == null) return null;
-    final root = MetaDataNode(MetaType.instance, "", items: chatModel.metadata!.metadata);
-    MetaDataNode? schemaNode;
-    root.visitor((node, _) {
-      if (schemaNode != null) return false;
-      if (node.type == MetaType.schema && node.value == chatModel.currentSchema) {
-        schemaNode = node;
-        return false;
-      }
-      return true;
-    });
-    return schemaNode;
-  }
-
   String _buildTableRef(SessionAIChatModel chatModel, Iterable<String> mentionedTables) {
-    final schemaNode = _findSchemaNode(chatModel);
-    if (schemaNode == null) return '';
-    if (mentionedTables.isEmpty) return '';
+    if (chatModel.metadata == null || chatModel.currentSchema == null) {
+      return '';
+    }
+    final schemaNode = getNodeByDatabaseRef(chatModel.metadata!.metadata, chatModel.currentSchema!);
+    if (schemaNode == null || mentionedTables.isEmpty) {
+      return '';
+    }
     final b = StringBuffer();
     for (final tableName in mentionedTables) {
-      MetaDataNode? tableNode;
-      for (final n in (schemaNode.items ?? const <MetaDataNode>[])) {
-        if (n.type == MetaType.table && n.value == tableName) {
-          tableNode = n;
-          break;
-        }
-      }
+      final tableNode = schemaNode.getNode(MetaType.table, tableName);
       // 直接复用 MetaDataNode.toString() 的 JSON 序列化（见 db_driver_metadata.dart）
       if (tableNode != null) {
         b.writeln(tableNode.toString());
       }
     }
-
     return b.toString().trimRight();
   }
 
@@ -489,9 +471,14 @@ class _ChatInputFieldWidgetState extends ConsumerState<ChatInputFieldWidget> {
     if (widget.model.metadata == null || widget.model.currentSchema == null) {
       return [];
     }
-    final schema = MetaDataNode(MetaType.instance, "", items: widget.model.metadata!.metadata);
-    final schemaNodes = schema.getChildren(MetaType.schema, widget.model.currentSchema!);
-    return schemaNodes.where((e) => e.type == MetaType.table).map((e) => e.value).toList();
+    final tableNodes = getNodeByDatabaseRef(
+      widget.model.metadata!.metadata,
+      widget.model.currentSchema!,
+    )?.getChildren(MetaType.table);
+    if (tableNodes == null) {
+      return [];
+    }
+    return tableNodes.map((e) => e.value).toList();
   }
 
   List<String> _filterAndSortTables(List<String> allTables, String query) {

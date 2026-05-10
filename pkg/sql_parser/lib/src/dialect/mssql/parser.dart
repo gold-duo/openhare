@@ -70,6 +70,10 @@ class MssqlSQLDefiner extends SQLDefiner {
       if (Matcher(MssqlLexer(content)).match("select {*} order by")) {
         return false;
       }
+      // 排除没有 from 的 select
+      if (!Matcher(MssqlLexer(content)).match("select {*} from")){
+        return false;
+      }
       return true;
     }
     return false;

@@ -10,6 +10,7 @@ import 'package:client/services/sessions/session_drawer.dart';
 import 'package:client/services/sessions/session_sql_result.dart';
 import 'package:client/services/sessions/session_controller.dart';
 import 'package:client/services/tasks/overview.dart';
+import 'package:db_driver/db_driver.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'sessions.g.dart';
@@ -48,7 +49,7 @@ class SessionsServices extends _$SessionsServices {
     _invalidateSelf();
   }
 
-  Future<void> addSession(InstanceModel instance, {String? schema}) async {
+  Future<void> addSession(InstanceModel instance, {DatabaseRef? schema}) async {
     SessionId selectedSessionId;
     final selectedSession = ref.read(sessionRepoProvider).seletedSession();
     if (selectedSession == null) {
@@ -271,7 +272,7 @@ class SessionOpBarNotifier extends _$SessionOpBarNotifier {
       dbType: session.dbType,
       connId: session.connId,
       state: session.connState,
-      currentSchema: session.currentSchema ?? "",
+      currentSchema: session.currentSchema,
       isRightPageOpen: sessionDrawer.isRightPageOpen,
       runningTaskCount: runningTaskCount,
     );

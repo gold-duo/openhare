@@ -142,7 +142,7 @@ class SqlResultTable extends ConsumerWidget {
         children: [
           Icon(
             Icons.check_circle,
-            size: 64,
+            size: 48,
             color: Theme.of(context).colorScheme.primaryContainer, // SQL执行成功图标颜色
           ),
           const SizedBox(height: kSpacingSmall),
@@ -159,7 +159,11 @@ class SqlResultTable extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error, size: kIconSizeLarge, color: Theme.of(context).colorScheme.error), // SQL执行错误时图标颜色
+            Icon(
+              Icons.error,
+              size: 48,
+              color: Theme.of(context).colorScheme.errorContainer, // SQL执行错误时图标颜色
+            ),
             const SizedBox(height: kSpacingMedium),
             TooltipText(text: '${model.error}${model.query}'),
           ],

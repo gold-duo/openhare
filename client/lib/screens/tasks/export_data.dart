@@ -27,7 +27,7 @@ class _NoScrollbarBehavior extends ScrollBehavior {
 Future<ExportDataParameters?> showExportDataDialog(
   BuildContext context, {
   required InstanceId instanceId,
-  required String schema,
+  required DatabaseRef? schema,
   required String query,
   required DatabaseType dbType,
 }) async {
@@ -44,7 +44,7 @@ Future<ExportDataParameters?> showExportDataDialog(
 
 class _ExportDataDialogContent extends ConsumerStatefulWidget {
   final InstanceId instanceId;
-  final String schema;
+  final DatabaseRef? schema;
   final String query;
   final DatabaseType dbType;
 
@@ -109,7 +109,7 @@ class _ExportDataDialogContentState extends ConsumerState<_ExportDataDialogConte
   ExportDataParameters _getExportDataParameters() {
     return ExportDataParameters(
       instanceId: widget.instanceId,
-      schema: widget.schema,
+      schema: widget.schema?.toString() ?? "",
       query: widget.query,
       fileDir: dirController.text.trim(),
       fileName: fileNameController.text.trim(),

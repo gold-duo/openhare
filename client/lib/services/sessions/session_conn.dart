@@ -18,7 +18,7 @@ class SessionConnsServices extends _$SessionConnsServices {
     return ref.read(sessionConnRepoProvider).getConn(connId);
   }
 
-  Future<SessionConnModel> createConn(InstanceId instanceId, {String? currentSchema}) async {
+  Future<SessionConnModel> createConn(InstanceId instanceId, {DatabaseRef? currentSchema}) async {
     final instance = ref.read(instanceRepoProvider).getInstanceById(instanceId);
     return ref.read(sessionConnRepoProvider).createConn(instance!, currentSchema: currentSchema);
   }
@@ -29,7 +29,7 @@ class SessionConnsServices extends _$SessionConnsServices {
 
   Future<void> connect(
     ConnId connId, {
-    Function(String)? onSchemaChangedCallback,
+    Function(DatabaseRef)? onSchemaChangedCallback,
   }) async {
     await ref
         .read(sessionConnRepoProvider)
@@ -48,7 +48,7 @@ class SessionConnsServices extends _$SessionConnsServices {
     ref.invalidateSelf();
   }
 
-  Future<void> setCurrentSchema(ConnId connId, String schema) async {
+  Future<void> setCurrentSchema(ConnId connId, DatabaseRef schema) async {
     await ref.read(sessionConnRepoProvider).setCurrentSchema(connId, schema);
     ref.invalidateSelf();
   }

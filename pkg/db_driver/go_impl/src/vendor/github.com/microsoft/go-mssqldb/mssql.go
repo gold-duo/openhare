@@ -262,28 +262,12 @@ func (c *Conn) checkBadConn(ctx context.Context, err error, mayRetry bool) error
 	switch err {
 	case nil:
 		return nil
-	case io.EOF:
-		c.connectionGood = false
 	case driver.ErrBadConn:
 		// It is an internal programming error if driver.ErrBadConn
 		// is ever passed to this function. driver.ErrBadConn should
 		// only ever be returned in response to a *mssql.Conn.connectionGood == false
 		// check in the external facing API.
 		panic("driver.ErrBadConn in checkBadConn. This should not happen.")
-	}
-
-	switch err.(type) {
-	case net.Error:
-		c.connectionGood = false
-	case StreamError:
-		c.connectionGood = false
-	case ServerError:
-		c.connectionGood = false
-	}
-
-	if !c.connectionGood && mayRetry && !c.connector.params.DisableRetry {
-		c.sess.Log(ctx, msdsn.LogRetries, err.Error)
-		return newRetryableError(err)
 	}
 
 	return err

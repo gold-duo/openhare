@@ -14,7 +14,7 @@ abstract class SessionRepo {
   SessionListModel getSessions();
   SessionModel? getSession(SessionId sessionId);
   SessionModel? seletedSession();
-  void updateSession(SessionId sessionId, {InstanceModel? instance, String? currentSchema});
+  void updateSession(SessionId sessionId, {InstanceModel? instance, DatabaseRef? currentSchema});
   void setConnId(SessionId sessionId, ConnId connId);
   void unsetConnId(SessionId sessionId);
   void deleteSession(SessionId sessionId);
@@ -29,16 +29,16 @@ abstract class SessionRepo {
 abstract class SessionConnRepo {
   SessionConnListModel getConns();
   SessionConnModel getConn(ConnId connId);
-  SessionConnModel createConn(InstanceModel model, {String? currentSchema});
+  SessionConnModel createConn(InstanceModel model, {DatabaseRef? currentSchema});
   void removeConn(ConnId connId);
 
   Future<void> connect(
     ConnId connId, {
     Function()? onStateChangedCallback,
-    Function(String)? onSchemaChangedCallback,
+    Function(DatabaseRef)? onSchemaChangedCallback,
   });
   Future<void> close(ConnId connId);
-  Future<void> setCurrentSchema(ConnId connId, String schema);
+  Future<void> setCurrentSchema(ConnId connId, DatabaseRef schema);
   Future<BaseQueryResult?> query(ConnId connId, String query, {int? limit});
   Stream<BaseQueryStreamItem> queryStream(ConnId connId, String query);
   Future<void> killQuery(ConnId connId);
@@ -71,7 +71,7 @@ abstract class SessionModel with _$SessionModel {
     required SessionId sessionId,
     InstanceId? instanceId,
     ConnId? connId,
-    String? currentSchema,
+    DatabaseRef? currentSchema,
     required SessionConfigModel config,
   }) = _SessionModel;
 }
@@ -102,7 +102,7 @@ abstract class SessionDetailModel with _$SessionDetailModel {
     String? connErrorMsg,
 
     // schema
-    String? currentSchema,
+    DatabaseRef? currentSchema,
 
     // config
     required SessionConfigModel config,
@@ -131,9 +131,9 @@ abstract class SessionOpBarModel with _$SessionOpBarModel {
     required SessionConfigModel config,
     InstanceId? instanceId,
     DatabaseType? dbType,
-    required ConnId? connId,
+    ConnId? connId,
     required SQLConnectState? state,
-    required String currentSchema,
+    DatabaseRef? currentSchema,
     required bool isRightPageOpen,
     required int runningTaskCount,
   }) = _SessionOpBarModel;
@@ -172,6 +172,10 @@ enum SQLConnectState {
 
   static bool isConnecting(SQLConnectState? state) {
     return state != null && state == connecting;
+  }
+
+  static bool isUnhealthy(SQLConnectState? state) {
+    return state != null && state == unHealth;
   }
 }
 
@@ -225,7 +229,7 @@ abstract class SessionSQLEditorModel with _$SessionSQLEditorModel {
   const factory SessionSQLEditorModel({
     required SessionId sessionId,
     DatabaseType? dbType,
-    String? currentSchema,
+    DatabaseRef? currentSchema,
     List<MetaDataNode>? metadata,
   }) = _SessionSQLEditorModel;
 }
@@ -308,7 +312,7 @@ abstract class SessionAIChatModel with _$SessionAIChatModel {
   const factory SessionAIChatModel({
     required SessionId sessionId,
     required SessionConfigModel config,
-    required String? currentSchema,
+    required DatabaseRef? currentSchema,
     required DatabaseType? dbType,
     required InstanceMetadataModel? metadata,
     required ConnId? connId,
@@ -326,6 +330,16 @@ abstract class SessionAIChatModel with _$SessionAIChatModel {
   bool canClearMessage() {
     return chatOverviewModel.state != AIChatState.waiting && chatOverviewModel.messageCount > 0;
   }
+}
+
+// session metadata model
+@freezed
+abstract class SelectedSessionSchemaModel with _$SelectedSessionSchemaModel {
+  const factory SelectedSessionSchemaModel({
+    required SessionId sessionId,
+    required DatabaseModeType databaseMode,
+    required List<DatabaseRef> schemas,
+  }) = _SelectedSessionSchemaModel;
 }
 
 // session metadata tree model

@@ -6,6 +6,7 @@ import 'package:client/widgets/button.dart';
 import 'package:client/widgets/dialog.dart';
 import 'package:client/widgets/const.dart';
 import 'package:client/widgets/paginated_bar.dart';
+import 'package:client/widgets/tooltip.dart';
 import 'package:db_driver/db_driver.dart';
 import 'package:flutter/material.dart';
 import 'package:client/screens/page_skeleton.dart';
@@ -45,16 +46,18 @@ class _InstanceTableState extends ConsumerState<InstanceTable> {
                 width: kIconSizeMedium,
                 height: kIconSizeMedium,
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: kSpacingSmall),
-                child: Text(instance.connectValue.name),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: kSpacingSmall),
+                  child: TooltipText(text: instance.connectValue.name),
+                ),
               ),
             ],
           ),
         ),
-        DataCell(Text(instance.connectValue.target.toString())),
-        DataCell(Text(instance.connectValue.user)),
-        DataCell(Text(instance.connectValue.desc, overflow: TextOverflow.ellipsis)),
+        DataCell(TooltipText(text: instance.connectValue.target.toString())),
+        DataCell(TooltipText(text: instance.connectValue.user)),
+        DataCell(TooltipText(text: instance.connectValue.desc)),
         DataCell(
           Row(
             children: [
@@ -78,10 +81,6 @@ class _InstanceTableState extends ConsumerState<InstanceTable> {
                   );
                 },
               ),
-              RectangleIconButton.small(
-                icon: Icons.more_vert_outlined,
-                onPressed: () {},
-              ),
             ],
           ),
         ),
@@ -93,24 +92,24 @@ class _InstanceTableState extends ConsumerState<InstanceTable> {
   Widget build(BuildContext context) {
     final column = [
       DataColumn(
-        label: Text(AppLocalizations.of(context)!.db_instance_name),
+        label: Text(AppLocalizations.of(context)!.db_instance_name, overflow: TextOverflow.ellipsis),
         columnWidth: const FlexColumnWidth(2),
       ),
       DataColumn(
-        label: Text(AppLocalizations.of(context)!.db_instance_target),
+        label: Text(AppLocalizations.of(context)!.db_instance_target, overflow: TextOverflow.ellipsis),
         columnWidth: const FlexColumnWidth(3),
       ),
       DataColumn(
-        label: Text(AppLocalizations.of(context)!.db_instance_user),
-        columnWidth: const FlexColumnWidth(1),
-      ),
-      DataColumn(
-        label: Text(AppLocalizations.of(context)!.db_instance_desc),
-        columnWidth: const FlexColumnWidth(3),
-      ),
-      DataColumn(
-        label: Text(AppLocalizations.of(context)!.db_instance_op),
+        label: Text(AppLocalizations.of(context)!.db_instance_user, overflow: TextOverflow.ellipsis),
         columnWidth: const FlexColumnWidth(2),
+      ),
+      DataColumn(
+        label: Text(AppLocalizations.of(context)!.db_instance_desc, overflow: TextOverflow.ellipsis),
+        columnWidth: const FlexColumnWidth(3),
+      ),
+      DataColumn(
+        label: Text(AppLocalizations.of(context)!.db_instance_op, overflow: TextOverflow.ellipsis),
+        columnWidth: const FlexColumnWidth(1.05), // 1.05 是为了让操作列的宽度稍微比其他列宽一点，这样在操作列的列名不会被缩略显示
       ),
     ];
 
@@ -186,7 +185,7 @@ class _InstanceTableState extends ConsumerState<InstanceTable> {
                 child: DataTable(
                   checkboxHorizontalMargin: 0,
                   horizontalMargin: 0,
-                  columnSpacing: 0,
+                  columnSpacing: kSpacingMedium,
                   dividerThickness: kDividerThickness,
                   showBottomBorder: true,
                   columns: column,

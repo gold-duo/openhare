@@ -14,6 +14,10 @@ class MSSQLConnection extends GoImplConnection {
 
   MSSQLConnection(super._conn, this._dsn);
 
+  @override
+  Future<DatabaseModeType> getDatabaseMode() async =>
+      DatabaseModeType.databaseMode;
+
   static const Set<String> _mssqlSystemDatabasesLower = {
     'tempdb',
     'model',
@@ -39,13 +43,15 @@ class MSSQLConnection extends GoImplConnection {
   sp.SQLDefiner parser(String sql) => sp.parser(sp.DialectType.mssql, sql);
 
   static Future<BaseConnection> open(
-      {required ConnectValue meta, String? schema}) async {
-    final database = (schema != null && schema.isNotEmpty)
-        ? schema
+      {required ConnectValue meta, DatabaseRef? schema}) async {
+    final database = (schema != null && schema.databaseName().isNotEmpty)
+        ? schema.databaseName()
         : meta.getValue("database", "master");
     final encrypt = meta.getValue("encrypt", "true");
     final trustServerCertificate =
         meta.getValue("trustServerCertificate", "true");
+    // ref: https://github.com/microsoft/go-mssqldb/issues/33
+    final tlsmin = meta.getValue("tlsmin", "1.2");
 
     final dsn = Uri(
       scheme: 'sqlserver',
@@ -56,6 +62,7 @@ class MSSQLConnection extends GoImplConnection {
         'database': database,
         'encrypt': encrypt,
         'trustServerCertificate': trustServerCertificate,
+        'tlsmin': tlsmin,
       },
     ).toString();
 
@@ -90,7 +97,7 @@ class MSSQLConnection extends GoImplConnection {
   }
 
   @override
-  Future<List<String>> schemas() async {
+  Future<List<DatabaseRef>> schemas() async {
     final results = await query(
       'SELECT name AS SCHEMA_NAME FROM sys.databases '
       'WHERE LOWER(name) NOT IN (${_mssqlSystemDatabasesNotInSql()}) ORDER BY name;',
@@ -98,20 +105,23 @@ class MSSQLConnection extends GoImplConnection {
     return results.rows
         .map((r) => r.getString("SCHEMA_NAME") ?? "")
         .where((s) => s.isNotEmpty)
+        .map((s) => DatabaseMode(database: s))
         .toList();
   }
 
   @override
-  Future<void> setCurrentSchema(String schema) async {
-    await query("USE ${_escapeIdent(schema)};");
+  Future<void> setCurrentSchema(DatabaseRef schema) async {
+    await query("USE ${_escapeIdent(schema.databaseName())};");
     final currentSchema = await getCurrentSchema();
-    onSchemaChanged(currentSchema ?? "");
+    onSchemaChanged(
+        currentSchema ?? DatabaseMode(database: schema.databaseName()));
   }
 
   @override
-  Future<String?> getCurrentSchema() async {
+  Future<DatabaseRef?> getCurrentSchema() async {
     final results = await query("SELECT DB_NAME() AS CURRENT_SCHEMA;");
-    return results.rows.first.getString("CURRENT_SCHEMA");
+    return DatabaseMode(
+        database: results.rows.first.getString("CURRENT_SCHEMA") ?? '');
   }
 
   @override
@@ -179,20 +189,23 @@ ORDER BY
     final byCatalog = <String, List<QueryResultRow>>{};
     final schemaByCatalog = <String, Set<String>>{};
     for (final catalog in databaseList) {
-      byCatalog[catalog] = await _tableColumnRowsInCatalog(catalog);
-      schemaByCatalog[catalog] = (await _schemaNamesInCatalog(catalog)).toSet();
+      byCatalog[catalog.databaseName()] =
+          await _tableColumnRowsInCatalog(catalog.databaseName());
+      schemaByCatalog[catalog.databaseName()] =
+          (await _schemaNamesInCatalog(catalog.databaseName())).toSet();
     }
 
     final databaseNodes = <MetaDataNode>[];
     for (final catalog in databaseList) {
-      final databaseNode = MetaDataNode(MetaType.database, catalog);
+      final databaseNode =
+          MetaDataNode(MetaType.database, catalog.databaseName());
       databaseNodes.add(databaseNode);
 
-      final catalogRows = byCatalog[catalog]!;
+      final catalogRows = byCatalog[catalog.databaseName()]!;
       final fromTables =
           catalogRows.map((r) => r.getString('TABLE_SCHEMA')!).toSet();
       final schemaNames = {
-        ...schemaByCatalog[catalog]!,
+        ...schemaByCatalog[catalog.databaseName()]!,
         ...fromTables,
       }.toList()
         ..sort();

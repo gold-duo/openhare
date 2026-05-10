@@ -6,6 +6,7 @@ import 'package:objectbox/objectbox.dart'; // 必须引入, 不然objectbox不�
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:client/repositories/repo.dart';
 import 'package:client/utils/reorder_list.dart';
+import 'package:db_driver/db_driver.dart';
 
 part 'sessions.g.dart';
 
@@ -18,7 +19,9 @@ class SessionStorage {
 
   final code = ToOne<SessionCodeStorage>();
 
-  String? currentSchema;
+  String? currentSchema; // 暂时不改成 DatabaseRef, 为了保持兼容，需要加一层转换.
+
+  DatabaseRef? get currentSchemaRef => currentSchema != null ? DatabaseRef.fromString(currentSchema!) : null;
 
   SessionStorage({
     this.id = 0,
@@ -65,7 +68,7 @@ class SessionRepoImpl extends SessionRepo {
     return SessionModel(
       sessionId: SessionId(value: session.id),
       instanceId: session.instance.hasValue ? InstanceId(value: session.instance.targetId) : null,
-      currentSchema: session.currentSchema,
+      currentSchema: session.currentSchemaRef,
       connId: _connIdMap[session.id],
       config: getSessionConfig(SessionId(value: session.id)),
     );
@@ -83,7 +86,7 @@ class SessionRepoImpl extends SessionRepo {
   }
 
   @override
-  void updateSession(SessionId sessionId, {InstanceModel? instance, String? currentSchema}) {
+  void updateSession(SessionId sessionId, {InstanceModel? instance, DatabaseRef? currentSchema}) {
     final session = _sessionBox.get(sessionId.value);
     if (session == null) {
       return;
@@ -92,7 +95,7 @@ class SessionRepoImpl extends SessionRepo {
       session.instance.target = InstanceStorage.fromModel(instance);
     }
     if (currentSchema != null) {
-      session.currentSchema = currentSchema;
+      session.currentSchema = currentSchema.toString();
     }
 
     _sessionBox.put(session);

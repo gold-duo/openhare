@@ -15,7 +15,7 @@ abstract class InstanceRepo {
   InstanceListModel isntances(String key, {int? pageNumber, int? pageSize});
   List<InstanceModel> getActiveInstances(int top);
   void addActiveInstance(InstanceId id);
-  void addInstanceActiveSchema(InstanceId id, String schema);
+  void addInstanceActiveSchema(InstanceId id, DatabaseRef schema);
   Future<InstanceMetadataModel> getMetadata(InstanceId instanceId);
   Future<void> refreshMetadata(InstanceId instanceId);
 }
@@ -43,7 +43,7 @@ abstract class InstanceModel with _$InstanceModel {
     required String desc,
     required Map<String, String> custom,
     required List<String> initQuerys,
-    required List<String> activeSchemas,
+    required List<DatabaseRef> activeSchemas,
     required DateTime createdAt,
     required DateTime latestOpenAt,
   }) = _InstanceModel;
@@ -87,7 +87,8 @@ abstract class PaginationInstanceListModel with _$PaginationInstanceListModel {
 abstract class InstanceMetadataModel with _$InstanceMetadataModel {
   const factory InstanceMetadataModel({
     required String version,
-    required List<String> schemas,
+    required DatabaseModeType databaseMode,
+    required List<DatabaseRef> schemas,
     required List<MetaDataNode> metadata,
   }) = _InstanceMetadataModel;
 }

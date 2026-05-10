@@ -12,8 +12,8 @@ class ConnectionFactory {
   static Future<BaseConnection> open(
       {required DatabaseType type,
       required ConnectValue meta,
-      String? schema,
-      Function(String)? onSchemaChangedCallback}) async {
+      DatabaseRef? schema,
+      Function(DatabaseRef)? onSchemaChangedCallback}) async {
     BaseConnection? conn;
     try {
       conn = switch (type) {
@@ -144,6 +144,13 @@ List<ConnectionMeta> connectionMetas = [
         group: settingMetaGroupParams,
         defaultValue: "true",
         enumValues: ['true', 'false'],
+      ),
+      CustomMeta(
+        name: "tlsmin",
+        type: SettingMetaType.enumValue,
+        group: settingMetaGroupParams,
+        defaultValue: "1.2",
+        enumValues: ["1.0", "1.1", "1.2", "1.3"],
       ),
     ],
     initQuerys: const [],

@@ -14,6 +14,10 @@ class PGConnection extends GoImplConnection {
 
   PGConnection(super._conn, this._dsn);
 
+  @override
+  Future<DatabaseModeType> getDatabaseMode() async =>
+      DatabaseModeType.schemaMode;
+
   static const Set<String> _pgSystemSchemasLower = {
     'information_schema',
     'pg_catalog',
@@ -28,8 +32,25 @@ class PGConnection extends GoImplConnection {
   sp.SQLDefiner parser(String sql) => sp.parser(sp.DialectType.pg, sql);
 
   static Future<BaseConnection> open(
-      {required ConnectValue meta, String? schema}) async {
-    final database = meta.getValue("database", "postgres");
+      {required ConnectValue meta, DatabaseRef? schema}) async {
+    final defaultDb = meta.getValue("database", "postgres");
+
+    final schemaToApply = switch (schema) {
+      null => null,
+      // 兼容旧数据：PG 上曾用 currentSchema 存 schema, 在其他数据库都代表的database, 连接库用配置里的 database。
+      DatabaseMode(database: final schemaName) => SchemaMode(
+          database: defaultDb,
+          schema: schemaName,
+        ),
+      SchemaMode(database: final databaseName, schema: final schemaName) =>
+        SchemaMode(
+          database: databaseName.isNotEmpty ? databaseName : defaultDb,
+          schema: schemaName,
+        ),
+    };
+
+    final dsnDatabase = schemaToApply?.databaseName() ?? defaultDb;
+
     final sslmode = meta.getValue("sslmode", "disable");
     final connectTimeout = meta.getIntValue("connectTimeout", 10);
     final queryTimeout = meta.getIntValue("queryTimeout", 600);
@@ -39,7 +60,7 @@ class PGConnection extends GoImplConnection {
       userInfo: '${meta.user}:${Uri.encodeComponent(meta.password)}',
       host: meta.getHost(),
       port: meta.getPort() ?? 5432,
-      path: '/$database',
+      path: '/$dsnDatabase',
       queryParameters: {
         'sslmode': sslmode,
         'connect_timeout': connectTimeout.toString(),
@@ -52,8 +73,8 @@ class PGConnection extends GoImplConnection {
     await pg.query("SET statement_timeout = '${queryTimeout}s'");
     await pg._loadBackendPid();
 
-    if (schema != null && schema.isNotEmpty) {
-      await pg.setCurrentSchema(schema);
+    if (schemaToApply != null) {
+      await pg.setCurrentSchema(schemaToApply);
     }
 
     return pg;
@@ -89,22 +110,45 @@ class PGConnection extends GoImplConnection {
     return results.rows.first.getString("version") ?? "";
   }
 
+  Future<String> _currentDatabase() async {
+    final results = await query("SELECT current_database() AS db");
+    return results.rows.first.getString("db") ?? "";
+  }
+
   @override
-  Future<void> setCurrentSchema(String schema) async {
-    final escaped = schema.replaceAll("'", "''");
+  Future<void> setCurrentSchema(DatabaseRef schema) async {
+    if (schema is! SchemaMode) {
+      return;
+    }
+    final dbName = await _currentDatabase();
+    if (schema.database.isNotEmpty && schema.database != dbName) {
+      throw StateError(
+        "PostgreSQL cannot switch database on an existing connection "
+        "(current: $dbName, requested: ${schema.database}).",
+      );
+    }
+    final nsp = schema.schemaName();
+    final escaped = nsp.replaceAll("'", "''");
     await query("SET search_path TO '$escaped'");
-    final currentSchema = await getCurrentSchema();
-    onSchemaChanged(currentSchema ?? "");
+    onSchemaChanged(SchemaMode(database: dbName, schema: nsp));
   }
 
   @override
-  Future<String?> getCurrentSchema() async {
-    final results = await query("SELECT current_schema();");
-    return results.rows.first.getString("current_schema");
+  Future<DatabaseRef?> getCurrentSchema() async {
+    final results = await query(
+      "SELECT current_database() AS db, current_schema() AS sch",
+    );
+    final db = results.rows.first.getString("db") ?? "";
+    final sch = results.rows.first.getString("sch") ?? "";
+    if (sch.isEmpty) {
+      return null;
+    }
+    return SchemaMode(database: db, schema: sch);
   }
 
   @override
-  Future<List<String>> schemas() async {
+  Future<List<DatabaseRef>> schemas() async {
+    final db = await _currentDatabase();
     final results = await query(
       'SELECT nspname FROM pg_namespace '
       'WHERE LOWER(nspname) NOT IN (${_pgSystemSchemasNotInSql()}) '
@@ -113,12 +157,19 @@ class PGConnection extends GoImplConnection {
     return results.rows
         .map((r) => r.getString("nspname") ?? "")
         .where((s) => s.isNotEmpty)
+        .map((s) => SchemaMode(database: db, schema: s))
         .toList();
   }
 
   @override
   Future<List<MetaDataNode>> metadata() async {
-    final schemaList = await schemas();
+    final dbName = await _currentDatabase();
+    if (dbName.isEmpty) {
+      return [];
+    }
+
+    final schemaList =
+        (await schemas()).whereType<SchemaMode>().toList(growable: false);
 
     final results = await query("""SELECT 
     t.table_schema,
@@ -143,12 +194,12 @@ ORDER BY
         rows.groupListsBy((result) => result.getString("table_schema")!);
 
     final schemaNodes = <MetaDataNode>[];
-    for (final schema in schemaList) {
-      final schemaNode = MetaDataNode(MetaType.schema, schema);
+    for (final schemaRef in schemaList) {
+      final schemaNode = MetaDataNode(MetaType.schema, schemaRef.schemaName());
       schemaNodes.add(schemaNode);
 
       final tableNodes = <MetaDataNode>[];
-      final tableRowsForSchema = schemaRows[schema];
+      final tableRowsForSchema = schemaRows[schemaRef.schemaName()];
       if (tableRowsForSchema != null) {
         final byTable = tableRowsForSchema
             .groupListsBy((result) => result.getString("table_name")!);
@@ -169,7 +220,9 @@ ORDER BY
       schemaNode.items = tableNodes;
     }
 
-    return schemaNodes;
+    final databaseNode = MetaDataNode(MetaType.database, dbName);
+    databaseNode.items = schemaNodes;
+    return [databaseNode];
   }
 
   static DataType _getDataType(String dataType) {

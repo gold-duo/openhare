@@ -96,7 +96,7 @@ class AddSession extends HookConsumerWidget {
                     ),
                     for (final schema in inst.activeSchemas.toList())
                       LinkButton(
-                        text: schema,
+                        text: schema.toString(),
                         maxWidth: schemaButtonWidth,
                         onPressed: () {
                           ref.read(sessionsServicesProvider.notifier).addSession(inst, schema: schema);

@@ -84,6 +84,19 @@ class SessionOpBar extends ConsumerWidget {
     );
   }
 
+  void unhealthReconnectDialog(BuildContext context, WidgetRef ref, SessionOpBarModel model) {
+    return doActionDialog(
+      context,
+      AppLocalizations.of(context)!.tip_reconnect,
+      AppLocalizations.of(context)!.tip_reconnect_desc,
+      () async {
+        await ref.read(sessionsServicesProvider.notifier).disconnectSession(model.sessionId);
+        await ref.read(sessionsServicesProvider.notifier).connectSession(model.sessionId);
+      },
+      icon: Icon(Icons.link_rounded, color: Theme.of(context).colorScheme.primary),
+    );
+  }
+
   void connectDialog(BuildContext context, WidgetRef ref, SessionOpBarModel model) {
     // 如果是connIsBusy，则提示连接繁忙，请稍后执行
     if (SQLConnectState.isBusy(model.state)) {
@@ -97,7 +110,11 @@ class SessionOpBar extends ConsumerWidget {
         icon: Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error),
       );
     }
-    // 如果是connIsDisconnected，则提示连接未建立，请先连接
+    // 未连接则提示连接；不健康则提示探活失败后重连
+    if (SQLConnectState.isUnhealthy(model.state)) {
+      return unhealthReconnectDialog(context, ref, model);
+    }
+
     return doActionDialog(
       context,
       AppLocalizations.of(context)!.tip_connect,
@@ -117,6 +134,15 @@ class SessionOpBar extends ConsumerWidget {
         iconColor: Theme.of(context).colorScheme.primary, // 连接数据库按钮颜色
         onPressed: () async {
           await ref.read(sessionsServicesProvider.notifier).connectSession(model.sessionId);
+        },
+      );
+    } else if (SQLConnectState.isUnhealthy(model.state)) {
+      return RectangleIconButton.medium(
+        tooltip: AppLocalizations.of(context)!.button_tooltip_connect,
+        icon: Icons.link_rounded,
+        iconColor: Theme.of(context).colorScheme.primary, // 连接数据库按钮颜色
+        onPressed: () {
+          unhealthReconnectDialog(context, ref, model);
         },
       );
     } else if (SQLConnectState.isConnecting(model.state)) {
@@ -278,6 +304,7 @@ class SessionOpBar extends ConsumerWidget {
         child: const Spacer(),
       );
     }
+
     return Container(
       constraints: BoxConstraints(maxHeight: height),
       child: Row(
@@ -286,14 +313,7 @@ class SessionOpBar extends ConsumerWidget {
         children: [
           // connect
           connectWidget(context, ref, model),
-
-          // schema list
-          SchemaBar(
-            instanceId: model.instanceId,
-            connId: model.connId,
-            disable: !SQLConnectState.isIdle(model.state),
-            currentSchema: model.currentSchema,
-          ),
+          SizedBox(width: 2), // 将分割线与code editor linenumber 的分割线对齐
           divider(context),
           executeWidget(context, ref, model),
           executeAddWidget(context, ref, model),
@@ -301,8 +321,16 @@ class SessionOpBar extends ConsumerWidget {
           exportDataWidget(context, model),
           taskOverviewWidget(context, ref, model),
           SessionConfigBar(model: model),
-          divider(context),
           saveWidget(context, ref, model),
+          divider(context),
+          // schema list
+          SchemaBar(
+            instanceId: model.instanceId,
+            connId: model.connId,
+            disable: !SQLConnectState.isIdle(model.state),
+            currentSchema: model.currentSchema,
+          ),
+          // divider(context),
           const Expanded(child: SessionDrawerBar()),
         ],
       ),
@@ -311,7 +339,7 @@ class SessionOpBar extends ConsumerWidget {
 }
 
 class SchemaBar extends ConsumerStatefulWidget {
-  final String? currentSchema;
+  final DatabaseRef? currentSchema;
   final bool disable;
   final InstanceId? instanceId;
   final ConnId? connId;
@@ -350,125 +378,128 @@ class _SchemaBarState extends ConsumerState<SchemaBar> {
     setState(() {});
   }
 
-  List<String> _filteredSchemas(List<String> schemas, String searchText) {
-    if (searchText.isEmpty) return schemas;
-    return schemas.where((s) => s.toLowerCase().contains(searchText.toLowerCase())).toList();
+  List<DatabaseRef> _filteredDatabaseRefs(List<DatabaseRef> refs, String q) {
+    if (q.isEmpty) {
+      return refs;
+    }
+    final lower = q.toLowerCase();
+    return refs.where((r) => r.toString().toLowerCase().contains(lower)).toList();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final schemasAsync = ref.watch(selectedSessionSchemaProvider);
-    final color = (isEnter && !widget.disable)
-        ? Theme.of(context).colorScheme.primary
-        : Theme.of(context).colorScheme.onSurface; // schema 框鼠标移入的颜色
-
-    final schemaBarContent = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 5),
+  Widget _schemaBarTriggerContent(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(kSpacingTiny),
       child: MouseRegion(
         onEnter: (_) => setState(() => isEnter = true),
         onExit: (_) => setState(() => isEnter = false),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(0, kSpacingTiny, 0, kSpacingTiny),
+          height: 26,
+          padding: const EdgeInsets.fromLTRB(kSpacingTiny, 0, kSpacingTiny, 0),
+          decoration: BoxDecoration(
+            color: isEnter ? Theme.of(context).colorScheme.surfaceContainerLow : null, // schema 框鼠标移入的颜色
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+          ),
           child: Row(
             children: [
               HugeIcon(
                 icon: HugeIcons.strokeRoundedDatabase,
-                color: color,
+                color: Theme.of(context).colorScheme.onSurface, // schema bar icon 颜色
                 size: kIconSizeSmall,
               ),
-              Container(
-                padding: const EdgeInsets.only(left: kSpacingTiny),
-                width: 120,
-                child: Align(
-                  alignment: Alignment.centerLeft,
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 120, maxWidth: 180),
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    left: kSpacingTiny,
+                    right: kSpacingTiny,
+                    bottom: 2, // 为了字体和icon在视觉上对齐, 这是一个我觉得协调的值.
+                  ),
                   child: Text(
-                    widget.currentSchema ?? "",
+                    widget.currentSchema?.toString() ?? "",
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: color),
                   ),
                 ),
+              ),
+              Icon(
+                Icons.expand_more,
+                size: kIconSizeSmall,
               ),
             ],
           ),
         ),
       ),
     );
+  }
 
-    final tabs = schemasAsync.when(
-      loading: () => [
-        OverlayMenuItem(
-          height: 72,
-          child: const Center(child: Loading.medium()),
-        ),
-      ],
-      error: (error, _) => [
+  /// database / schema 模式共用：一级列表，标签为 [DatabaseRef.toString]。
+  Widget _buildSchemaBarRefMenu(BuildContext context, SelectedSessionSchemaModel data) {
+    final searchText = _schemaSearchController.text;
+    final filtered = _filteredDatabaseRefs(data.schemas, searchText);
+    final List<OverlayMenuItem> tabs;
+    if (filtered.isEmpty) {
+      tabs = [
         OverlayMenuItem(
           height: 36,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: kSpacingSmall),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: TooltipText(
-                text: error.toString(),
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
+              child: Text(AppLocalizations.of(context)!.display_msg_no_data),
             ),
           ),
         ),
-      ],
-      data: (schemas) {
-        final filteredSchemas = _filteredSchemas(schemas, _schemaSearchController.text);
-        if (filteredSchemas.isEmpty) {
-          return [
-            OverlayMenuItem(
-              height: 36,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: kSpacingSmall),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(AppLocalizations.of(context)!.display_msg_no_data),
-                ),
-              ),
-            ),
-          ];
-        }
-        return filteredSchemas.map((schema) {
-          final isSelected = schema == widget.currentSchema;
-          final color = isSelected
-              ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.onSurface; // schema list 里当前schema的颜色
+      ];
+    } else {
+      tabs = filtered.map((schemaRef) {
+        final label = schemaRef.toString();
+        final cur = widget.currentSchema;
+        final isSelected = cur != null && cur.toString() == label;
+        final itemColor = isSelected
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.onSurface; // schema list 里当前schema的颜色
 
-          return OverlayMenuItem(
-            height: 30,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: kSpacingSmall),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Row(
-                  children: [
-                    HugeIcon(
-                      icon: HugeIcons.strokeRoundedDatabase,
-                      color: color,
-                      size: kIconSizeSmall,
+        return OverlayMenuItem(
+          height: 30,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: kSpacingSmall),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Row(
+                children: [
+                  HugeIcon(
+                    icon: HugeIcons.strokeRoundedDatabase,
+                    color: itemColor,
+                    size: kIconSizeSmall,
+                  ),
+                  const SizedBox(width: kSpacingTiny),
+                  Expanded(
+                    child: TooltipText(
+                      text: label,
+                      style: TextStyle(color: itemColor),
                     ),
-                    const SizedBox(width: kSpacingTiny),
-                    Expanded(
-                      child: TooltipText(
-                        text: schema,
-                        style: TextStyle(color: color),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-            onTabSelected: () async {
-              await ref.read(sessionConnsServicesProvider.notifier).setCurrentSchema(widget.connId!, schema);
-            },
-          );
-        }).toList();
-      },
-    );
+          ),
+          onTabSelected: () async {
+            await ref.read(sessionConnsServicesProvider.notifier).setCurrentSchema(widget.connId!, schemaRef);
+          },
+        );
+      }).toList();
+    }
+
+    return _buildSchemaBarOverlay(context, tabs);
+  }
+
+  Widget _buildSchemaBarOverlay(
+    BuildContext context,
+    List<OverlayMenuItem> tabs,
+  ) {
+    final schemaBarContent = _schemaBarTriggerContent(context);
 
     if (widget.disable) {
       return schemaBarContent;
@@ -527,6 +558,42 @@ class _SchemaBarState extends ConsumerState<SchemaBar> {
       header: header,
       footer: footer,
       child: schemaBarContent,
+    );
+  }
+
+  Widget _buildSchemaBarSingleMode() {
+    return const SizedBox.shrink();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.instanceId == null) {
+      return const SizedBox.shrink();
+    }
+
+    final schemasAsync = ref.watch(selectedSessionSchemaProvider);
+    return schemasAsync.when(
+      data: (data) {
+        switch (data.databaseMode) {
+          case DatabaseModeType.singleMode:
+            return _buildSchemaBarSingleMode();
+          case DatabaseModeType.databaseMode:
+          case DatabaseModeType.schemaMode:
+            return _buildSchemaBarRefMenu(context, data);
+        }
+      },
+      loading: () => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 5),
+        child: SizedBox(
+          height: 24,
+          width: 132,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Loading.medium(),
+          ),
+        ),
+      ),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 }

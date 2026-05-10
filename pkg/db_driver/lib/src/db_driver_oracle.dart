@@ -12,10 +12,14 @@ class OracleConnection extends GoImplConnection {
   OracleConnection(super._conn);
 
   @override
+  Future<DatabaseModeType> getDatabaseMode() async =>
+      DatabaseModeType.databaseMode;
+
+  @override
   sp.SQLDefiner parser(String sql) => sp.parser(sp.DialectType.oracle, sql);
 
   static Future<BaseConnection> open(
-      {required ConnectValue meta, String? schema}) async {
+      {required ConnectValue meta, DatabaseRef? schema}) async {
     final service = meta.getValue("service", "FREEPDB1");
     final dsn = Uri(
       scheme: "oracle",
@@ -28,8 +32,8 @@ class OracleConnection extends GoImplConnection {
     final conn = await impl.ImplConnection.openOracle(dsn);
     final oc = OracleConnection(conn);
 
-    if (schema != null && schema.isNotEmpty) {
-      await oc.setCurrentSchema(schema);
+    if (schema != null && schema.databaseName().isNotEmpty) {
+      await oc.setCurrentSchema(DatabaseMode(database: schema.databaseName()));
     }
 
     return oc;
@@ -64,32 +68,36 @@ class OracleConnection extends GoImplConnection {
   }
 
   @override
-  Future<void> setCurrentSchema(String schema) async {
-    await query("ALTER SESSION SET CURRENT_SCHEMA = ${_escapeIdent(schema)}");
+  Future<void> setCurrentSchema(DatabaseRef schema) async {
+    await query(
+        "ALTER SESSION SET CURRENT_SCHEMA = ${_escapeIdent(schema.databaseName())}");
     final currentSchema = await getCurrentSchema();
-    onSchemaChanged(currentSchema ?? "");
+    onSchemaChanged(
+        currentSchema ?? DatabaseMode(database: schema.databaseName()));
   }
 
   @override
-  Future<String?> getCurrentSchema() async {
+  Future<DatabaseRef?> getCurrentSchema() async {
     final results = await query(
         "SELECT SYS_CONTEXT('USERENV','CURRENT_SCHEMA') AS CURRENT_SCHEMA FROM dual");
-    return results.rows.first.getString("CURRENT_SCHEMA");
+    return DatabaseMode(
+        database: results.rows.first.getString("CURRENT_SCHEMA") ?? '');
   }
 
   @override
-  Future<List<String>> schemas() async {
+  Future<List<DatabaseRef>> schemas() async {
     final results = await query(
         "SELECT username AS SCHEMA_NAME FROM all_users ORDER BY username");
     return results.rows
         .map((r) => r.getString("SCHEMA_NAME") ?? "")
         .where((s) => s.isNotEmpty)
+        .map((s) => DatabaseMode(database: s))
         .toList();
   }
 
   @override
   Future<List<MetaDataNode>> metadata() async {
-    final schemaList = await schemas();
+    final databaseList = await schemas();
 
     final results = await query("""SELECT
     owner AS TABLE_SCHEMA,
@@ -104,18 +112,18 @@ ORDER BY
     column_id""");
 
     final rows = results.rows;
-    final schemaRows =
+    final databaseRows =
         rows.groupListsBy((result) => result.getString("TABLE_SCHEMA")!);
 
-    final schemaNodes = <MetaDataNode>[];
-    for (final schema in schemaList) {
-      final schemaNode = MetaDataNode(MetaType.schema, schema);
-      schemaNodes.add(schemaNode);
+    final databaseNodes = <MetaDataNode>[];
+    for (final database in databaseList) {
+      final databaseNode = MetaDataNode(MetaType.database, database.databaseName());
+      databaseNodes.add(databaseNode);
 
       final tableNodes = <MetaDataNode>[];
-      final tableRowsForSchema = schemaRows[schema];
-      if (tableRowsForSchema != null) {
-        final byTable = tableRowsForSchema
+      final tableRows = databaseRows[database.databaseName()];
+      if (tableRows != null) {
+        final byTable = tableRows
             .groupListsBy((result) => result.getString("TABLE_NAME")!);
         for (final table in byTable.keys) {
           final tableNode = MetaDataNode(MetaType.table, table);
@@ -131,10 +139,10 @@ ORDER BY
           tableNode.items = columnNodes;
         }
       }
-      schemaNode.items = tableNodes;
+      databaseNode.items = tableNodes;
     }
 
-    return schemaNodes;
+    return databaseNodes;
   }
 
   static DataType _getDataType(String dataType) {

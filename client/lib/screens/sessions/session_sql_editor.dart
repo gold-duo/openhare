@@ -28,7 +28,7 @@ class SQLEditor extends ConsumerWidget {
     return keywordPrompt;
   }
 
-  Map<String, List<CodePrompt>> buildRelatePrompts(List<MetaDataNode> metadata, String? currentSchema) {
+  Map<String, List<CodePrompt>> buildRelatePrompts(List<MetaDataNode> metadata, DatabaseRef? currentSchema) {
     Map<String, List<CodePrompt>> relatedPrompts = {};
     // todo: 有一个缺陷，有下划线的变量无法relate, 当存在类似的prefix时，例如: 存在`t1`时, `t1_1`无法关联。
     for (final node in metadata) {
@@ -38,9 +38,6 @@ class SQLEditor extends ConsumerWidget {
         }
         if (parent.value == "") {
           return true;
-        }
-        if (node.type == MetaType.schema && node.value != currentSchema) {
-          return false;
         }
         final ps = relatedPrompts.putIfAbsent(parent.value, () => List.empty(growable: true));
 

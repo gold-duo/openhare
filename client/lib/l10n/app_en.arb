@@ -235,6 +235,14 @@
   "@tip_connect_desc": {
     "description": "tips when connect session desc"
   },
+  "tip_reconnect": "Reconnect",
+  "@tip_reconnect": {
+    "description": "tips when connection is unhealthy"
+  },
+  "tip_reconnect_desc": "Keep-alive failed. Close this connection and open a new one?",
+  "@tip_reconnect_desc": {
+    "description": "tips when connection is unhealthy desc"
+  },
   "tip_connect_busy": "Executing",
   "@tip_connect_busy": {
     "description": "tips when connect session busy"
@@ -734,6 +742,10 @@
   "ai_chat_thinking": "Thinking...",
   "@ai_chat_thinking": {
     "description": "AI chat thinking message"
+  },
+  "ai_chat_waiting_api": "Waiting for response…",
+  "@ai_chat_waiting_api": {
+    "description": "AI chat placeholder before first stream chunk"
   },
   "ai_chat_budget_tooltip_loop": "Loop: {used}/{limit}",
   "@ai_chat_budget_tooltip_loop": {

@@ -115,7 +115,7 @@ class ExportDataTasksServices extends _$ExportDataTasksServices {
 
       connModel = await connServices.createConn(
         parameters.instanceId,
-        currentSchema: parameters.schema,
+        currentSchema: DatabaseRef.fromString(parameters.schema),
       );
       await connServices.connect(connModel.connId);
 

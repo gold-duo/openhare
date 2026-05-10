@@ -14,15 +14,19 @@ class MySQLConnection extends GoImplConnection {
   MySQLConnection(super._conn, this._dsn);
 
   @override
+  Future<DatabaseModeType> getDatabaseMode() async =>
+      DatabaseModeType.databaseMode;
+
+  @override
   sp.SQLDefiner parser(String sql) => sp.parser(sp.DialectType.mysql, sql);
 
   static Future<BaseConnection> open(
-      {required ConnectValue meta, String? schema}) async {
-    final database = schema ?? meta.getValue("database", "");
+      {required ConnectValue meta, DatabaseRef? schema}) async {
+    final database = schema?.databaseName() ?? meta.getValue("database", "");
     final host = meta.getHost();
     final port = meta.getPort() ?? 3306;
     final user = meta.user;
-    final password = Uri.encodeComponent(meta.password);
+    final password = meta.password;
 
     final dsn = '$user:$password@tcp($host:$port)/$database';
 
@@ -63,31 +67,33 @@ class MySQLConnection extends GoImplConnection {
   }
 
   @override
-  Future<List<String>> schemas() async {
+  Future<List<DatabaseRef>> schemas() async {
     final results = await query("SHOW DATABASES");
     return results.rows
         .map((r) => r.getString("Database") ?? "")
         .where((s) => s.isNotEmpty)
+        .map((s) => DatabaseMode(database: s))
         .toList();
   }
 
   @override
-  Future<void> setCurrentSchema(String schema) async {
-    final escaped = schema.replaceAll('`', '``');
+  Future<void> setCurrentSchema(DatabaseRef schema) async {
+    final escaped = schema.databaseName().replaceAll('`', '``');
     await query("USE `$escaped`");
     final currentSchema = await getCurrentSchema();
-    onSchemaChanged(currentSchema ?? "");
+    onSchemaChanged(currentSchema ?? DatabaseMode(database: ''));
   }
 
   @override
-  Future<String?> getCurrentSchema() async {
+  Future<DatabaseRef?> getCurrentSchema() async {
     final results = await query("SELECT DATABASE() AS current_schema");
-    return results.rows.first.getString("current_schema");
+    return DatabaseMode(
+        database: results.rows.first.getString("current_schema") ?? '');
   }
 
   @override
   Future<List<MetaDataNode>> metadata() async {
-    final schemaList = await schemas();
+    final databaseList = await schemas();
 
     final results = await query("""SELECT 
     t.TABLE_SCHEMA,
@@ -108,16 +114,17 @@ ORDER BY
     c.ORDINAL_POSITION;""");
 
     final rows = results.rows;
-    final schemaRows =
+    final databaseRows =
         rows.groupListsBy((result) => result.getString("TABLE_SCHEMA")!);
 
-    final schemaNodes = <MetaDataNode>[];
-    for (final schema in schemaList) {
-      final schemaNode = MetaDataNode(MetaType.schema, schema);
-      schemaNodes.add(schemaNode);
+    final databaseNodes = <MetaDataNode>[];
+    for (final database in databaseList) {
+      final databaseNode =
+          MetaDataNode(MetaType.database, database.databaseName());
+      databaseNodes.add(databaseNode);
 
       final tableNodes = <MetaDataNode>[];
-      final tableRows = schemaRows[schema];
+      final tableRows = databaseRows[database.databaseName()];
       if (tableRows != null) {
         final byTable =
             tableRows.groupListsBy((result) => result.getString("TABLE_NAME")!);
@@ -135,9 +142,9 @@ ORDER BY
           tableNode.items = columnNodes;
         }
       }
-      schemaNode.items = tableNodes;
+      databaseNode.items = tableNodes;
     }
-    return schemaNodes;
+    return databaseNodes;
   }
 
   static DataType _getDataType(String dataType) {

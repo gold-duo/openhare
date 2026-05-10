@@ -95,8 +95,72 @@ class QueryStreamItemRow extends BaseQueryStreamItem {
   const QueryStreamItemRow({required this.row});
 }
 
+enum DatabaseModeType {
+  singleMode, // 单库模式, 例如 sqlite.
+  databaseMode, // 多库模式, 例如 pg.
+  schemaMode,
+}
+
+sealed class DatabaseRef {
+  String databaseName();
+  String schemaName();
+
+  /// 从字符串创建 DatabaseRef. 之前存储的schema是以String的形式，为了保证兼容性，需要从String创建. 并按每个数据库类型分别处理.
+  factory DatabaseRef.fromString(String s) {
+    final dot = s.indexOf('.');
+    if (dot > 0 && dot < s.length - 1) {
+      return SchemaMode(
+          database: s.substring(0, dot), schema: s.substring(dot + 1));
+    }
+    return DatabaseMode(database: s);
+  }
+}
+
+class SchemaMode implements DatabaseRef {
+  final String database;
+  final String schema;
+
+  SchemaMode({required this.database, required this.schema});
+
+  @override
+  String toString() {
+    return '$database.$schema';
+  }
+
+  @override
+  String databaseName() {
+    return database;
+  }
+
+  @override
+  String schemaName() {
+    return schema;
+  }
+}
+
+class DatabaseMode implements DatabaseRef {
+  final String database;
+
+  DatabaseMode({required this.database});
+
+  @override
+  String toString() {
+    return database;
+  }
+
+  @override
+  String databaseName() {
+    return database;
+  }
+
+  @override
+  String schemaName() {
+    return '';
+  }
+}
+
 abstract class BaseConnection {
-  void Function(String)? onSchemaChangedCallback;
+  void Function(DatabaseRef)? onSchemaChangedCallback;
 
   BaseConnection();
 
@@ -104,20 +168,22 @@ abstract class BaseConnection {
   Future<void> killQuery();
   Stream<BaseQueryStreamItem> queryStreamInternal(String sql);
   Future<void> close();
+  Future<DatabaseModeType> getDatabaseMode();
   Future<List<MetaDataNode>> metadata();
-  Future<List<String>> schemas();
-  Future<String?> getCurrentSchema();
-  Future<void> setCurrentSchema(String schema);
+  Future<List<DatabaseRef>> schemas();
+  Future<DatabaseRef?> getCurrentSchema();
+  Future<void> setCurrentSchema(DatabaseRef schema);
   Future<String> version();
   SQLDefiner parser(String sql);
 
   void listen(
       {Function()? onCloseCallback,
-      Function(String)? onSchemaChangedCallback}) {
+      Function(DatabaseRef)? onSchemaChangedCallback}) {
     this.onSchemaChangedCallback = onSchemaChangedCallback;
   }
 
-  void onSchemaChanged(String schema) => onSchemaChangedCallback?.call(schema);
+  void onSchemaChanged(DatabaseRef schema) =>
+      onSchemaChangedCallback?.call(schema);
 
   Future<BaseQueryResult> query(String sql, {int? limit}) async {
     final queryId = Uuid().v4();
@@ -162,7 +228,7 @@ abstract class BaseConnection {
     yield* queryStreamInternal(sql);
     if (sd.changeSchema) {
       final currentSchema = await getCurrentSchema();
-      onSchemaChanged(currentSchema ?? '');
+      onSchemaChanged(currentSchema ?? DatabaseMode(database: ''));
     }
   }
 }
@@ -224,12 +290,17 @@ class GoImplConnection extends BaseConnection {
   }
 
   @override
-  Future<void> setCurrentSchema(String schema) {
+  Future<DatabaseModeType> getDatabaseMode() {
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> getCurrentSchema() {
+  Future<void> setCurrentSchema(DatabaseRef schema) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<DatabaseRef?> getCurrentSchema() {
     throw UnimplementedError();
   }
 
@@ -244,7 +315,7 @@ class GoImplConnection extends BaseConnection {
   }
 
   @override
-  Future<List<String>> schemas() {
+  Future<List<DatabaseRef>> schemas() {
     throw UnimplementedError();
   }
 

@@ -12,12 +12,14 @@ import 'db_driver_metadata.dart';
 class MongoConnection extends GoImplConnection {
   MongoConnection(super._conn, this._currentDb);
 
-  String _currentDb;
+  DatabaseRef _currentDb;
 
-  static Future<BaseConnection> open({
-    required ConnectValue meta,
-    String? schema,
-  }) async {
+  @override
+  Future<DatabaseModeType> getDatabaseMode() async =>
+      DatabaseModeType.databaseMode;
+
+  static Future<BaseConnection> open(
+      {required ConnectValue meta, DatabaseRef? schema}) async {
     final user = meta.user.trim();
     final pass = meta.password;
     String? userInfo;
@@ -58,16 +60,14 @@ class MongoConnection extends GoImplConnection {
     );
 
     final conn = await impl.ImplConnection.openMongo(uri.toString());
-    final current =
-        (schema != null && schema.trim().isNotEmpty) ? schema.trim() : dbName;
-    return MongoConnection(conn, current);
+    return MongoConnection(conn, schema ?? DatabaseMode(database: dbName));
   }
 
   @override
   sp.SQLDefiner parser(String sql) => sp.parser(sp.DialectType.mongodb, sql);
 
-  static String _buildQuery(String shell, String db, {int? maxRows}) {
-    final m = <String, dynamic>{'shell': shell, 'db': db};
+  static String _buildQuery(String shell, DatabaseRef db, {int? maxRows}) {
+    final m = <String, dynamic>{'shell': shell, 'db': db.databaseName()};
     if (maxRows != null && maxRows > 0) {
       m['maxRows'] = maxRows;
     }
@@ -83,14 +83,14 @@ class MongoConnection extends GoImplConnection {
 
     if (sd.changeSchema) {
       final currentSchema = await getCurrentSchema();
-      onSchemaChanged(currentSchema ?? '');
+      onSchemaChanged(currentSchema ?? DatabaseMode(database: ''));
     }
   }
 
-  Future<BaseQueryResult> _queryOnDb(String sql, String database) async {
+  Future<BaseQueryResult> _queryOnDb(String sql, DatabaseRef database) async {
     final sd = parser(sql);
     final shell = sd.trimDelimiter(sql);
-    final wire = _buildQuery(shell, database);
+    final wire = _buildQuery(shell, _currentDb);
 
     final queryId = Uuid().v4();
     List<BaseQueryColumn>? resultColumns;
@@ -133,25 +133,24 @@ class MongoConnection extends GoImplConnection {
   }
 
   @override
-  Future<List<String>> schemas() async {
+  Future<List<DatabaseRef>> schemas() async {
     final r = await query('show dbs');
     return r.rows
-        .map((e) => e.getString('name'))
-        .whereType<String>()
+        .map((e) => DatabaseMode(database: e.getString('name') ?? ''))
         .toList(growable: false);
   }
 
   @override
-  Future<String?> getCurrentSchema() async => _currentDb;
+  Future<DatabaseRef?> getCurrentSchema() async => _currentDb;
 
   @override
-  Future<void> setCurrentSchema(String schema) async {
-    final s = schema.trim();
+  Future<void> setCurrentSchema(DatabaseRef schema) async {
+    final s = schema.databaseName().trim();
     if (s.isEmpty) {
       return;
     }
-    _currentDb = s;
-    onSchemaChanged(s);
+    _currentDb = schema;
+    onSchemaChanged(schema);
   }
 
   @override
@@ -159,7 +158,7 @@ class MongoConnection extends GoImplConnection {
     final dbs = await schemas();
     final out = <MetaDataNode>[];
     for (final db in dbs) {
-      final dbNode = MetaDataNode(MetaType.database, db);
+      final dbNode = MetaDataNode(MetaType.database, db.databaseName());
       try {
         final r = await _queryOnDb('db.getCollectionNames()', db);
         dbNode.items = r.rows

@@ -13,7 +13,7 @@ part 'session_metadata.g.dart';
 class SelectedSessionMetadataNotifier extends _$SelectedSessionMetadataNotifier {
   @override
   Future<InstanceMetadataModel> build() async {
-      SessionModel? sessionModel = ref.watch(selectedSessionProvider);
+    SessionModel? sessionModel = ref.watch(selectedSessionProvider);
     if (sessionModel == null || sessionModel.instanceId == null) {
       throw Exception("Session not found");
     }
@@ -39,7 +39,7 @@ class SelectedSessionMetadataTreeNotifier extends _$SelectedSessionMetadataTreeN
     if (sessionModel == null || sessionModel.instanceId == null) {
       throw Exception("Session not found");
     }
-    
+
     final metadataModel = await ref.watch(selectedSessionMetadataProvider.future);
 
     List<MetaDataNode> items = metadataModel.metadata;
@@ -50,13 +50,21 @@ class SelectedSessionMetadataTreeNotifier extends _$SelectedSessionMetadataTreeN
     );
 
     root.visitor((node) {
-      // 默认打开 SchemaNode
-      if (node is SchemaNode) {
+      // 默认打开 database / schema 分类文件夹（与 buildDataNode 的 MetaType 对应）
+      if (node is DatabaseNode || node is SchemaNode) {
         metadataController.setExpansionState(node, true);
       }
-      // 默认打开 currentSchema 对应的节点
-      if (node is SchemaValueNode && node.name == sessionModel.currentSchema) {
-        metadataController.setExpansionState(node, true);
+      if (node is DatabaseValueNode) {
+        final cur = sessionModel.currentSchema;
+        if (cur != null && cur.databaseName() == node.name) {
+          metadataController.setExpansionState(node, true);
+        }
+      }
+      if (node is SchemaValueNode) {
+        final cur = sessionModel.currentSchema;
+        if (cur != null && cur.schemaName() == node.name) {
+          metadataController.setExpansionState(node, true);
+        }
       }
       // 默认打开所有table 节点
       if (node is TableNode) {
@@ -75,16 +83,20 @@ class SelectedSessionMetadataTreeNotifier extends _$SelectedSessionMetadataTreeN
   }
 }
 
-// schema 
+// schema
 @Riverpod(keepAlive: true)
 class SelectedSessionSchemaNotifier extends _$SelectedSessionSchemaNotifier {
   @override
-  Future<List<String>> build() async {
+  Future<SelectedSessionSchemaModel> build() async {
     SessionModel? sessionModel = ref.watch(selectedSessionProvider);
     if (sessionModel == null || sessionModel.instanceId == null) {
       throw Exception("Session not found");
     }
     final metadataModel = await ref.watch(selectedSessionMetadataProvider.future);
-    return metadataModel.schemas;
+    return SelectedSessionSchemaModel(
+      sessionId: sessionModel.sessionId,
+      databaseMode: metadataModel.databaseMode,
+      schemas: metadataModel.schemas,
+    );
   }
 }

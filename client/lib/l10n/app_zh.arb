@@ -58,6 +58,8 @@
     "tip_disconnect_desc": "确定断开连接吗?",
     "tip_connect": "连接",
     "tip_connect_desc": "未连接数据库，请先连接数据库。",
+    "tip_reconnect": "重新连接",
+    "tip_reconnect_desc": "探活失败，将关闭当前连接后重新建立，是否继续？",
     "tip_connect_busy": "连接繁忙",
     "tip_connect_busy_desc": "当前连接正在执行语句，请稍后再试。",
     "short_conn": "连接",
@@ -275,6 +277,10 @@
     "ai_chat_thinking": "正在思考...",
     "@ai_chat_thinking": {
       "description": "AI对话思考消息"
+    },
+    "ai_chat_waiting_api": "等待接口返回",
+    "@ai_chat_waiting_api": {
+      "description": "AI对话等待服务端首包"
     },
     "ai_chat_budget_tooltip_loop": "循环：{used}/{limit}",
     "@ai_chat_budget_tooltip_loop": {
