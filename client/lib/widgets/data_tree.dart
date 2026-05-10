@@ -223,7 +223,7 @@ class DatabaseValueNode extends DataValueNode {
     return HugeIcon(
       size: kIconSizeSmall,
       icon: HugeIcons.strokeRoundedDatabase,
-      color: Theme.of(context).colorScheme.onSurface,
+      color: Colors.orangeAccent[100]!,
     );
   }
 }
@@ -245,7 +245,7 @@ class SchemaValueNode extends DataValueNode {
     return HugeIcon(
       size: kIconSizeSmall,
       icon: HugeIcons.strokeRoundedFolder01,
-      color: Theme.of(context).colorScheme.onSurface,
+      color: Colors.orangeAccent[100]!,
     );
   }
 }
@@ -267,7 +267,7 @@ class TableValueNode extends DataValueNode {
     return HugeIcon(
       size: kIconSizeSmall,
       icon: HugeIcons.strokeRoundedTable,
-      color: Theme.of(context).colorScheme.onSurface,
+      color: Colors.green[200]!,
     );
   }
 }
