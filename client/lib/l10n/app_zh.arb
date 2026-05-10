@@ -276,6 +276,10 @@
     "@ai_chat_thinking": {
       "description": "AI对话思考消息"
     },
+    "ai_chat_waiting_api": "等待接口返回",
+    "@ai_chat_waiting_api": {
+      "description": "AI对话等待服务端首包"
+    },
     "ai_chat_budget_tooltip_loop": "循环：{used}/{limit}",
     "@ai_chat_budget_tooltip_loop": {
       "description": "AI对话预算提示-循环",

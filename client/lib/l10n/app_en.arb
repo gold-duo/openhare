@@ -735,6 +735,10 @@
   "@ai_chat_thinking": {
     "description": "AI chat thinking message"
   },
+  "ai_chat_waiting_api": "Waiting for response…",
+  "@ai_chat_waiting_api": {
+    "description": "AI chat placeholder before first stream chunk"
+  },
   "ai_chat_budget_tooltip_loop": "Loop: {used}/{limit}",
   "@ai_chat_budget_tooltip_loop": {
     "description": "AI chat budget tooltip - loop",
