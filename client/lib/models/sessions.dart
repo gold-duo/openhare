@@ -173,6 +173,10 @@ enum SQLConnectState {
   static bool isConnecting(SQLConnectState? state) {
     return state != null && state == connecting;
   }
+
+  static bool isUnhealthy(SQLConnectState? state) {
+    return state != null && state == unHealth;
+  }
 }
 
 enum SQLExecuteState { init, executing, done, error }

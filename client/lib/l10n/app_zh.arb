@@ -58,6 +58,8 @@
     "tip_disconnect_desc": "确定断开连接吗?",
     "tip_connect": "连接",
     "tip_connect_desc": "未连接数据库，请先连接数据库。",
+    "tip_reconnect": "重新连接",
+    "tip_reconnect_desc": "探活失败，将关闭当前连接后重新建立，是否继续？",
     "tip_connect_busy": "连接繁忙",
     "tip_connect_busy_desc": "当前连接正在执行语句，请稍后再试。",
     "short_conn": "连接",

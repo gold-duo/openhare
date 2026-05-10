@@ -84,6 +84,19 @@ class SessionOpBar extends ConsumerWidget {
     );
   }
 
+  void unhealthReconnectDialog(BuildContext context, WidgetRef ref, SessionOpBarModel model) {
+    return doActionDialog(
+      context,
+      AppLocalizations.of(context)!.tip_reconnect,
+      AppLocalizations.of(context)!.tip_reconnect_desc,
+      () async {
+        await ref.read(sessionsServicesProvider.notifier).disconnectSession(model.sessionId);
+        await ref.read(sessionsServicesProvider.notifier).connectSession(model.sessionId);
+      },
+      icon: Icon(Icons.link_rounded, color: Theme.of(context).colorScheme.primary),
+    );
+  }
+
   void connectDialog(BuildContext context, WidgetRef ref, SessionOpBarModel model) {
     // 如果是connIsBusy，则提示连接繁忙，请稍后执行
     if (SQLConnectState.isBusy(model.state)) {
@@ -97,7 +110,11 @@ class SessionOpBar extends ConsumerWidget {
         icon: Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error),
       );
     }
-    // 如果是connIsDisconnected，则提示连接未建立，请先连接
+    // 未连接则提示连接；不健康则提示探活失败后重连
+    if (SQLConnectState.isUnhealthy(model.state)) {
+      return unhealthReconnectDialog(context, ref, model);
+    }
+
     return doActionDialog(
       context,
       AppLocalizations.of(context)!.tip_connect,
@@ -117,6 +134,15 @@ class SessionOpBar extends ConsumerWidget {
         iconColor: Theme.of(context).colorScheme.primary, // 连接数据库按钮颜色
         onPressed: () async {
           await ref.read(sessionsServicesProvider.notifier).connectSession(model.sessionId);
+        },
+      );
+    } else if (SQLConnectState.isUnhealthy(model.state)) {
+      return RectangleIconButton.medium(
+        tooltip: AppLocalizations.of(context)!.button_tooltip_connect,
+        icon: Icons.link_rounded,
+        iconColor: Theme.of(context).colorScheme.primary, // 连接数据库按钮颜色
+        onPressed: () {
+          unhealthReconnectDialog(context, ref, model);
         },
       );
     } else if (SQLConnectState.isConnecting(model.state)) {
